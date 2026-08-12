@@ -76,7 +76,7 @@ export default function IssueCredential() {
 
   // Student Email Verification State
   const [checkingStudent, setCheckingStudent] = useState(false)
-  const [studentFoundStatus, setStudentFoundStatus] = useState<'found' | 'not_found' | null>(null)
+  const [studentFoundStatus, setStudentFoundStatus] = useState<'found' | 'not_found' | 'error' | null>(null)
   const [studentUserId, setStudentUserId] = useState<string | null>(null)
 
   // Form Validation & Errors
@@ -84,6 +84,7 @@ export default function IssueCredential() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [issueSuccess, setIssueSuccess] = useState<boolean>(false)
+  const [showConfirm, setShowConfirm] = useState<boolean>(false)
 
   // Mount logic: Run all checks
   useEffect(() => {
@@ -177,21 +178,24 @@ export default function IssueCredential() {
     setStudentUserId(null)
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', emailVal)
-        .maybeSingle()
+      // Uses a security-definer RPC instead of a direct `profiles` select so the
+      // answer doesn't depend on RLS visibility of the caller's own role — a
+      // misconfigured/missing issuer role used to make this silently look like
+      // "student not found" instead of surfacing the real problem.
+      const { data, error } = await supabase.rpc('check_recipient_by_email', { p_email: emailVal })
 
-      if (!error && data) {
-        const uid = data.id
-        setStudentUserId(uid)
+      if (error) {
+        console.error('[handleEmailBlur] check_recipient_by_email failed:', error)
+        setStudentFoundStatus('error')
+      } else if (data && data.length > 0) {
+        setStudentUserId(data[0].student_id)
         setStudentFoundStatus('found')
       } else {
         setStudentFoundStatus('not_found')
       }
-    } catch {
-      setStudentFoundStatus('not_found')
+    } catch (err) {
+      console.error('[handleEmailBlur] unexpected error:', err)
+      setStudentFoundStatus('error')
     } finally {
       setCheckingStudent(false)
     }
@@ -202,6 +206,8 @@ export default function IssueCredential() {
     
     if (!studentEmail.trim() || !studentEmail.includes('@')) {
       nextErrors.studentEmail = 'A valid student email is required.'
+    } else if (studentFoundStatus === 'error') {
+      nextErrors.studentEmail = 'Could not verify this email — retry before issuing.'
     }
     if (fullName.trim().length < 2) {
       nextErrors.fullName = 'Student name must be at least 2 characters.'
@@ -240,8 +246,17 @@ export default function IssueCredential() {
     return Object.keys(nextErrors).length === 0
   }
 
-  const handleIssue = async (e: React.FormEvent) => {
+  // Form submit only validates and shows the review screen — issuing the
+  // (irreversible, cryptographically signed) credential happens from there.
+  const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!issuerInfo || !privateKey) return
+    if (!validateForm()) return
+    if (checkingStudent) return // wait for lookup to finish
+    setShowConfirm(true)
+  }
+
+  const handleIssue = async () => {
     if (!issuerInfo || !privateKey) return
     if (!validateForm()) return
     if (checkingStudent) return // wait for lookup to finish
@@ -424,6 +439,7 @@ export default function IssueCredential() {
     setErrors({})
     setSubmitError(null)
     setIssueSuccess(false)
+    setShowConfirm(false)
   }
 
   // --- GATES RENDERING ---
@@ -554,11 +570,153 @@ export default function IssueCredential() {
             >
               {t('dashboard.issue_another')}
             </button>
-            <button 
-              className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
+            <button
+              className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/dashboard')}
             >
               {t('account.go_dashboard')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Type-specific fields to show on the review screen, mirroring the form above.
+  const reviewRows: { label: string; value: string }[] = []
+  if (selectedType === 'academic_degree') {
+    reviewRows.push(
+      { label: t('dashboard.degree_type_req'), value: degreeTitle },
+      { label: t('dashboard.major_req'), value: major },
+      { label: t('dashboard.student_id_req'), value: studentId },
+      { label: t('dashboard.grad_date_req'), value: graduationDate },
+      { label: t('dashboard.cert_id_req'), value: certificateId }
+    )
+  } else if (selectedType === 'attendance_participation') {
+    reviewRows.push(
+      { label: t('dashboard.type_req'), value: subType },
+      { label: t('dashboard.event_name_req'), value: eventName },
+      { label: t('dashboard.event_date_req'), value: eventDate },
+      { label: t('dashboard.organizer_req'), value: organizer }
+    )
+    if (roleDescription.trim()) reviewRows.push({ label: t('dashboard.role_desc_opt'), value: roleDescription })
+  } else if (selectedType === 'completion') {
+    reviewRows.push(
+      { label: t('dashboard.type_req'), value: subType },
+      { label: t('dashboard.program_name_req'), value: programName },
+      { label: t('dashboard.completion_date_req'), value: completionDate }
+    )
+    if (duration.trim()) reviewRows.push({ label: t('dashboard.duration_opt'), value: duration })
+    if (departmentOrRole.trim()) reviewRows.push({ label: t('dashboard.dept_role_opt'), value: departmentOrRole })
+  } else if (selectedType === 'merit_excellence') {
+    reviewRows.push(
+      { label: t('dashboard.type_req'), value: subType },
+      { label: t('dashboard.achievement_title_req'), value: achievementTitle },
+      { label: t('dashboard.basis_desc_req'), value: basisDescription },
+      { label: t('dashboard.date_awarded_req'), value: dateAwarded }
+    )
+  } else if (selectedType === 'appreciation_service') {
+    reviewRows.push(
+      { label: t('dashboard.reason_req'), value: reason },
+      { label: t('dashboard.date_req'), value: appreciationDate }
+    )
+    if (capacity.trim()) reviewRows.push({ label: t('dashboard.capacity_opt'), value: capacity })
+  } else if (selectedType === 'professional_certification') {
+    reviewRows.push(
+      { label: t('dashboard.cert_name_req'), value: certName },
+      { label: t('dashboard.issuing_body_req'), value: issuingBody },
+      { label: t('dashboard.date_certified_req'), value: dateCertified }
+    )
+    if (licenseNumber.trim()) reviewRows.push({ label: t('dashboard.license_num_opt'), value: licenseNumber })
+    if (expiryDate) reviewRows.push({ label: t('dashboard.expiry_date_opt'), value: expiryDate })
+  }
+
+  // Review Screen — shown after the form validates, before the credential is
+  // actually signed and written. Issuing is irreversible (a signed SD-JWT), so
+  // this gives the issuer one more look before committing.
+  if (showConfirm) {
+    return (
+      <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
+        <style>{spinStyles}</style>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
+          <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-1">{t('dashboard.review_title')}</h2>
+          <p className="text-sm text-stone-500 mb-6 leading-relaxed">{t('dashboard.review_desc')}</p>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-left text-sm space-y-3">
+            <div>
+              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.student_email')}</span>
+              <strong className="text-gray-900 text-base break-all">{studentEmail}</strong>
+              {studentFoundStatus === 'found' && (
+                <p className="text-emerald-600 text-xs mt-1 font-semibold">{t('dashboard.student_found')}</p>
+              )}
+              {studentFoundStatus === 'not_found' && (
+                <p className="text-amber-600 text-xs mt-1 font-semibold italic leading-normal">{t('dashboard.student_not_found_warning')}</p>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.full_name_req')}</span>
+              <strong className="text-gray-900">{fullName}</strong>
+            </div>
+            <div>
+              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.issuing_institution')}</span>
+              <strong className="text-gray-900">{issuerInfo?.name}</strong>
+            </div>
+            {reviewRows.map((row, i) => (
+              <div key={i}>
+                <span className="text-xs text-gray-400 block font-medium">{row.label}</span>
+                <strong className="text-gray-900 break-words">{row.value || '—'}</strong>
+              </div>
+            ))}
+            {selectedType !== 'academic_degree' && notes.trim() && (
+              <div>
+                <span className="text-xs text-gray-400 block font-medium">{t('dashboard.additional_notes_opt')}</span>
+                <strong className="text-gray-900 break-words whitespace-pre-wrap">{notes}</strong>
+              </div>
+            )}
+            {photoDataUrl && (
+              <div>
+                <span className="text-xs text-gray-400 block font-medium">{t('dashboard.cert_doc_req')}</span>
+                {photoDataUrl.startsWith('data:application/pdf') ? (
+                  <strong className="text-gray-900">{photoFileName}</strong>
+                ) : (
+                  <img
+                    src={photoDataUrl}
+                    alt="Certificate preview"
+                    className="max-h-40 max-w-full mt-1 rounded object-contain border border-gray-200"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {submitError && (
+            <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-medium mb-4">
+              {submitError}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleIssue}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+            >
+              {isSubmitting && (
+                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              )}
+              <span>{t('dashboard.confirm_issue_btn')}</span>
+            </button>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => setShowConfirm(false)}
+              className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer disabled:opacity-60"
+            >
+              {t('dashboard.back_to_edit')}
             </button>
           </div>
         </div>
@@ -651,7 +809,7 @@ export default function IssueCredential() {
             {t('dashboard.change_cert_type')}
           </button>
 
-          <form onSubmit={handleIssue} className="space-y-5">
+          <form onSubmit={handleReviewSubmit} className="space-y-5">
             
             {/* Section A: Student Identity */}
             <h3 className="border-b border-gray-200 pb-2 text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider mt-2 mb-4">
@@ -686,6 +844,11 @@ export default function IssueCredential() {
               {studentFoundStatus === 'not_found' && (
                 <p className="text-amber-600 text-xs mt-1 font-semibold italic leading-normal">
                   {t('dashboard.student_not_found_warning')}
+                </p>
+              )}
+              {studentFoundStatus === 'error' && (
+                <p className="text-red-600 text-xs mt-1 font-semibold italic leading-normal">
+                  {t('dashboard.student_check_error')}
                 </p>
               )}
               {errors.studentEmail && (
