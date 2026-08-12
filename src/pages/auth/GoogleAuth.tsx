@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { checkRateLimit, getClientIp } from '../../lib/rateLimit'
+
+// Message types posted from the /auth/callback popup back to this window
+const AUTH_COMPLETE = 'actik-auth-complete'
+const AUTH_ERROR = 'actik-auth-error'
 
 // Shared keyframe spinner animation
 const spinStyles = `
@@ -18,6 +22,15 @@ export default function GoogleAuth() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const popupRef = useRef<Window | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopWatchingPopup = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
 
   // Redirect logged-in users immediately on mount
   useEffect(() => {
@@ -45,31 +58,105 @@ export default function GoogleAuth() {
     return () => { active = false }
   }, [navigate])
 
+  // Listen for the popup posting back its result
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return
+      const data = event.data
+      if (!data || typeof data !== 'object') return
+
+      if (data.type === AUTH_COMPLETE) {
+        stopWatchingPopup()
+        popupRef.current = null
+        navigate(data.target || '/app/dashboard', { replace: true })
+      } else if (data.type === AUTH_ERROR) {
+        stopWatchingPopup()
+        popupRef.current = null
+        setErrorMsg(data.message || 'Sign in failed. Please try again.')
+        setLoading(false)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => {
+      window.removeEventListener('message', handleMessage)
+      stopWatchingPopup()
+    }
+  }, [navigate])
+
+  const openAuthPopup = (url: string): Window | null => {
+    const width = 480
+    const height = 640
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+    return window.open(
+      url,
+      'actik-google-auth',
+      `width=${width},height=${height},left=${left},top=${top}`
+    )
+  }
+
   const handleGoogleSignIn = async () => {
+    setLoading(true)
+    setErrorMsg(null)
+
+    // Open the popup synchronously, inside the click handler, so browser
+    // popup blockers see it as user-initiated. We point it at the real URL
+    // once we've fetched it below.
+    const popup = openAuthPopup('about:blank')
+
     try {
-      setLoading(true)
-      setErrorMsg(null)
-      
       const clientIp = getClientIp() || 'unknown'
       const limit = await checkRateLimit(clientIp, 'auth/login', 5, 15)
-      
+
       if (!limit.allowed) {
+        if (popup && !popup.closed) popup.close()
         setErrorMsg(`Too many login attempts. Try again in ${Math.ceil((limit.resetTime - Date.now()) / 60000)} minutes.`)
         setLoading(false)
         return
       }
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin + '/auth/callback',
+          queryParams: { prompt: 'select_account' },
+          skipBrowserRedirect: true,
         },
       })
       if (error) throw error
+      if (!data?.url) throw new Error('No auth URL returned')
+
+      if (popup && !popup.closed) {
+        popup.location.href = data.url
+        popupRef.current = popup
+        popup.focus()
+
+        stopWatchingPopup()
+        pollRef.current = setInterval(() => {
+          if (popup.closed) {
+            stopWatchingPopup()
+            popupRef.current = null
+            setLoading(false)
+          }
+        }, 500)
+      } else {
+        // Popup blocked by the browser — fall back to a full-page redirect
+        window.location.href = data.url
+      }
     } catch (err: unknown) {
+      if (popup && !popup.closed) popup.close()
       setErrorMsg('Sign in failed. Please try again.')
       setLoading(false)
     }
+  }
+
+  const handleCancelSignIn = () => {
+    stopWatchingPopup()
+    if (popupRef.current && !popupRef.current.closed) {
+      popupRef.current.close()
+    }
+    popupRef.current = null
+    setLoading(false)
   }
 
   return (
@@ -98,16 +185,17 @@ export default function GoogleAuth() {
           Sign in with your Google account to continue
         </p>
 
-        {/* Google sign-in button */}
+        {/* Google sign-in button — Google's own account chooser (with
+            "Use another account") handles account selection natively */}
         <button
-          onClick={handleGoogleSignIn}
+          onClick={() => handleGoogleSignIn()}
           disabled={loading}
           className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 text-gray-700 font-semibold h-[52px] rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
         >
           {loading ? (
-            <svg 
-              style={{ animation: 'spin 1s linear infinite', width: 18, height: 18, color: '#4b5563' }} 
-              fill="none" 
+            <svg
+              style={{ animation: 'spin 1s linear infinite', width: 18, height: 18, color: '#4b5563' }}
+              fill="none"
               viewBox="0 0 24 24"
             >
               <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -124,6 +212,16 @@ export default function GoogleAuth() {
           )}
           <span>Continue with Google</span>
         </button>
+
+        {/* Cancel button — shown while the Google popup is open */}
+        {loading && (
+          <button
+            onClick={handleCancelSignIn}
+            className="text-sm text-gray-500 hover:text-gray-700 mt-4 cursor-pointer underline"
+          >
+            Cancel
+          </button>
+        )}
 
         {/* Error message */}
         {errorMsg && (
@@ -153,6 +251,28 @@ export function GoogleCallback() {
   const [savingRole, setSavingRole] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [debugError, setDebugError] = useState<string | null>(null)
+
+  // When opened as a popup (see GoogleAuth), report the result back to the
+  // opener window instead of navigating this window, then close.
+  const isPopup = typeof window !== 'undefined' && !!window.opener && window.opener !== window
+
+  const finishAuth = (target: string) => {
+    if (isPopup) {
+      window.opener?.postMessage({ type: AUTH_COMPLETE, target }, window.location.origin)
+      window.close()
+    } else {
+      navigate(target, { replace: true })
+    }
+  }
+
+  const failAuth = (message?: string) => {
+    if (isPopup) {
+      window.opener?.postMessage({ type: AUTH_ERROR, message }, window.location.origin)
+      window.close()
+    } else {
+      navigate('/auth/login?error=session_failed', { replace: true })
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -194,12 +314,13 @@ export function GoogleCallback() {
         // If user already has a role set, redirect them directly
         if (!profileError && data && data.role) {
           const role = data.role
-          if (role === 'admin') navigate('/admin', { replace: true })
-          else if (role === 'issuer') navigate('/app/issue', { replace: true })
-          else if (role === 'student') navigate('/app/wallet', { replace: true })
-          else navigate('/app/dashboard', { replace: true })
+          let target = '/app/dashboard'
+          if (role === 'admin') target = '/admin'
+          else if (role === 'issuer') target = '/app/issue'
+          else if (role === 'student') target = '/app/wallet'
+          finishAuth(target)
         } else {
-          // No role set yet -> show role selector modal
+          // No role set yet -> show role selector modal (popup stays open for this)
           setShowRoleModal(true)
           setLoading(false)
         }
@@ -208,7 +329,7 @@ export function GoogleCallback() {
         setDebugError(`processSession Exception: ${err instanceof Error ? err.message : String(err)}`)
         if (active) {
           setTimeout(() => {
-            if (active) navigate('/auth/login?error=session_failed', { replace: true })
+            if (active) failAuth('Sign in failed. Please try again.')
           }, 8000)
         }
       }
@@ -223,7 +344,7 @@ export function GoogleCallback() {
           setDebugError(`getSession Error: ${sessionError.message} (${sessionError.status || 'no status'})`)
           if (active) {
             setTimeout(() => {
-              if (active) navigate('/auth/login?error=session_failed', { replace: true })
+              if (active) failAuth('Sign in failed. Please try again.')
             }, 8000)
           }
           return
@@ -252,7 +373,7 @@ export function GoogleCallback() {
             setDebugError('Timeout reached (8 seconds): No session was received. Please check if your Google OAuth configuration or Redirect URLs are fully allowed in your Supabase Dashboard.')
             if (unsubscribeFn) unsubscribeFn()
             setTimeout(() => {
-              if (active) navigate('/auth/login?error=session_failed', { replace: true })
+              if (active) failAuth('Sign in timed out. Please try again.')
             }, 10000)
           }
         }, 8000)
@@ -261,7 +382,7 @@ export function GoogleCallback() {
         setDebugError(`handleAuthCallback Exception: ${err instanceof Error ? err.message : String(err)}`)
         if (active) {
           setTimeout(() => {
-            if (active) navigate('/auth/login?error=session_failed', { replace: true })
+            if (active) failAuth('Sign in failed. Please try again.')
           }, 8000)
         }
       }
@@ -301,12 +422,10 @@ export function GoogleCallback() {
       }
 
       // Redirect based on the newly saved role
-      if (selectedRole === 'issuer') {
-        navigate('/app/dashboard', { replace: true })
-      } else if (selectedRole === 'student') {
-        navigate('/app/wallet', { replace: true })
+      if (selectedRole === 'student') {
+        finishAuth('/app/wallet')
       } else {
-        navigate('/app/dashboard', { replace: true })
+        finishAuth('/app/dashboard')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
