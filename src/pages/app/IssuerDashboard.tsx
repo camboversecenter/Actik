@@ -48,13 +48,8 @@ export default function IssuerDashboard() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [registerSuccessMsg, setRegisterSuccessMsg] = useState<string | null>(null)
 
-  // Danger-zone key regeneration state (deliberate, rare — invalidates all
-  // previously issued certificates since there is no key-history/versioning)
-  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false)
-  const [regenerateAck, setRegenerateAck] = useState(false)
-  const [regeneratePin, setRegeneratePin] = useState('')
-  const [isRegenerating, setIsRegenerating] = useState(false)
-  const [regenerateError, setRegenerateError] = useState<string | null>(null)
+  // Quick stats: certificates issued by this institution
+  const [stats, setStats] = useState<{ total: number; claimed: number; pending: number } | null>(null)
 
 
   // Check registration and keys on mount/update
@@ -115,6 +110,17 @@ export default function IssuerDashboard() {
             setPrivateKey(JSON.parse(keyJson))
           } else {
             setPrivateKey(null)
+          }
+
+          // Quick stats: how many certificates this institution has issued
+          const [claimedRes, pendingRes] = await Promise.all([
+            supabase.from('credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did),
+            supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did)
+          ])
+          if (active) {
+            const claimed = claimedRes.count || 0
+            const pending = pendingRes.count || 0
+            setStats({ claimed, pending, total: claimed + pending })
           }
         } else {
           setIssuerInfo(null)
@@ -238,54 +244,6 @@ export default function IssuerDashboard() {
       setIsRegistering(false)
     }
   }
-
-  // Danger zone: deliberately rotate the signing key. This permanently
-  // invalidates every certificate issued with the previous key, since there
-  // is no key-history/versioning — unlike the old implicit per-session
-  // regeneration, this only runs on explicit, confirmed user action.
-  const handleDangerRegenerate = async () => {
-    if (!currentUser || !issuerInfo) return
-    if (!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN) return
-
-    setIsRegenerating(true)
-    setRegenerateError(null)
-
-    try {
-      const { publicJwk, privateJwk } = await generateIssuerKeys()
-
-      const setupOk = await setupVault(regeneratePin, currentUser.id, currentUser.email, { skipPasskey: true })
-      if (!setupOk) throw new Error('Failed to secure your new signing key. Please try again.')
-
-      const ciphertext = await encryptPayload(privateJwk)
-      let res = await supabase
-        .from('issuers')
-        .update({ public_jwk: publicJwk, signing_key_ciphertext: ciphertext })
-        .eq('owner', currentUser.id)
-
-      if (res.error && (res.error.message.includes('owner') || res.error.message.includes('public_jwk') || res.error.code === '42703')) {
-        res = await supabase
-          .from('issuers')
-          .update({ public_key: JSON.stringify(publicJwk), signing_key_ciphertext: ciphertext })
-          .eq('user_id', currentUser.id)
-      }
-
-      if (res.error) throw res.error
-
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', issuerInfo.did)
-
-      setPrivateKey(privateJwk)
-      setIssuerInfo(prev => prev && { ...prev, rawIssuerData: { ...prev.rawIssuerData, public_jwk: publicJwk } })
-      setShowRegenerateConfirm(false)
-      setRegenerateAck(false)
-      setRegeneratePin('')
-    } catch (err: any) {
-      setRegenerateError(err.message || 'Failed to regenerate keys. Please try again.')
-    } finally {
-      setIsRegenerating(false)
-    }
-  }
-
 
 
 
@@ -479,6 +437,22 @@ export default function IssuerDashboard() {
               />
             ) : (
               <>
+                {/* Quick stats: certificates issued by this institution */}
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
+                    <div className="text-2xl md:text-3xl font-extrabold text-stone-900">{stats?.total ?? '—'}</div>
+                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Total issued</div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
+                    <div className="text-2xl md:text-3xl font-extrabold text-emerald-600">{stats?.claimed ?? '—'}</div>
+                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Claimed</div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
+                    <div className="text-2xl md:text-3xl font-extrabold text-amber-600">{stats?.pending ?? '—'}</div>
+                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Awaiting claim</div>
+                  </div>
+                </div>
+
                 {/* If accredited & key is active: Credential Issuance Panel (Navigates to new flow) */}
                 <div className="bg-white rounded-2xl border border-stone-200 p-8 shadow-sm flex flex-col items-center text-center py-16">
                   <div className="text-5xl mb-4">📋</div>
@@ -495,69 +469,6 @@ export default function IssuerDashboard() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
                   </button>
-                </div>
-
-                {/* Danger zone: deliberate, rare key rotation — replaces the
-                    old implicit per-session "Regenerate & Update Keys" flow. */}
-                <div className="mt-8 border border-red-200 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegenerateConfirm(!showRegenerateConfirm)}
-                    className="w-full px-6 py-4 flex justify-between items-center bg-red-50 border-none cursor-pointer text-left"
-                  >
-                    <span className="text-sm font-bold text-red-700">Danger zone: Regenerate signing key</span>
-                    <span className="text-red-400">{showRegenerateConfirm ? '▲' : '▼'}</span>
-                  </button>
-
-                  {showRegenerateConfirm && (
-                    <div className="p-6 bg-white space-y-4">
-                      <p className="text-sm text-stone-600 leading-relaxed">
-                        This creates a brand-new signing key. <strong>Every certificate issued with your current key will permanently fail verification</strong> — this cannot be undone. Only do this if you believe your key has been compromised.
-                      </p>
-
-                      <label className="flex items-start gap-2 text-sm text-stone-700">
-                        <input
-                          type="checkbox"
-                          checked={regenerateAck}
-                          onChange={(e) => setRegenerateAck(e.target.checked)}
-                          className="mt-1"
-                        />
-                        <span>I understand this permanently invalidates every previously issued certificate.</span>
-                      </label>
-
-                      <div>
-                        <label className="text-xs md:text-sm font-bold text-gray-700 block">New signing PIN</label>
-                        <input
-                          type="password"
-                          value={regeneratePin}
-                          onChange={(e) => setRegeneratePin(e.target.value)}
-                          placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
-                          autoComplete="new-password"
-                          className="mt-1 block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 bg-white text-stone-900"
-                        />
-                      </div>
-
-                      {regenerateError && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-semibold">
-                          {regenerateError}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={handleDangerRegenerate}
-                        disabled={!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN || isRegenerating}
-                        className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        {isRegenerating && (
-                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                        )}
-                        <span>Permanently regenerate signing key</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </>
             )

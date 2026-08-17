@@ -369,6 +369,9 @@ export default function App() {
             <Route path="dashboard" element={<IssuerDashboard />} />
             <Route path="register-issuer" element={<RegisterIssuer />} />
             <Route path="issue" element={<IssueCredential />} />
+            {/* institution-settings needs the issuer signing-key vault too —
+                its Danger Zone (regenerate signing key) lives there. */}
+            <Route path="institution-settings" element={<InstitutionSettings />} />
           </Route>
           <Route path="issued" element={<IssuedCredentials />} />
           <Route path="issued/type/:credentialType" element={<IssuedCredentialsCategory />} />
@@ -380,7 +383,6 @@ export default function App() {
           <Route path="share/:credentialId" element={<ShareCredential />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="activity" element={<Activity />} />
-          <Route path="institution-settings" element={<InstitutionSettings />} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Route>
 

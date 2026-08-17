@@ -503,6 +503,8 @@ export default function Wallet() {
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_pin')}</label>
                   <input
                     type="password"
+                    autoComplete="current-password"
+                    name="vault-pin"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     placeholder="••••"
@@ -594,6 +596,8 @@ export default function Wallet() {
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_pin')}</label>
                   <input
                     type="password"
+                    autoComplete="current-password"
+                    name="vault-pin"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     placeholder="••••"
