@@ -324,7 +324,7 @@ export function GoogleCallback() {
           const role = data.role
           let target = '/app/dashboard'
           if (role === 'admin') target = '/admin'
-          else if (role === 'issuer') target = '/app/issue'
+          else if (role === 'issuer') target = '/app/dashboard'
           else if (role === 'student') target = '/app/wallet'
           finishAuth(target)
         } else {

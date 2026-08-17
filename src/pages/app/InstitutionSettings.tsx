@@ -1,19 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { 
-  Building2, 
-  Globe, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Award, 
-  Copy, 
-  Check, 
-  Calendar, 
+import { generateIssuerKeys } from '../../lib/did'
+import { useZkVault } from '../../vault/zk-vault/hooks'
+import {
+  Building2,
+  Globe,
+  ShieldCheck,
+  ShieldAlert,
+  Award,
+  Copy,
+  Check,
+  Calendar,
   ArrowRight
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
+
+const MIN_PIN_LEN = 8
 
 interface IssuerInfo {
   id: string
@@ -32,6 +36,7 @@ interface IssuerInfo {
 export default function InstitutionSettings() {
   const navigate = useNavigate()
   const { t } = useLanguage()
+  const { setupVault, encryptPayload } = useZkVault()
   const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -40,6 +45,14 @@ export default function InstitutionSettings() {
   // Copy indicators
   const [copiedKey, setCopiedKey] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  // Danger-zone key regeneration state (deliberate, rare — invalidates all
+  // previously issued certificates since there is no key-history/versioning)
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false)
+  const [regenerateAck, setRegenerateAck] = useState(false)
+  const [regeneratePin, setRegeneratePin] = useState('')
+  const [isRegenerating, setIsRegenerating] = useState(false)
+  const [regenerateError, setRegenerateError] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -120,6 +133,52 @@ export default function InstitutionSettings() {
       setLoading(false)
     }
   }, [])
+
+  // Danger zone: deliberately rotate the signing key. This permanently
+  // invalidates every certificate issued with the previous key, since there
+  // is no key-history/versioning — this only runs on explicit, confirmed
+  // user action (checkbox + new PIN required).
+  const handleDangerRegenerate = async () => {
+    if (!currentUser || !issuer) return
+    if (!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN) return
+
+    setIsRegenerating(true)
+    setRegenerateError(null)
+
+    try {
+      const { publicJwk, privateJwk } = await generateIssuerKeys()
+
+      const setupOk = await setupVault(regeneratePin, currentUser.id, currentUser.email, { skipPasskey: true })
+      if (!setupOk) throw new Error('Failed to secure your new signing key. Please try again.')
+
+      const ciphertext = await encryptPayload(privateJwk)
+      let res = await supabase
+        .from('issuers')
+        .update({ public_jwk: publicJwk, signing_key_ciphertext: ciphertext })
+        .eq('owner', currentUser.id)
+
+      if (res.error && (res.error.message.includes('owner') || res.error.message.includes('public_jwk') || res.error.code === '42703')) {
+        res = await supabase
+          .from('issuers')
+          .update({ public_key: JSON.stringify(publicJwk), signing_key_ciphertext: ciphertext })
+          .eq('user_id', currentUser.id)
+      }
+
+      if (res.error) throw res.error
+
+      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
+      sessionStorage.setItem('issuer_did', issuer.did)
+
+      setIssuer(prev => prev && { ...prev, public_key: JSON.stringify(publicJwk, null, 2) })
+      setShowRegenerateConfirm(false)
+      setRegenerateAck(false)
+      setRegeneratePin('')
+    } catch (err: any) {
+      setRegenerateError(err.message || 'Failed to regenerate keys. Please try again.')
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -365,6 +424,72 @@ export default function InstitutionSettings() {
               <p className="text-xs text-stone-500 leading-relaxed">
                 <strong>{t('settings.public_key_desc_label')}</strong> {t('settings.public_key_desc_text')}
               </p>
+            </div>
+          )}
+
+          {/* Danger zone: deliberate, rare key rotation. Only shown once the
+              institution is accredited (there's no meaningful "in production"
+              key to rotate before that). */}
+          {issuer.accredited && (
+            <div className="border border-red-200 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowRegenerateConfirm(!showRegenerateConfirm)}
+                className="w-full px-6 py-4 flex justify-between items-center bg-red-50 border-none cursor-pointer text-left"
+              >
+                <span className="text-sm font-bold text-red-700">Danger zone: Regenerate signing key</span>
+                <span className="text-red-400">{showRegenerateConfirm ? '▲' : '▼'}</span>
+              </button>
+
+              {showRegenerateConfirm && (
+                <div className="p-6 bg-white space-y-4">
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    This creates a brand-new signing key. <strong>Every certificate issued with your current key will permanently fail verification</strong> — this cannot be undone. Only do this if you believe your key has been compromised.
+                  </p>
+
+                  <label className="flex items-start gap-2 text-sm text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={regenerateAck}
+                      onChange={(e) => setRegenerateAck(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>I understand this permanently invalidates every previously issued certificate.</span>
+                  </label>
+
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">New signing PIN</label>
+                    <input
+                      type="password"
+                      value={regeneratePin}
+                      onChange={(e) => setRegeneratePin(e.target.value)}
+                      placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
+                      autoComplete="new-password"
+                      className="mt-1 block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 bg-white text-stone-900"
+                    />
+                  </div>
+
+                  {regenerateError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-semibold">
+                      {regenerateError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDangerRegenerate}
+                    disabled={!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN || isRegenerating}
+                    className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isRegenerating && (
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    <span>Permanently regenerate signing key</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
