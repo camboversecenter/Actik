@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { generateIssuerKeys, didWeb } from '../../lib/did'
 import { useLanguage } from '../../lib/i18n'
+import { useZkVault } from '../../vault/zk-vault/hooks'
+
+const MIN_PIN_LEN = 8
 
 // Shared keyframe spinner animation
 const spinStyles = `
@@ -28,17 +31,19 @@ interface IssuerData {
 export default function RegisterIssuer() {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const { setupVault, encryptPayload } = useZkVault()
   const [currentUser, setCurrentUser] = useState<any | null>(null)
-  
+
   // Loading & Screen states
   const [checking, setChecking] = useState(true)
   const [existingIssuer, setExistingIssuer] = useState<IssuerData | null>(null)
   const [registeredSuccess, setRegisteredSuccess] = useState<IssuerData | null>(null)
-  
+
   // Form fields
   const [name, setName] = useState('')
   const [domain, setDomain] = useState('')
   const [type, setType] = useState('')
+  const [signingPin, setSigningPin] = useState('')
   
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -123,6 +128,9 @@ export default function RegisterIssuer() {
     if (!type || type === 'Select type...') {
       nextErrors.type = 'Please select a valid institution type.'
     }
+    if (signingPin.trim().length < MIN_PIN_LEN) {
+      nextErrors.signingPin = `Signing PIN must be at least ${MIN_PIN_LEN} characters.`
+    }
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -167,11 +175,25 @@ export default function RegisterIssuer() {
 
       if (res.error) throw res.error
 
-      // Step 3: Store private key in sessionStorage (Private key is session-only. Never stored in database. Lost on tab close.)
+      // Step 3: Persist the private key, encrypted with the issuer's signing
+      // PIN, so it survives closing this tab instead of being lost with
+      // sessionStorage alone.
+      const setupOk = await setupVault(signingPin, currentUser.id, currentUser.email, { skipPasskey: true })
+      if (!setupOk) throw new Error('Failed to secure your signing key. Please try again.')
+
+      const ciphertext = await encryptPayload(privateJwk)
+      let vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('owner', currentUser.id)
+      if (vaultRes.error && (vaultRes.error.message.includes('owner') || vaultRes.error.code === 'PGRST204' || vaultRes.error.code === '42703')) {
+        vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('user_id', currentUser.id)
+      }
+      if (vaultRes.error) throw vaultRes.error
+
+      // Step 4: Store private key in sessionStorage for this session too, so
+      // nothing downstream (signing/issuance) needs to change.
       sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
       sessionStorage.setItem('issuer_did', did)
 
-      // Step 4: Success state
+      // Step 5: Success state
       const successData: IssuerData = {
         name: name.trim(),
         did: did,
@@ -426,6 +448,25 @@ export default function RegisterIssuer() {
             </select>
             {errors.type && (
               <p className="text-red-600 text-xs mt-1 font-semibold">{errors.type}</p>
+            )}
+          </div>
+
+          {/* Signing PIN */}
+          <div>
+            <label className="text-xs md:text-sm font-bold text-gray-700 block">Signing PIN</label>
+            <input
+              type="password"
+              value={signingPin}
+              onChange={(e) => setSigningPin(e.target.value)}
+              placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
+              autoComplete="new-password"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+            />
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+              Protects your certificate-signing key so it survives closing this tab. You&apos;ll enter this PIN each time you return, instead of regenerating a new key.
+            </p>
+            {errors.signingPin && (
+              <p className="text-red-600 text-xs mt-1 font-semibold">{errors.signingPin}</p>
             )}
           </div>
 
