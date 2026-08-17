@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
+import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 
 // Shared keyframe spinner animation
 const spinStyles = `
@@ -29,7 +30,8 @@ export default function IssueCredential() {
   const [checking, setChecking] = useState(true)
   const [issuerInfo, setIssuerInfo] = useState<IssuerInfo | null>(null)
   const [privateKey, setPrivateKey] = useState<any | null>(null)
-  const [gateState, setGateState] = useState<'valid' | 'not_registered' | 'pending_approval' | 'session_expired'>('valid')
+  const [gateState, setGateState] = useState<'valid' | 'not_registered' | 'pending_approval'>('valid')
+  const [gateError, setGateError] = useState<string | null>(null)
 
   // Form Fields
   const [studentEmail, setStudentEmail] = useState('')
@@ -135,22 +137,17 @@ export default function IssueCredential() {
           return
         }
 
-        // Check 2: Is the private key available in sessionStorage?
+        // Check 2: Is the private key available in sessionStorage? If not,
+        // IssuerKeyUnlock (rendered below) recovers it from the encrypted
+        // vault instead of forcing a sign-out.
         const privateKeyJson = sessionStorage.getItem('issuer_private_key')
         const sessionDid = sessionStorage.getItem('issuer_did')
-        
-        if (!privateKeyJson || !sessionDid) {
-          setGateState('session_expired')
-          setChecking(false)
-          return
-        }
 
-        // Save states
-        setPrivateKey(JSON.parse(privateKeyJson))
+        setPrivateKey(privateKeyJson ? JSON.parse(privateKeyJson) : null)
         setIssuerInfo({
           name: issuerData.name,
           domain: issuerData.domain || '',
-          did: issuerData.did || sessionDid,
+          did: issuerData.did || sessionDid || '',
           accredited: issuerData.accredited,
           rawIssuerData: issuerData
         })
@@ -158,7 +155,7 @@ export default function IssueCredential() {
         setChecking(false)
       } catch (err) {
         if (active) {
-          setGateState('session_expired')
+          setGateError('Something went wrong loading your account. Please try again.')
           setChecking(false)
         }
       }
@@ -462,6 +459,24 @@ export default function IssueCredential() {
     )
   }
 
+  // Unexpected error loading the gate checks themselves
+  if (gateError) {
+    return (
+      <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
+        <div className="bg-white rounded-xl shadow-sm border border-red-300 border-l-4 p-6 md:p-8">
+          <h2 className="text-xl md:text-2xl font-bold text-red-700 mb-2">Something went wrong</h2>
+          <p className="text-sm text-stone-500 mb-6 leading-relaxed">{gateError}</p>
+          <button
+            className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Check 1 Fail: Not Registered
   if (gateState === 'not_registered') {
     return (
@@ -506,28 +521,20 @@ export default function IssueCredential() {
     )
   }
 
-  // Check 2 Fail: Session Expired (Private key cleared)
-  if (gateState === 'session_expired') {
+  // Check 2 Fail: signing key not loaded in this browser session — recover
+  // it from the encrypted vault instead of forcing a sign-out.
+  if (gateState === 'valid' && !privateKey && currentUser && issuerInfo) {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-        <div className="bg-white rounded-xl shadow-sm border border-red-300 border-l-4 p-6 md:p-8">
-          <h2 className="text-xl md:text-2xl font-bold text-red-700 mb-2">{t('dashboard.session_expired')}</h2>
-          <p className="text-sm text-stone-500 mb-4 leading-relaxed">
-            {t('dashboard.session_expired_desc1')}
-          </p>
-          <p className="text-xs text-stone-500 mb-6">
-            {t('dashboard.session_expired_desc2')}
-          </p>
-          <button 
-            className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
-            onClick={async () => {
-              await supabase.auth.signOut()
-              navigate('/auth/login', { replace: true })
-            }}
-          >
-            {t('dashboard.sign_out_back_in')}
-          </button>
-        </div>
+        <IssuerKeyUnlock
+          userId={currentUser.id}
+          userEmail={currentUser.email}
+          did={issuerInfo.did}
+          onUnlocked={(jwk) => setPrivateKey(jwk)}
+          onKeyRegenerated={(newJwk) =>
+            setIssuerInfo(prev => prev && ({ ...prev, rawIssuerData: { ...prev.rawIssuerData, public_jwk: newJwk } }))
+          }
+        />
       </div>
     )
   }

@@ -26,7 +26,16 @@ create table if not exists issuers (
   did text not null unique,
   public_jwk jsonb not null,
   accredited boolean not null default false,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- zk-vault envelope for the issuer's signing private key (ciphertext only —
+  -- mirrors profiles' vault_* columns above). signing_key_ciphertext holds the
+  -- encrypted privateJwk payload itself, which is outside the vault library's
+  -- own envelope contract.
+  vault_envelope_pin text,
+  vault_pin_salt text,
+  vault_envelope_passkey text,
+  passkey_id text,
+  signing_key_ciphertext jsonb
 );
 
 -- ---------------------------------------------------------------------------

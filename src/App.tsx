@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import Layout from './components/Layout'
@@ -21,6 +21,7 @@ import IssuedCredentials from './pages/app/IssuedCredentials'
 import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
 import { VaultProvider } from './vault/zk-vault'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
+import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
 import { initializeRateLimiting } from './lib/rateLimit'
 
 // ==========================================
@@ -350,9 +351,25 @@ export default function App() {
             </PrivateRoute>
           }
         >
-          <Route path="dashboard" element={<IssuerDashboard />} />
-          <Route path="register-issuer" element={<RegisterIssuer />} />
-          <Route path="issue" element={<IssueCredential />} />
+          {/* Issuer routes get their own nested vault, scoped to the signing
+              key, distinct from the holder wallet vault wrapping all of
+              /app above. Nearest VaultProvider wins, so useZkVault() inside
+              these 3 pages resolves here without affecting any other route. */}
+          <Route
+            element={
+              <VaultProvider
+                storageAdapter={issuerVaultAdapter}
+                lockOnWindowBlur={false}
+                autoLockTimeoutMs={1800000}
+              >
+                <Outlet />
+              </VaultProvider>
+            }
+          >
+            <Route path="dashboard" element={<IssuerDashboard />} />
+            <Route path="register-issuer" element={<RegisterIssuer />} />
+            <Route path="issue" element={<IssueCredential />} />
+          </Route>
           <Route path="issued" element={<IssuedCredentials />} />
           <Route path="issued/type/:credentialType" element={<IssuedCredentialsCategory />} />
           {/* Student routes */}
