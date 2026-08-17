@@ -133,7 +133,15 @@ export default function GoogleAuth() {
 
         stopWatchingPopup()
         pollRef.current = setInterval(() => {
-          if (popup.closed) {
+          // Cross-origin popups under COOP can make `.closed` throw/warn —
+          // treat that as "can't tell yet" rather than crashing the poll.
+          let closed = false
+          try {
+            closed = popup.closed
+          } catch {
+            return
+          }
+          if (closed) {
             stopWatchingPopup()
             popupRef.current = null
             setLoading(false)
