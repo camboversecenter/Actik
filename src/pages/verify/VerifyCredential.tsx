@@ -656,7 +656,7 @@ export default function VerifyCredential() {
           <div className="flex flex-col">
             <span className="text-xl font-semibold text-indigo-600">Actik</span>
             <span className="text-[10px] text-stone-500 -mt-0.5 font-medium">
-              Digital certificates for Cambodia
+              Digital proof of ownership for Cambodia
             </span>
           </div>
           <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
@@ -1120,7 +1120,7 @@ export default function VerifyCredential() {
             </div>
           </div>
           <div className="space-y-1 text-xs text-stone-400">
-            <p className="font-medium">Powered by Actik — Digital certificates for Cambodia</p>
+            <p className="font-medium">Powered by Actik — Digital proof of ownership for Cambodia</p>
             <a
               href="https://actik.app"
               target="_blank"

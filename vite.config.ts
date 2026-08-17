@@ -22,9 +22,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'Actik — Digital Certificates',
+        name: 'Actik — Digital Proof of Ownership',
         short_name: 'Actik',
-        description: 'Issue, hold, and verify digital certificates in Cambodia.',
+        description: 'Digital proof of ownership for Cambodia — starting with verifiable certificates.',
         theme_color: '#1b3a2f',
         background_color: '#f6f3ec',
         display: 'standalone',

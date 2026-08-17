@@ -179,7 +179,7 @@ export default function GoogleAuth() {
 
         {/* Tagline */}
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-6">
-          Digital certificates for Cambodia
+          Digital proof of ownership for Cambodia
         </p>
 
         {/* Divider */}
