@@ -381,6 +381,8 @@ export default function WalletCategory() {
               <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
                 <input
                   type="password"
+                  autoComplete="current-password"
+                  name="vault-pin"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
                   placeholder="••••"

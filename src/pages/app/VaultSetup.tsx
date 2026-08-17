@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
-import { Fingerprint, Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
+import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 
@@ -64,18 +64,13 @@ export default function VaultSetup() {
   const [existingVault, setExistingVault] = useState<Partial<VaultRecord> | null>(null)
   const [showReconfigureModal, setShowReconfigureModal] = useState(false)
   
-  // Selection
-  const [selectedMethod, setSelectedMethod] = useState<UnlockMethod>('biometric')
-
-  // PIN inputs
-  const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', ''])
-  const [confirmDigits, setConfirmDigits] = useState<string[]>(['', '', '', '', '', ''])
+  // PIN inputs — a single masked field (not split digit boxes) so browsers
+  // can recognize it as a real password field and offer to save it, with
+  // Face ID/Touch ID/Windows Hello gating the autofill on later visits.
+  const [pin, setPin] = useState('')
+  const [confirmPin, setConfirmPin] = useState('')
   const [showPin, setShowPin] = useState(false)
   const [pinError, setPinError] = useState<string | null>(null)
-
-  // Refs for auto-focusing PIN digits
-  const pinRefs = useRef<(HTMLInputElement | null)[]>([])
-  const confirmRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Security explainer collapse
   const [explainOpen, setExplainOpen] = useState(false)
@@ -178,70 +173,15 @@ export default function VaultSetup() {
     return () => { active = false }
   }, [navigate, checkVaultStatus, setUserRole])
 
-  // Focus helpers for digit inputs
-  const handleDigitChange = (
-    val: string,
-    index: number,
-    type: 'pin' | 'confirm'
-  ) => {
-    const cleanDigit = val.replace(/[^0-9]/g, '').slice(-1)
-    const digits = type === 'pin' ? [...pinDigits] : [...confirmDigits]
-    const refs = type === 'pin' ? pinRefs : confirmRefs
+  const isPinComplete = pin.length === 6
+  const isConfirmComplete = confirmPin.length === 6
+  const pinsMatch = pin === confirmPin
 
-    digits[index] = cleanDigit
-    
-    if (type === 'pin') {
-      setPinDigits(digits)
-    } else {
-      setConfirmDigits(digits)
-    }
+  const canContinueStep1 = isPinComplete && isConfirmComplete && pinsMatch
 
-    // Auto-focus next input
-    if (cleanDigit && index < 5) {
-      refs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleDigitKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    index: number,
-    type: 'pin' | 'confirm'
-  ) => {
-    const digits = type === 'pin' ? pinDigits : confirmDigits
-    const refs = type === 'pin' ? pinRefs : confirmRefs
-
-    // Move backward on backspace
-    if (e.key === 'Backspace' && !digits[index] && index > 0) {
-      refs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleDigitPaste = (
-    e: React.ClipboardEvent<HTMLInputElement>,
-    type: 'pin' | 'confirm'
-  ) => {
+  // Step 1 submit
+  const handleContinueToStep2 = (e: React.FormEvent) => {
     e.preventDefault()
-    const pastedData = e.clipboardData.getData('text').trim()
-    if (/^\d{6}$/.test(pastedData)) {
-      const splitDigits = pastedData.split('')
-      if (type === 'pin') {
-        setPinDigits(splitDigits)
-        pinRefs.current[5]?.focus()
-      } else {
-        setConfirmDigits(splitDigits)
-        confirmRefs.current[5]?.focus()
-      }
-    }
-  }
-
-  const isPinComplete = pinDigits.every(d => d !== '')
-  const isConfirmComplete = confirmDigits.every(d => d !== '')
-  const pinsMatch = pinDigits.join('') === confirmDigits.join('')
-
-  const canContinueStep1 = selectedMethod === 'biometric' || (isPinComplete && isConfirmComplete && pinsMatch)
-
-  // Step 1 Click
-  const handleContinueToStep2 = () => {
     if (!canContinueStep1) return
     setPinError(null)
     setStep(2)
@@ -260,14 +200,7 @@ export default function VaultSetup() {
     })
 
     try {
-      // Step A: Generate PIN string
-      let pinCode = ''
-      if (selectedMethod === 'pin') {
-        pinCode = pinDigits.join('')
-      } else {
-        // Passkey method: generate random numeric passcode behind the scenes
-        pinCode = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('')
-      }
+      const pinCode = pin
 
       // 1. Generate Key status
       await new Promise(r => setTimeout(r, 800))
@@ -277,38 +210,16 @@ export default function VaultSetup() {
       await new Promise(r => setTimeout(r, 800))
       setCreationStatus(prev => ({ ...prev, envelope: 'done', saving: 'running' }))
 
-      // Call actual setup function
-      // In zk-vault context, setupVault triggers both PIN derivation and Passkey prompt (WebAuthn)
+      // Call actual setup function — PIN only, skip the passkey ceremony.
       const success = await setupVault(
         pinCode,
         currentUser.id,
         currentUser.email,
-        selectedMethod === 'pin'
-          ? { skipPasskey: true }
-          : { authenticatorAttachment: 'platform' }
+        { skipPasskey: true }
       )
-      
-      if (!success) {
-        throw new Error(
-          selectedMethod === 'pin'
-            ? 'PIN vault creation failed.'
-            : 'Biometrics setup failed or was unsupported.'
-        )
-      }
 
-      // Verify the vault status and check if passkey was cancelled when selectedMethod !== 'pin'
-      const checkStatus = await checkVaultStatus(currentUser.id)
-      if (selectedMethod !== 'pin' && !checkStatus.hasPasskey) {
-        // Rollback envelopes because user cancelled passkey ceremony or skipped it
-        // We clean up profiles
-        await supabase.from('profiles').update({
-          vault_envelope_pin: null,
-          vault_pin_salt: null,
-          vault_envelope_passkey: null,
-          passkey_id: null
-        }).eq('id', currentUser.id)
-        
-        throw new Error('CANCELLED')
+      if (!success) {
+        throw new Error('PIN vault creation failed.')
       }
 
       // Get envelopes from profiles to save to vaults table (or sync)
@@ -329,7 +240,7 @@ export default function VaultSetup() {
       let res = await supabase.from('vaults').upsert({
         user_id: currentUser.id,
         encrypted_envelope: envelopePayloadStr,
-        unlock_method: selectedMethod === 'biometric' ? 'passkey' : selectedMethod,
+        unlock_method: 'pin',
         created_at: new Date().toISOString()
       })
 
@@ -353,21 +264,15 @@ export default function VaultSetup() {
       await new Promise(r => setTimeout(r, 600))
       setStep(3)
     } catch (err: any) {
-      if (err.message === 'CANCELLED') {
-        // Passkey cancelled
-        setStep(1)
-        setPinError('Vault creation cancelled. Please try again.')
-      } else {
-        setCreationStatus(prev => {
-          const next = { ...prev }
-          if (next.keyGen === 'running') next.keyGen = 'error'
-          else if (next.envelope === 'running') next.envelope = 'error'
-          else if (next.saving === 'running') next.saving = 'error'
-          else if (next.verifying === 'running') next.verifying = 'error'
-          return next
-        })
-        setCreationError(err.message || 'Setup failed. Please try again.')
-      }
+      setCreationStatus(prev => {
+        const next = { ...prev }
+        if (next.keyGen === 'running') next.keyGen = 'error'
+        else if (next.envelope === 'running') next.envelope = 'error'
+        else if (next.saving === 'running') next.saving = 'error'
+        else if (next.verifying === 'running') next.verifying = 'error'
+        return next
+      })
+      setCreationError(err.message || 'Setup failed. Please try again.')
     }
   }
 
@@ -399,9 +304,8 @@ export default function VaultSetup() {
       setShowResetModal(false)
       setResetInput('')
       setStep(1)
-      setPinDigits(['', '', '', '', '', ''])
-      setConfirmDigits(['', '', '', '', '', ''])
-      setSelectedMethod('passkey')
+      setPin('')
+      setConfirmPin('')
       setIsResetting(false)
     } catch {
       setIsResetting(false)
@@ -608,82 +512,50 @@ export default function VaultSetup() {
                 {t('account.how_to_unlock')}
               </h3>
 
-              {/* Cards Stack */}
-              <div className="flex flex-col gap-4 mb-6">
-                {/* Card 1: Biometric */}
-                <div 
-                  onClick={() => setSelectedMethod('biometric')}
-                  className={`border-2 rounded-xl p-5 cursor-pointer transition-all flex flex-col justify-between ${
-                    selectedMethod === 'biometric' ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={selectedMethod === 'biometric' ? 'text-indigo-600' : 'text-gray-400'}>
-                      <Fingerprint size={28} />
-                    </div>
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
-                      {t('account.recommended_badge')}
-                    </span>
-                  </div>
-                  <strong className="text-sm md:text-base text-gray-900 block font-semibold">{t('account.biometric_title')}</strong>
-                  <p className="text-xs text-gray-500 mt-2 mb-4 leading-relaxed">
-                    {t('account.biometric_desc')}
-                  </p>
-                  <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-gray-500 mt-auto">
-                    <li>{t('account.bio_feature_1')}</li>
-                    <li>{t('account.bio_feature_2')}</li>
-                    <li>{t('account.bio_feature_3')}</li>
-                  </ul>
+              {/* PIN is the only unlock method: it's derived in software from
+                  the PIN text (PBKDF2) rather than bound to one device's
+                  hardware, so the same PIN works on any device/browser —
+                  unlike a platform biometric passkey, which only ever works
+                  on the single device it was created on. */}
+              <div className="border-2 border-indigo-600 bg-indigo-50/30 rounded-xl p-5 mb-6 flex flex-col">
+                <div className="mb-4 text-indigo-600">
+                  <Lock size={28} />
                 </div>
-
-                {/* Card 2: PIN */}
-                <div 
-                  onClick={() => setSelectedMethod('pin')}
-                  className={`border-2 rounded-xl p-5 cursor-pointer transition-all flex flex-col justify-between ${
-                    selectedMethod === 'pin' ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="mb-4">
-                    <div className={selectedMethod === 'pin' ? 'text-indigo-600' : 'text-gray-400'}>
-                      <Lock size={28} />
-                    </div>
-                  </div>
-                  <strong className="text-sm md:text-base text-gray-900 block font-semibold">{t('account.pin_title')}</strong>
-                  <p className="text-xs text-gray-500 mt-2 mb-4 leading-relaxed">
-                    {t('account.pin_desc')}
-                  </p>
-                  <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-gray-500 mt-auto">
-                    <li>{t('account.pin_feature_1')}</li>
-                    <li>{t('account.pin_feature_2')}</li>
-                    <li>{t('account.pin_feature_3')}</li>
-                  </ul>
-                </div>
+                <strong className="text-sm md:text-base text-gray-900 block font-semibold">{t('account.pin_title')}</strong>
+                <p className="text-xs text-gray-500 mt-2 mb-4 leading-relaxed">
+                  {t('account.pin_desc')}
+                </p>
+                <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-gray-500">
+                  <li>{t('account.pin_feature_1')}</li>
+                  <li>{t('account.pin_feature_2')}</li>
+                  <li>{t('account.pin_feature_3')}</li>
+                </ul>
               </div>
 
-              {/* PIN DIGIT INPUTS (Shown only if PIN selected) */}
-              {selectedMethod === 'pin' && (
+              {/* PIN entry — single real password fields (not split digit
+                  boxes) inside a form with autoComplete hints, so the
+                  browser can offer to save it and gate autofill behind
+                  Face ID/Touch ID/Windows Hello on later visits. */}
+              <form onSubmit={handleContinueToStep2}>
                 <div className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 mb-6 shadow-sm">
-                  
+
                   {/* Create PIN block */}
                   <div className="mb-6">
                     <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
                       {t('account.create_pin')}
                     </label>
-                    <div className="flex gap-2.5 justify-center">
-                      {pinDigits.map((digit, idx) => (
-                        <input
-                          key={`pin-${idx}`}
-                          ref={el => pinRefs.current[idx] = el}
-                          type={showPin ? 'text' : 'password'}
-                          value={digit}
-                          maxLength={1}
-                          onChange={(e) => handleDigitChange(e.target.value, idx, 'pin')}
-                          onKeyDown={(e) => handleDigitKeyDown(e, idx, 'pin')}
-                          onPaste={(e) => handleDigitPaste(e, 'pin')}
-                          className="w-12 h-14 text-center text-xl font-bold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      ))}
-                    </div>
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoComplete="new-password"
+                      name="vault-pin"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="block mx-auto w-full max-w-[220px] text-center text-2xl tracking-[0.5em] font-bold h-14 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
 
                   {/* Confirm PIN block */}
@@ -691,30 +563,27 @@ export default function VaultSetup() {
                     <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
                       {t('account.confirm_pin')}
                     </label>
-                    <div className="flex gap-2.5 justify-center">
-                      {confirmDigits.map((digit, idx) => (
-                        <input
-                          key={`confirm-${idx}`}
-                          ref={el => confirmRefs.current[idx] = el}
-                          type={showPin ? 'text' : 'password'}
-                          value={digit}
-                          maxLength={1}
-                          onChange={(e) => handleDigitChange(e.target.value, idx, 'confirm')}
-                          onKeyDown={(e) => handleDigitKeyDown(e, idx, 'confirm')}
-                          onPaste={(e) => handleDigitPaste(e, 'confirm')}
-                          className="w-12 h-14 text-center text-xl font-bold rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      ))}
-                    </div>
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      autoComplete="new-password"
+                      name="vault-pin-confirm"
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="block mx-auto w-full max-w-[220px] text-center text-2xl tracking-[0.5em] font-bold h-14 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
 
                   {/* Toggle show/hide PIN */}
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 pt-4 border-t border-gray-100">
                     <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
-                      <input 
-                        type="checkbox" 
-                        checked={showPin} 
-                        onChange={(e) => setShowPin(e.target.checked)} 
+                      <input
+                        type="checkbox"
+                        checked={showPin}
+                        onChange={(e) => setShowPin(e.target.checked)}
                         className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span>{t('account.show_pin_digits')}</span>
@@ -732,25 +601,25 @@ export default function VaultSetup() {
                     )}
                   </div>
                 </div>
-              )}
 
-              {/* Error messages */}
-              {pinError && (
-                <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 mb-4 font-medium">
-                  {pinError}
-                </div>
-              )}
+                {/* Error messages */}
+                {pinError && (
+                  <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 mb-4 font-medium">
+                    {pinError}
+                  </div>
+                )}
 
-              {/* Continue button */}
-              <button 
-                className={`w-full h-[52px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2 mb-6 ${
-                  canContinueStep1 ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer text-white shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-                onClick={handleContinueToStep2}
-                disabled={!canContinueStep1}
-              >
-                {t('account.continue_btn')}
-              </button>
+                {/* Continue button */}
+                <button
+                  type="submit"
+                  className={`w-full h-[52px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2 mb-6 ${
+                    canContinueStep1 ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer text-white shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                  disabled={!canContinueStep1}
+                >
+                  {t('account.continue_btn')}
+                </button>
+              </form>
 
               {/* SECURITY EXPLAINER SECTION */}
               <div className="border-t border-gray-200 pt-5">
@@ -769,7 +638,7 @@ export default function VaultSetup() {
                 {explainOpen && (
                   <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs leading-relaxed text-gray-500 space-y-3">
                     <p>
-                      🔑 <strong>Local Key Derivation:</strong> Your encryption key is derived directly from your passkey or PIN using the browser&apos;s WebCrypto API.
+                      🔑 <strong>Local Key Derivation:</strong> Your encryption key is derived directly from your PIN using the browser&apos;s WebCrypto API.
                     </p>
                     <p>
                       🚫 <strong>Zero Knowledge:</strong> The key never leaves your device. Actik servers only store the encrypted envelopes (gibberish without your device key).
@@ -778,7 +647,7 @@ export default function VaultSetup() {
                       🔒 <strong>AES-GCM 256 Encryption:</strong> We use industry-standard AES-GCM 256-bit symmetric encryption to wrap certificates.
                     </p>
                     <p>
-                      ⚙️ <strong>Technical stack:</strong> Passkey PRF assertions or PIN-derived KEK envelopes secure the main Data Encryption Key (DEK).
+                      ⚙️ <strong>Technical stack:</strong> A PIN-derived KEK envelope secures the main Data Encryption Key (DEK).
                     </p>
                   </div>
                 )}
@@ -795,7 +664,7 @@ export default function VaultSetup() {
                 {t('account.creating_your_vault')}
               </h3>
               <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
-                {t('account.confirm_with_device')} {selectedMethod === 'pin' ? t('account.pin_passcode') : t('account.biometrics_touch')}
+                {t('account.confirm_with_device')} {t('account.pin_passcode')}
               </p>
 
               {/* Checklist visualizer */}
@@ -872,7 +741,7 @@ export default function VaultSetup() {
 
               <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('account.vault_ready_title')}</h2>
               <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
-                {t('account.vault_protected_by')} {selectedMethod === 'pin' ? t('account.pin_passcode') : t('account.biometrics_touch')}
+                {t('account.vault_protected_by')} {t('account.pin_passcode')}
               </p>
 
               {/* Explainer cards */}

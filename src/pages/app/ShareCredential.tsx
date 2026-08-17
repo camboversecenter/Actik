@@ -1350,6 +1350,8 @@ export default function ShareCredential() {
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
                   <input
                     type="password"
+                    autoComplete="current-password"
+                    name="vault-pin"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     placeholder="••••"
@@ -1479,6 +1481,8 @@ export default function ShareCredential() {
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
                   <input
                     type="password"
+                    autoComplete="current-password"
+                    name="vault-pin"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     placeholder="••••"
