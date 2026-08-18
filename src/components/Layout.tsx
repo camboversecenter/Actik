@@ -366,7 +366,7 @@ export default function Layout() {
       <footer className="bg-white border-t border-gray-200 no-print pb-20 md:pb-0">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-xs text-gray-500">
-            Actik MVP — Digital Certificates backed by W3C VC and SD-JWT
+            Actik MVP — Digital proof of ownership, starting with certificates, backed by W3C VC and SD-JWT
           </p>
         </div>
       </footer>
