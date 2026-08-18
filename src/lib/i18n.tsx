@@ -14,7 +14,7 @@ const translations = {
     },
     layout: {
       loading: 'Loading Actik...',
-      tagline: 'Digital proof of ownership for Cambodia',
+      tagline: 'Proof of ownership',
       institution_dashboard: 'Institution Dashboard',
       sign_out: 'Sign out'
     },
@@ -480,7 +480,7 @@ const translations = {
     },
     layout: {
       loading: 'កំពុងផ្ទុក Actik...',
-      tagline: 'ភស្តុតាងកម្មសិទ្ធិឌីជីថលសម្រាប់កម្ពុជា',
+      tagline: 'ភស្តុតាងកម្មសិទ្ធិ',
       institution_dashboard: 'ផ្ទាំងគ្រប់គ្រងស្ថាប័ន',
       sign_out: 'ចាកចេញ'
     },
