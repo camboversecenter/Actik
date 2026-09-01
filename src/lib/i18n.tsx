@@ -30,10 +30,13 @@ const translations = {
       empty_title: 'No credentials yet',
       empty_desc: 'Your institution will issue credentials to you. You can check notifications to view and claim pending certificates.',
       view_notifications: 'View pending notifications',
+      view_all_notifications: 'View all notifications',
       category_academic_degree: 'Academic Degrees',
       category_other: 'Other',
       see_all: 'See all ({count})',
       verified: '✓ Verified',
+      verified_label: 'Verified',
+      encrypted_certificate_fallback: 'Encrypted certificate',
       issued_by: 'Issued by: ',
       year: 'Year: ',
       issued_on: 'Issued on: ',
@@ -529,10 +532,13 @@ const translations = {
       empty_title: 'មិនទាន់មានវិញ្ញាបនបត្រទេ',
       empty_desc: 'ស្ថាប័នរបស់អ្នកនឹងចេញវិញ្ញាបនបត្រឱ្យអ្នក។ អ្នកអាចពិនិត្យមើលការជូនដំណឹងដើម្បីមើល និងទទួលយកវិញ្ញាបនបត្រដែលរង់ចាំការទទួល។',
       view_notifications: 'មើលការជូនដំណឹង',
+      view_all_notifications: 'មើលការជូនដំណឹងទាំងអស់', // TODO(km-review)
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
       verified: '✓ បានផ្ទៀងផ្ទាត់',
+      verified_label: 'បានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      encrypted_certificate_fallback: 'លិខិតបញ្ជាក់ដែលបានគ្រីប', // TODO(km-review)
       issued_by: 'ចេញដោយ៖ ',
       year: 'ឆ្នាំ៖ ',
       issued_on: 'ថ្ងៃចេញ៖ ',

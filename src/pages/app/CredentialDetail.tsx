@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
+import PinDotsInput from '../../components/PinDotsInput'
 
 // Reusing same Credential interface
 interface Credential {
@@ -580,8 +581,8 @@ export default function CredentialDetail() {
 
       {/* UNLOCK MODAL */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🔒</div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
@@ -589,17 +590,15 @@ export default function CredentialDetail() {
             {/* Logic based on unlock method */}
             {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
               <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  name="vault-pin"
+                <PinDotsInput
                   value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="••••"
+                  onChange={setPinInput}
+                  name="vault-pin"
+                  autoComplete="current-password"
+                  autoFocus
                   required
-                  className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
+                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
                 <button type="submit" disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg cursor-pointer">
                   {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
                 </button>
@@ -616,7 +615,7 @@ export default function CredentialDetail() {
             )}
             {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
               <div className="flex flex-col gap-3 items-center text-center">
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
+                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
                 <button type="button" onClick={handleUnlockWithPasskeyClick} disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg cursor-pointer">
                   {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_passkey')}
                 </button>

@@ -5,6 +5,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
+import PinDotsInput from '../../components/PinDotsInput'
 
 // Note: The prompt expects import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -429,7 +430,7 @@ export default function VaultSetup() {
               {t('account.go_wallet')}
             </button>
             <button 
-              className="w-full border border-red-200 bg-white hover:bg-red-50 active:bg-red-100 text-red-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
+              className="w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
               onClick={() => setShowResetModal(true)}>
               {t('account.reset_vault')}
             </button>
@@ -532,10 +533,12 @@ export default function VaultSetup() {
                 </ul>
               </div>
 
-              {/* PIN entry — single real password fields (not split digit
-                  boxes) inside a form with autoComplete hints, so the
+              {/* PIN entry via PinDotsInput — still a single real password
+                  <input> under the dot-progress visual (not split digit
+                  boxes), inside a form with autoComplete hints, so the
                   browser can offer to save it and gate autofill behind
-                  Face ID/Touch ID/Windows Hello on later visits. */}
+                  Face ID/Touch ID/Windows Hello on later visits. See
+                  components/PinDotsInput.tsx for why that matters. */}
               <form onSubmit={handleContinueToStep2}>
                 <div className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 mb-6 shadow-sm">
 
@@ -544,17 +547,13 @@ export default function VaultSetup() {
                     <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
                       {t('account.create_pin')}
                     </label>
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      autoComplete="new-password"
-                      name="vault-pin"
+                    <PinDotsInput
                       value={pin}
-                      onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                      placeholder="••••••"
-                      className="block mx-auto w-full max-w-[220px] text-center text-2xl tracking-[0.5em] font-bold h-14 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={setPin}
+                      name="vault-pin"
+                      autoComplete="new-password"
+                      reveal={showPin}
+                      autoFocus
                     />
                   </div>
 
@@ -563,17 +562,12 @@ export default function VaultSetup() {
                     <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
                       {t('account.confirm_pin')}
                     </label>
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      autoComplete="new-password"
-                      name="vault-pin-confirm"
+                    <PinDotsInput
                       value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                      placeholder="••••••"
-                      className="block mx-auto w-full max-w-[220px] text-center text-2xl tracking-[0.5em] font-bold h-14 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={setConfirmPin}
+                      name="vault-pin-confirm"
+                      autoComplete="new-password"
+                      reveal={showPin}
                     />
                   </div>
 
@@ -590,7 +584,7 @@ export default function VaultSetup() {
                     </label>
 
                     {isPinComplete && isConfirmComplete && !pinsMatch && (
-                      <span className="text-red-600 text-xs font-semibold">
+                      <span className="text-rose-600 text-xs font-semibold">
                         {t('account.pin_mismatch_error')}
                       </span>
                     )}
@@ -604,7 +598,7 @@ export default function VaultSetup() {
 
                 {/* Error messages */}
                 {pinError && (
-                  <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 mb-4 font-medium">
+                  <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 mb-4 font-medium">
                     {pinError}
                   </div>
                 )}
@@ -674,7 +668,7 @@ export default function VaultSetup() {
                   {creationStatus.keyGen === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
                   {creationStatus.keyGen === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.keyGen === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
-                  {creationStatus.keyGen === 'error' && <XCircle size={20} className="text-red-500 shrink-0" />}
+                  {creationStatus.keyGen === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
                   <span className={creationStatus.keyGen === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
                     {t('account.generating_key')}
                   </span>
@@ -685,7 +679,7 @@ export default function VaultSetup() {
                   {creationStatus.envelope === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
                   {creationStatus.envelope === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.envelope === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
-                  {creationStatus.envelope === 'error' && <XCircle size={20} className="text-red-500 shrink-0" />}
+                  {creationStatus.envelope === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
                   <span className={creationStatus.envelope === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
                     {t('account.creating_envelope')}
                   </span>
@@ -696,7 +690,7 @@ export default function VaultSetup() {
                   {creationStatus.saving === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
                   {creationStatus.saving === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.saving === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
-                  {creationStatus.saving === 'error' && <XCircle size={20} className="text-red-500 shrink-0" />}
+                  {creationStatus.saving === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
                   <span className={creationStatus.saving === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
                     {t('account.saving_actik')}
                   </span>
@@ -707,7 +701,7 @@ export default function VaultSetup() {
                   {creationStatus.verifying === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
                   {creationStatus.verifying === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.verifying === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
-                  {creationStatus.verifying === 'error' && <XCircle size={20} className="text-red-500 shrink-0" />}
+                  {creationStatus.verifying === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
                   <span className={creationStatus.verifying === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
                     {t('account.verifying_vault')}
                   </span>
@@ -717,7 +711,7 @@ export default function VaultSetup() {
               {/* Step 2 Error card */}
               {creationError && (
                 <div className="text-center">
-                  <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3.5 mb-6 text-left">
+                  <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3.5 mb-6 text-left">
                     <strong>{t('account.vault_creation_failed')}</strong>
                     <p className="mt-1 text-[11px] leading-relaxed">{creationError}</p>
                   </div>
@@ -806,7 +800,7 @@ export default function VaultSetup() {
         <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[1000] p-0 md:p-4 flex-col">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in text-center">
             <div className="text-4xl mb-2">⚠️</div>
-            <h3 className="text-lg font-bold text-red-600 mb-2">{t('account.delete_vault_warning')}</h3>
+            <h3 className="text-lg font-bold text-rose-600 mb-2">{t('account.delete_vault_warning')}</h3>
             
             <p className="text-xs text-gray-500 mb-6 leading-relaxed text-left">
               {t('account.reset_vault_desc')}
@@ -821,7 +815,7 @@ export default function VaultSetup() {
                 value={resetInput}
                 onChange={(e) => setResetInput(e.target.value)}
                 placeholder="RESET"
-                className="w-full text-center h-11 border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-lg text-sm font-semibold mb-2"
+                className="w-full text-center h-11 border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm font-semibold mb-2"
               />
             </div>
 
@@ -843,7 +837,7 @@ export default function VaultSetup() {
                 disabled={resetInput !== 'RESET' || isResetting}
                 onClick={handleResetConfirm}
                 className={`w-1/2 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 transition-all ${
-                  resetInput === 'RESET' && !isResetting ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  resetInput === 'RESET' && !isResetting ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isResetting && (

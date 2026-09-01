@@ -3,14 +3,12 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../lib/i18n'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import NotificationsBell from './NotificationsBell'
 
 export default function Layout() {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [notificationCount, setNotificationCount] = useState<number>(0)
-  const [prevCount, setPrevCount] = useState<number>(0)
-  const [shouldPulse, setShouldPulse] = useState<boolean>(false)
   const navigate = useNavigate()
   const { t } = useLanguage()
 
@@ -72,67 +70,6 @@ export default function Layout() {
       subscription.unsubscribe()
     }
   }, [])
-
-  const fetchNotificationCount = async (email: string) => {
-    try {
-      const { count, error } = await supabase
-        .from('pending_credentials')
-        .select('id', { count: 'exact' })
-        .eq('recipient_email', email.toLowerCase())
-      
-      if (!error && count !== null) {
-        setNotificationCount(count)
-      }
-    } catch (err) {
-      console.error('Error fetching notification count:', err)
-    }
-  }
-
-  useEffect(() => {
-    if (notificationCount > prevCount) {
-      setShouldPulse(true)
-      const timer = setTimeout(() => setShouldPulse(false), 2000)
-      setPrevCount(notificationCount)
-      return () => clearTimeout(timer)
-    } else {
-      setPrevCount(notificationCount)
-    }
-  }, [notificationCount])
-
-  useEffect(() => {
-    let active = true
-
-    if (session?.user?.email && role === 'student') {
-      const email = session.user.email
-      fetchNotificationCount(email)
-
-      const channel = supabase
-        .channel('pending_credentials_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'pending_credentials',
-            filter: `recipient_email=eq.${email.toLowerCase()}`
-          },
-          () => {
-            if (active) {
-              fetchNotificationCount(email)
-            }
-          }
-        )
-        .subscribe()
-
-      return () => {
-        active = false
-        channel.unsubscribe()
-      }
-    } else {
-      setNotificationCount(0)
-      setPrevCount(0)
-    }
-  }, [session, role])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -262,24 +199,7 @@ export default function Layout() {
                 </div>
               )}
               {session?.user && role === 'student' && (
-                <button
-                  onClick={() => navigate('/app/notifications')}
-                  className="relative p-1.5 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-gray-100 transition-all focus:outline-none flex items-center justify-center cursor-pointer"
-                  aria-label="Notifications"
-                >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {notificationCount > 0 && (
-                    <span 
-                      className={`absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-sm ${
-                        shouldPulse ? 'animate-pulse' : ''
-                      }`}
-                    >
-                      {notificationCount > 9 ? '9+' : notificationCount}
-                    </span>
-                  )}
-                </button>
+                <NotificationsBell email={session.user.email} />
               )}
               <button
                 onClick={handleSignOut}
