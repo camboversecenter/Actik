@@ -14,6 +14,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import Notifications from './pages/app/Notifications'
 import InstitutionSettings from './pages/app/InstitutionSettings'
 import VerifyRegistry from './pages/public/VerifyRegistry'
+import Landing from './pages/public/Landing'
 import Activity from './pages/app/Activity'
 import WalletCategory from './pages/app/WalletCategory'
 import CredentialDetail from './pages/app/CredentialDetail'
@@ -300,7 +301,7 @@ export function RootRedirect() {
   }
 
   if (!session) {
-    return <Navigate to="/auth/login" replace />
+    return <Landing />
   }
 
   // Redirect based on user role
