@@ -138,90 +138,144 @@ export default function Layout() {
       isActive ? 'text-indigo-600' : 'text-gray-500 active:text-indigo-600'
     }`
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-      isActive
-        ? 'border-indigo-600 text-gray-900'
-        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 active:text-indigo-600'
+  // Desktop sidebar link — icon + label, same icon set as the mobile bottom
+  // nav below so the two stay visually consistent instead of drifting into
+  // two different navigation vocabularies.
+  const sidebarLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
     }`
 
+  const sidebarNav = (
+    <>
+      {role === 'student' && (
+        <>
+          <NavLink to="/app/wallet" end className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {t('nav.wallet')}
+          </NavLink>
+          <NavLink to="/app/activity" className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            {t('nav.activity')}
+          </NavLink>
+          <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {t('nav.account')}
+          </NavLink>
+        </>
+      )}
+      {role === 'issuer' && (
+        <>
+          <NavLink to="/app/dashboard" end className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011-1v5m-4 0h4" />
+            </svg>
+            {t('nav.dashboard')}
+          </NavLink>
+          <NavLink to="/app/issued" className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {t('nav.issued')}
+          </NavLink>
+          <NavLink to="/app/institution-settings" className={sidebarLinkClass}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {t('nav.settings')}
+          </NavLink>
+        </>
+      )}
+      {role === 'admin' && (
+        <NavLink to="/admin" end className={sidebarLinkClass}>
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          Manage issuers
+        </NavLink>
+      )}
+    </>
+  )
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Top navigation bar */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-14">
-            <div className="flex">
-              {/* Brand Logo & Tagline */}
-              <div className="flex flex-col justify-center mr-8">
-                <img src="/logo.png" alt="Actik" className="h-10 md:h-12 w-auto mb-0.5" />
-                <span className="text-[10px] text-gray-500 font-medium tracking-wide uppercase hidden md:inline">
-                  {t('layout.tagline')}
-                </span>
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Desktop sidebar — replaces the top nav bar at md+. Logo has no
+          tagline here (or on the mobile bar below); it only ever showed at
+          md+ and just added height without adding anything mobile didn't
+          already communicate with the logo alone. */}
+      <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-gray-200">
+        <div className="h-16 flex items-center px-5 border-b border-gray-100">
+          <img src="/logo.png" alt="Actik" className="h-9 w-auto" />
+        </div>
+        <nav className="flex-1 flex flex-col gap-1 px-3 py-4 overflow-y-auto">
+          {sidebarNav}
+        </nav>
+        {session?.user && (
+          <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-gray-700 font-medium truncate">{session.user.email}</p>
+                <div className="mt-1">{renderRoleBadge()}</div>
               </div>
-
-              {/* Navigation Links based on role */}
-              <div className="hidden md:flex md:space-x-8">
-                {role === 'issuer' && (
-                  <NavLink to="/app/dashboard" className={linkClass}>
-                    {t('layout.institution_dashboard')}
-                  </NavLink>
-                )}
-                {role === 'student' && (
-                  <>
-                    <NavLink to="/app/wallet" end className={linkClass}>
-                      {t('nav.wallet')}
-                    </NavLink>
-                    <NavLink to="/app/activity" className={linkClass}>
-                      {t('nav.activity')}
-                    </NavLink>
-                  </>
-                )}
-                {role === 'admin' && (
-                  <NavLink to="/admin" end className={linkClass}>
-                    Manage issuers
-                  </NavLink>
-                )}
-              </div>
+              {role === 'student' && <NotificationsBell email={session.user.email} dropDirection="up" align="left" />}
             </div>
+            <button
+              onClick={handleSignOut}
+              className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors rounded-lg h-9 cursor-pointer"
+            >
+              {t('layout.sign_out')}
+            </button>
+          </div>
+        )}
+      </aside>
 
-            {/* Right side user info & Sign out */}
-            <div className="flex items-center space-x-4 md:space-x-6">
-              {session?.user && (
-                <div className="text-right flex-col items-end hidden md:flex">
-                  <span className="text-xs text-gray-700 font-medium">{session.user.email}</span>
-                  <div className="mt-0.5">{renderRoleBadge()}</div>
-                </div>
-              )}
-              {session?.user && (
-                <div className="md:hidden flex items-center">
-                  {renderRoleBadge()}
-                </div>
-              )}
-              {session?.user && role === 'student' && (
-                <NotificationsBell email={session.user.email} />
-              )}
-              <button
-                onClick={handleSignOut}
-                className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors p-2 md:p-0"
-                aria-label="Sign out"
-              >
-                <span className="hidden md:inline">{t('layout.sign_out')}</span>
-                <span className="inline md:hidden">
+      {/* Right column: mobile top bar + page content + footer */}
+      <div className="flex-1 flex flex-col min-w-0 md:pl-60">
+        {/* Top bar — mobile only; desktop uses the sidebar above instead */}
+        <nav className="md:hidden bg-white border-b border-gray-200 shadow-sm">
+          <div className="px-4 sm:px-6">
+            <div className="flex justify-between items-center h-14">
+              <img src="/logo.png" alt="Actik" className="h-10 w-auto" />
+              <div className="flex items-center space-x-4">
+                {session?.user && renderRoleBadge()}
+                {session?.user && role === 'student' && (
+                  <NotificationsBell email={session.user.email} variant="modal" />
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className="inline-flex items-center text-sm font-semibold text-indigo-600 p-2"
+                  aria-label="Sign out"
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013-3v1" />
                   </svg>
-                </span>
-              </button>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
-        <Outlet />
-      </main>
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
+          <Outlet />
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 no-print pb-20 md:pb-0">
+          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
+            <p className="text-xs text-gray-500">
+              Actik MVP — Digital proof of ownership, starting with certificates, backed by W3C VC and SD-JWT
+            </p>
+          </div>
+        </footer>
+      </div>
 
       {/* Bottom navigation bar (mobile only) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(64px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white border-t border-gray-200 flex items-center justify-around z-50 shadow-lg">
@@ -281,15 +335,6 @@ export default function Layout() {
           </>
         )}
       </div>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 no-print pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-xs text-gray-500">
-            Actik MVP — Digital proof of ownership, starting with certificates, backed by W3C VC and SD-JWT
-          </p>
-        </div>
-      </footer>
     </div>
   )
 }
