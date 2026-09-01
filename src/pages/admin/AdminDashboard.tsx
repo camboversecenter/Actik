@@ -473,7 +473,7 @@ export default function AdminDashboard() {
       )
     } else if (issuer.revoked_at !== null) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
           <span>✕</span> REVOKED
         </span>
       )

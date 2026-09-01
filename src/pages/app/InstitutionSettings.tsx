@@ -213,8 +213,8 @@ export default function InstitutionSettings() {
       return {
         label: t('settings.accreditation_revoked'),
         desc: `${t('settings.accreditation_revoked_on')} ${new Date(issuer.revoked_at).toLocaleDateString()}`,
-        badgeStyle: 'bg-red-50 text-red-700 border-red-200',
-        icon: <ShieldAlert size={20} className="text-red-500" />
+        badgeStyle: 'bg-rose-50 text-rose-700 border-rose-200',
+        icon: <ShieldAlert size={20} className="text-rose-500" />
       }
     }
 
@@ -255,11 +255,11 @@ export default function InstitutionSettings() {
       )}
 
       {loadError && !loading && (
-        <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 text-center shadow-sm">
-          <h3 className="font-semibold text-red-900 text-lg mb-2">{t('settings.status_failed')}</h3>
-          <p className="text-sm text-red-700 mb-4">{t('settings.status_error')}</p>
+        <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-6 text-center shadow-sm">
+          <h3 className="font-semibold text-rose-900 text-lg mb-2">{t('settings.status_failed')}</h3>
+          <p className="text-sm text-rose-700 mb-4">{t('settings.status_error')}</p>
           <button 
-            className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" 
+            className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" 
             onClick={() => fetchIssuerProfile(currentUser)}
           >
             {t('settings.retry_btn')}
@@ -431,14 +431,14 @@ export default function InstitutionSettings() {
               institution is accredited (there's no meaningful "in production"
               key to rotate before that). */}
           {issuer.accredited && (
-            <div className="border border-red-200 rounded-xl overflow-hidden">
+            <div className="border border-rose-200 rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowRegenerateConfirm(!showRegenerateConfirm)}
-                className="w-full px-6 py-4 flex justify-between items-center bg-red-50 border-none cursor-pointer text-left"
+                className="w-full px-6 py-4 flex justify-between items-center bg-rose-50 border-none cursor-pointer text-left"
               >
-                <span className="text-sm font-bold text-red-700">Danger zone: Regenerate signing key</span>
-                <span className="text-red-400">{showRegenerateConfirm ? '▲' : '▼'}</span>
+                <span className="text-sm font-bold text-rose-700">Danger zone: Regenerate signing key</span>
+                <span className="text-rose-400">{showRegenerateConfirm ? '▲' : '▼'}</span>
               </button>
 
               {showRegenerateConfirm && (
@@ -465,12 +465,12 @@ export default function InstitutionSettings() {
                       onChange={(e) => setRegeneratePin(e.target.value)}
                       placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
                       autoComplete="new-password"
-                      className="mt-1 block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 bg-white text-stone-900"
+                      className="mt-1 block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white text-stone-900"
                     />
                   </div>
 
                   {regenerateError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-semibold">
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 font-semibold">
                       {regenerateError}
                     </div>
                   )}
@@ -478,7 +478,7 @@ export default function InstitutionSettings() {
                   <button
                     onClick={handleDangerRegenerate}
                     disabled={!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN || isRegenerating}
-                    className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isRegenerating && (
                       <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">

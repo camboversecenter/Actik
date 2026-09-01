@@ -278,7 +278,7 @@ export default function RegisterIssuer() {
                 {t('dashboard.issue_credential')}
               </button>
             ) : (
-              <p className="text-xs text-red-600 font-semibold italic">
+              <p className="text-xs text-rose-600 font-semibold italic">
                 {t('dashboard.cannot_issue_until_approved')}
               </p>
             )}
@@ -380,7 +380,7 @@ export default function RegisterIssuer() {
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
             />
             {errors.name && (
-              <p className="text-red-600 text-xs mt-1 font-semibold">{errors.name}</p>
+              <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.name}</p>
             )}
           </div>
 
@@ -399,7 +399,7 @@ export default function RegisterIssuer() {
               {t('dashboard.domain_help')}
             </p>
             {errors.domain && (
-              <p className="text-red-600 text-xs mt-1 font-semibold">{errors.domain}</p>
+              <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.domain}</p>
             )}
           </div>
 
@@ -447,7 +447,7 @@ export default function RegisterIssuer() {
               <option value="Other">Other</option>
             </select>
             {errors.type && (
-              <p className="text-red-600 text-xs mt-1 font-semibold">{errors.type}</p>
+              <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.type}</p>
             )}
           </div>
 
@@ -466,13 +466,13 @@ export default function RegisterIssuer() {
               Protects your certificate-signing key so it survives closing this tab. You&apos;ll enter this PIN each time you return, instead of regenerating a new key.
             </p>
             {errors.signingPin && (
-              <p className="text-red-600 text-xs mt-1 font-semibold">{errors.signingPin}</p>
+              <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.signingPin}</p>
             )}
           </div>
 
           {/* Submit Error */}
           {submitError && (
-            <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-medium">
+            <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 font-medium">
               {submitError}
             </div>
           )}

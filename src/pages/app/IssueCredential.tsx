@@ -463,8 +463,8 @@ export default function IssueCredential() {
   if (gateError) {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-        <div className="bg-white rounded-xl shadow-sm border border-red-300 border-l-4 p-6 md:p-8">
-          <h2 className="text-xl md:text-2xl font-bold text-red-700 mb-2">Something went wrong</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-rose-300 border-l-4 p-6 md:p-8">
+          <h2 className="text-xl md:text-2xl font-bold text-rose-700 mb-2">Something went wrong</h2>
           <p className="text-sm text-stone-500 mb-6 leading-relaxed">{gateError}</p>
           <button
             className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
@@ -697,7 +697,7 @@ export default function IssueCredential() {
           </div>
 
           {submitError && (
-            <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-medium mb-4">
+            <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 font-medium mb-4">
               {submitError}
             </div>
           )}
@@ -825,7 +825,7 @@ export default function IssueCredential() {
 
             {/* Student Email */}
             <div>
-              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.student_email_req')} <span className="text-red-500">*</span></label>
+              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.student_email_req')} <span className="text-rose-500">*</span></label>
               <div className="relative mt-1">
                 <input
                   type="email"
@@ -854,18 +854,18 @@ export default function IssueCredential() {
                 </p>
               )}
               {studentFoundStatus === 'error' && (
-                <p className="text-red-600 text-xs mt-1 font-semibold italic leading-normal">
+                <p className="text-rose-600 text-xs mt-1 font-semibold italic leading-normal">
                   {t('dashboard.student_check_error')}
                 </p>
               )}
               {errors.studentEmail && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{errors.studentEmail}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.studentEmail}</p>
               )}
             </div>
 
             {/* Full Name */}
             <div>
-              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.full_name_req')} <span className="text-red-500">*</span></label>
+              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.full_name_req')} <span className="text-rose-500">*</span></label>
               <input
                 type="text"
                 value={fullName}
@@ -874,7 +874,7 @@ export default function IssueCredential() {
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               />
               {errors.fullName && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{errors.fullName}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.fullName}</p>
               )}
             </div>
 
@@ -900,7 +900,7 @@ export default function IssueCredential() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.degree_type_req')} <span className="text-red-500">*</span></label>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.degree_type_req')} <span className="text-rose-500">*</span></label>
                     <select
                       value={degreeTitle}
                       onChange={(e) => setDegreeTitle(e.target.value)}
@@ -912,10 +912,10 @@ export default function IssueCredential() {
                       <option value="Doctorate (PhD)">Doctorate (PhD)</option>
                       <option value="Associate">Associate</option>
                     </select>
-                    {errors.degreeTitle && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.degreeTitle}</p>}
+                    {errors.degreeTitle && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.degreeTitle}</p>}
                   </div>
                   <div>
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.major_req')} <span className="text-red-500">*</span></label>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.major_req')} <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       value={major}
@@ -923,13 +923,13 @@ export default function IssueCredential() {
                       placeholder="e.g. Computer Science"
                       className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
                     />
-                    {errors.major && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.major}</p>}
+                    {errors.major && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.major}</p>}
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.student_id_req')} <span className="text-red-500">*</span></label>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.student_id_req')} <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       value={studentId}
@@ -937,22 +937,22 @@ export default function IssueCredential() {
                       placeholder="e.g. STU-2024-001"
                       className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
                     />
-                    {errors.studentId && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.studentId}</p>}
+                    {errors.studentId && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.studentId}</p>}
                   </div>
                   <div>
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.grad_date_req')} <span className="text-red-500">*</span></label>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.grad_date_req')} <span className="text-rose-500">*</span></label>
                     <input
                       type="date"
                       value={graduationDate}
                       onChange={(e) => setGraduationDate(e.target.value)}
                       className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
                     />
-                    {errors.graduationDate && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.graduationDate}</p>}
+                    {errors.graduationDate && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.graduationDate}</p>}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.cert_id_req')} <span className="text-red-500">*</span></label>
+                  <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.cert_id_req')} <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     value={certificateId}
@@ -960,7 +960,7 @@ export default function IssueCredential() {
                     placeholder="e.g. CERT-2024-12345"
                     className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
                   />
-                  {errors.certificateId && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.certificateId}</p>}
+                  {errors.certificateId && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.certificateId}</p>}
                 </div>
               </>
             )}
@@ -974,23 +974,23 @@ export default function IssueCredential() {
                     <option value="Certificate of Attendance">Certificate of Attendance</option>
                     <option value="Certificate of Participation">Certificate of Participation</option>
                   </select>
-                  {errors.subType && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
+                  {errors.subType && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
                 </div>
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.event_name_req')}</label>
                   <input type="text" value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Annual Tech Conference 2026" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.eventName && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.eventName}</p>}
+                  {errors.eventName && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.eventName}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.event_date_req')}</label>
                     <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.eventDate && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.eventDate}</p>}
+                    {errors.eventDate && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.eventDate}</p>}
                   </div>
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.organizer_req')}</label>
                     <input type="text" value={organizer} onChange={e => setOrganizer(e.target.value)} placeholder="Ministry of Education" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.organizer && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.organizer}</p>}
+                    {errors.organizer && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.organizer}</p>}
                   </div>
                 </div>
                 <div>
@@ -1009,18 +1009,18 @@ export default function IssueCredential() {
                     <option value="Certificate of Completion">Certificate of Completion</option>
                     <option value="Certificate of Internship Completion">Certificate of Internship Completion</option>
                   </select>
-                  {errors.subType && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
+                  {errors.subType && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
                 </div>
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.program_name_req')}</label>
                   <input type="text" value={programName} onChange={e => setProgramName(e.target.value)} placeholder="Advanced React Bootcamp" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.programName && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.programName}</p>}
+                  {errors.programName && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.programName}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.completion_date_req')}</label>
                     <input type="date" value={completionDate} onChange={e => setCompletionDate(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.completionDate && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.completionDate}</p>}
+                    {errors.completionDate && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.completionDate}</p>}
                   </div>
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.duration_opt')}</label>
@@ -1045,22 +1045,22 @@ export default function IssueCredential() {
                     <option value="Certificate of Merit">Certificate of Merit</option>
                     <option value="Certificate of Excellence">Certificate of Excellence</option>
                   </select>
-                  {errors.subType && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
+                  {errors.subType && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.subType}</p>}
                 </div>
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.achievement_title_req')}</label>
                   <input type="text" value={achievementTitle} onChange={e => setAchievementTitle(e.target.value)} placeholder="Top Student of the Year" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.achievementTitle && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.achievementTitle}</p>}
+                  {errors.achievementTitle && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.achievementTitle}</p>}
                 </div>
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.basis_desc_req')}</label>
                   <textarea value={basisDescription} onChange={e => setBasisDescription(e.target.value)} placeholder="Achieved the highest overall score in the graduating class." rows={2} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900 resize-vertical min-h-[60px]" />
-                  {errors.basisDescription && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.basisDescription}</p>}
+                  {errors.basisDescription && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.basisDescription}</p>}
                 </div>
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.date_awarded_req')}</label>
                   <input type="date" value={dateAwarded} onChange={e => setDateAwarded(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.dateAwarded && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.dateAwarded}</p>}
+                  {errors.dateAwarded && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.dateAwarded}</p>}
                 </div>
               </>
             )}
@@ -1070,13 +1070,13 @@ export default function IssueCredential() {
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.reason_req')}</label>
                   <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="Outstanding contribution to the community outreach program" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.reason && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.reason}</p>}
+                  {errors.reason && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.reason}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.date_req')}</label>
                     <input type="date" value={appreciationDate} onChange={e => setAppreciationDate(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.appreciationDate && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.appreciationDate}</p>}
+                    {errors.appreciationDate && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.appreciationDate}</p>}
                   </div>
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.capacity_opt')}</label>
@@ -1091,13 +1091,13 @@ export default function IssueCredential() {
                 <div>
                   <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.cert_name_req')}</label>
                   <input type="text" value={certName} onChange={e => setCertName(e.target.value)} placeholder="Certified Cloud Architect" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                  {errors.certName && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.certName}</p>}
+                  {errors.certName && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.certName}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.issuing_body_req')}</label>
                     <input type="text" value={issuingBody} onChange={e => setIssuingBody(e.target.value)} placeholder="Cloud Services Inc." className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.issuingBody && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.issuingBody}</p>}
+                    {errors.issuingBody && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.issuingBody}</p>}
                   </div>
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.license_num_opt')}</label>
@@ -1108,7 +1108,7 @@ export default function IssueCredential() {
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.date_certified_req')}</label>
                     <input type="date" value={dateCertified} onChange={e => setDateCertified(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
-                    {errors.dateCertified && <p className="text-red-600 text-xs mt-1 font-semibold">{errors.dateCertified}</p>}
+                    {errors.dateCertified && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.dateCertified}</p>}
                   </div>
                   <div>
                     <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.expiry_date_opt')}</label>
@@ -1135,7 +1135,7 @@ export default function IssueCredential() {
             {/* Certificate Document Upload */}
             <div>
               <label className="text-xs md:text-sm font-bold text-gray-700 block">
-                {t('dashboard.cert_doc_req')} {selectedType === 'academic_degree' ? <span className="text-red-500">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
+                {t('dashboard.cert_doc_req')} {selectedType === 'academic_degree' ? <span className="text-rose-500">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
               </label>
               <p className="text-[11px] text-gray-500 mt-0.5 mb-2">
                 {t('dashboard.cert_doc_desc')}
@@ -1151,7 +1151,7 @@ export default function IssueCredential() {
                   <div className="w-full space-y-2">
                     {photoDataUrl.startsWith('data:application/pdf') ? (
                       <div className="flex items-center gap-2 text-indigo-700 font-semibold text-sm">
-                        <svg className="w-6 h-6 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <svg className="w-6 h-6 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                         {photoFileName}
@@ -1203,16 +1203,16 @@ export default function IssueCredential() {
               </label>
 
               {photoError && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{photoError}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{photoError}</p>
               )}
               {errors.photo && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{errors.photo}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.photo}</p>
               )}
               {photoDataUrl && (
                 <button
                   type="button"
                   onClick={() => { setPhotoDataUrl(null); setPhotoFileName('') }}
-                  className="mt-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                  className="mt-1.5 text-xs text-gray-400 hover:text-rose-500 transition-colors"
                 >
                   {t('dashboard.remove_document')}
                 </button>
@@ -1221,7 +1221,7 @@ export default function IssueCredential() {
 
             {/* Submit Error */}
             {submitError && (
-              <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-medium">
+              <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 font-medium">
                 {submitError}
               </div>
             )}
