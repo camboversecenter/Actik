@@ -20,7 +20,7 @@ function scorePasscode(pc: string): { label: string; pct: number; tone: string }
   if (/\d/.test(pc)) score++;
   if (/[^A-Za-z0-9]/.test(pc)) score++;
   const pct = Math.min(100, (score / 5) * 100);
-  if (score <= 1) return { label: 'Weak', pct, tone: 'bg-red-400' };
+  if (score <= 1) return { label: 'Weak', pct, tone: 'bg-rose-400' };
   if (score <= 3) return { label: 'Fair', pct, tone: 'bg-amber-400' };
   return { label: 'Strong', pct, tone: 'bg-green-500' };
 }
@@ -112,7 +112,7 @@ export default function VaultSetup({ userId, userEmail, onSuccess }: VaultSetupP
         )}
 
         {error && (
-          <p className="text-xs text-red-500 font-bold uppercase tracking-wider text-center">
+          <p className="text-xs text-rose-500 font-bold uppercase tracking-wider text-center">
             {error}
           </p>
         )}

@@ -224,11 +224,11 @@ export default function Activity() {
           <p className="mt-4 text-gray-500 font-medium">{t('wallet.loading_activity')}</p>
         </div>
       ) : loadError ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600 font-medium mb-2">{t('wallet.failed_load_activity')}</p>
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-center">
+          <p className="text-rose-600 font-medium mb-2">{t('wallet.failed_load_activity')}</p>
           <button 
             onClick={() => currentUser && loadShares(currentUser.id)}
-            className="text-sm bg-white text-red-600 px-4 py-2 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            className="text-sm bg-white text-rose-600 px-4 py-2 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors"
           >
             {t('wallet.try_again')}
           </button>
@@ -298,7 +298,7 @@ export default function Activity() {
                       </span>
                     )}
                     {isRevoked && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                         {t('wallet.status_revoked')}
                       </span>
                     )}
@@ -329,7 +329,7 @@ export default function Activity() {
                           setShowRevokeConfirmId(share.id)
                           setShowExtendId(null)
                         }}
-                        className="text-red-600 font-medium hover:text-red-800 hover:underline transition-colors focus:outline-none"
+                        className="text-rose-600 font-medium hover:text-rose-800 hover:underline transition-colors focus:outline-none"
                       >
                         {t('wallet.revoke_btn')}
                       </button>
@@ -339,8 +339,8 @@ export default function Activity() {
                 
                 {/* Inline Confirmation for Revoke */}
                 {showRevokeConfirmId === share.id && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-                    <span className="text-red-800 font-medium">{t('wallet.revoke_confirm_msg')}</span>
+                  <div className="mt-3 p-3 bg-rose-50 border border-rose-100 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+                    <span className="text-rose-800 font-medium">{t('wallet.revoke_confirm_msg')}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowRevokeConfirmId(null)}
@@ -352,7 +352,7 @@ export default function Activity() {
                       <button
                         onClick={() => handleRevokeShare(share.id)}
                         disabled={revokingShareId === share.id}
-                        className="flex items-center justify-center min-w-[70px] px-3 py-1.5 bg-red-600 text-white font-medium rounded hover:bg-red-700 transition-colors focus:outline-none disabled:opacity-50"
+                        className="flex items-center justify-center min-w-[70px] px-3 py-1.5 bg-rose-600 text-white font-medium rounded hover:bg-rose-700 transition-colors focus:outline-none disabled:opacity-50"
                       >
                         {revokingShareId === share.id ? (
                           <div style={{ animation: 'spin 1s linear infinite', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>

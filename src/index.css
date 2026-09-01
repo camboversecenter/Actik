@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens — several older components (Auth.tsx, ShareCredential.tsx,
+   VaultSetup.tsx, and the various loading-spinner blocks) reference these
+   custom properties but no :root definition ever shipped, so they were
+   silently resolving to nothing. Values below are the resolved Actik
+   design system: Deep Blue #097bb7 as the primary accent (superseding an
+   earlier, never-fully-wired forest-green direction), Tailwind's stone
+   scale for neutrals, and rose/emerald/amber for danger/success/warning. */
+:root {
+  --forest: #097bb7;       /* primary brand accent — wordmark, active spinner arc, accent headings */
+  --forest-soft: #b1dff0;  /* light tint of the accent — spinner track */
+  --ink: #1c1917;          /* primary body text (stone-900) */
+  --muted: #78716c;        /* secondary/caption text (stone-500) */
+  --paper: #f5f5f4;        /* subtle off-white hover/background fill (stone-100) */
+  --surface: #ffffff;      /* card / button resting surface */
+  --line: #e7e5e4;         /* border color (stone-200) */
+  --shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 2px 6px rgba(28, 25, 23, 0.06);
+  --ok: #059669;           /* success (emerald-600) */
+  --danger: #e11d48;       /* danger / error (rose-600) */
+  --gold: #d97706;         /* warning / pending (amber-600) */
+}
+
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;

@@ -233,7 +233,7 @@ export default function GoogleAuth() {
 
         {/* Error message */}
         {errorMsg && (
-          <p className="text-sm text-red-600 mt-4 font-medium">
+          <p className="text-sm text-rose-600 mt-4 font-medium">
             {errorMsg}
           </p>
         )}
@@ -472,8 +472,8 @@ export function GoogleCallback() {
             Completing sign in...
           </p>
           {debugError && (
-            <div className="mt-6 p-4 w-full bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-mono text-left whitespace-pre-wrap shadow-sm">
-              <strong className="block text-red-800 mb-1">Callback Debug Info:</strong>
+            <div className="mt-6 p-4 w-full bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-mono text-left whitespace-pre-wrap shadow-sm">
+              <strong className="block text-rose-800 mb-1">Callback Debug Info:</strong>
               {debugError}
             </div>
           )}
@@ -540,7 +540,7 @@ export function GoogleCallback() {
 
               {/* Error Message */}
               {saveError && (
-                <p className="text-sm text-red-600 mb-4 font-medium">
+                <p className="text-sm text-rose-600 mb-4 font-medium">
                   {saveError}
                 </p>
               )}

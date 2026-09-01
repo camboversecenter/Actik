@@ -292,7 +292,7 @@ export default function IssuerDashboard() {
                 className="block w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               />
               {regErrors.name && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{regErrors.name}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.name}</p>
               )}
             </div>
 
@@ -312,7 +312,7 @@ export default function IssuerDashboard() {
                 {t('dashboard.domain_desc')}
               </p>
               {regErrors.domain && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{regErrors.domain}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.domain}</p>
               )}
             </div>
 
@@ -332,7 +332,7 @@ export default function IssuerDashboard() {
                 <option value="Other">{t('dashboard.other')}</option>
               </select>
               {regErrors.type && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{regErrors.type}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.type}</p>
               )}
             </div>
 
@@ -352,12 +352,12 @@ export default function IssuerDashboard() {
                 Protects your certificate-signing key so it survives closing this tab.
               </p>
               {regErrors.signingPin && (
-                <p className="text-red-600 text-xs mt-1 font-semibold">{regErrors.signingPin}</p>
+                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.signingPin}</p>
               )}
             </div>
 
             {regSubmitError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-lg p-3">
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg p-3">
                 {regSubmitError}
               </div>
             )}

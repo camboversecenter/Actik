@@ -161,7 +161,7 @@ export default function InstitutionDetailModal({
                     </span>
                   )}
                   {isRevoked && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                       ❌ REVOKED
                     </span>
                   )}

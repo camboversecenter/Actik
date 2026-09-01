@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
+import CredentialCard from '../../components/CredentialCard'
+import PinDotsInput from '../../components/PinDotsInput'
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -267,12 +269,6 @@ export default function WalletCategory() {
     }
   }, [isUnlocked, pendingNavCredId, navigate])
 
-  const truncateDid = (did: string) => {
-    if (!did) return 'Unknown'
-    if (did.length <= 32) return did
-    return did.slice(0, 32) + '...'
-  }
-
   return (
     <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
       <style>{spinStyles}</style>
@@ -319,50 +315,17 @@ export default function WalletCategory() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {credentials.map((c) => {
-                return (
-                  <div 
-                    key={c.id}
-                    onClick={() => handleViewDetailsClick(c.id)}
-                    className="border-l-4 border-indigo-600 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white rounded-xl border border-gray-200 cursor-pointer"
-                  >
-                    <div className="p-4 md:p-6">
-                      <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
-                        <div>
-                          <strong className="text-base text-gray-900 block font-bold leading-snug">
-                            {c.institution_name ? `${c.institution_name} — ` : ''}{c.degree_title}
-                          </strong>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {c.institution_name || 'Encrypted Certificate'}
-                          </div>
-                        </div>
-                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 shrink-0">{t('wallet.verified')}</span>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-xs text-gray-500">
-                        <div>
-                          <span>{t('wallet.issued_by')}</span>
-                          <code className="font-mono text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded text-[10px] break-all">
-                            {c.issuer_did ? truncateDid(c.issuer_did) : 'did:web:...'}
-                          </code>
-                        </div>
-                        <div className="flex gap-4">
-                          <div>
-                            <span>{t('wallet.year')}</span>
-                            <strong className="text-gray-950">
-                              {c.graduation_date ? new Date(c.graduation_date).getFullYear().toString() : '—'}
-                            </strong>
-                          </div>
-                          <div>
-                            <span>{t('wallet.issued_on')}</span>
-                            <strong className="text-gray-950">{new Date(c.created_at).toLocaleDateString()}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {credentials.map((c) => (
+                <CredentialCard
+                  key={c.id}
+                  degreeTitle={c.degree_title}
+                  institutionName={c.institution_name}
+                  issuerDid={c.issuer_did}
+                  graduationDate={c.graduation_date}
+                  createdAt={c.created_at}
+                  onClick={() => handleViewDetailsClick(c.id)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -370,8 +333,8 @@ export default function WalletCategory() {
 
       {/* UNLOCK MODAL */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🔒</div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
@@ -379,17 +342,15 @@ export default function WalletCategory() {
             {/* Logic based on unlock method */}
             {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
               <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  name="vault-pin"
+                <PinDotsInput
                   value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="••••"
+                  onChange={setPinInput}
+                  name="vault-pin"
+                  autoComplete="current-password"
+                  autoFocus
                   required
-                  className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
+                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
                 <button type="submit" disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
                   {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
                 </button>
@@ -405,7 +366,7 @@ export default function WalletCategory() {
             )}
             {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
               <div className="flex flex-col gap-3 items-center text-center">
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
+                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
                 <button type="button" onClick={handleUnlockWithPasskeyClick} disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
                   {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_passkey')}
                 </button>

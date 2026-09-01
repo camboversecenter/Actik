@@ -119,7 +119,7 @@ export default function VaultSettings({ userId, userEmail }: VaultSettingsProps)
           className={`p-4 rounded-xl text-sm font-bold ${
             message.type === 'success'
               ? 'bg-green-50 text-green-700'
-              : 'bg-red-50 text-red-700'
+              : 'bg-rose-50 text-rose-700'
           }`}
         >
           {message.text}

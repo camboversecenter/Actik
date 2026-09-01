@@ -239,10 +239,10 @@ export default function ShareChecklist({
       </div>
 
       {/* Warning Box */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+      <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+        <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={18} />
         <div className="space-y-2">
-          <p className="text-xs text-red-800 leading-relaxed font-semibold">
+          <p className="text-xs text-rose-800 leading-relaxed font-semibold">
             ❌ STOP: If any information is incorrect, do NOT share. Contact your issuer to update your credential.
           </p>
           <div className="flex items-center gap-1 text-[11px] text-stone-500 font-medium">

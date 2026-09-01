@@ -184,7 +184,7 @@ export default function VaultUnlock({ userId, onSuccess }: VaultUnlockProps) {
           </div>
 
           {error && (
-            <div className="flex items-center justify-center gap-1.5 text-red-500">
+            <div className="flex items-center justify-center gap-1.5 text-rose-500">
               <AlertCircle size={14} />
               <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
             </div>

@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
+import CredentialCard from '../../components/CredentialCard'
+import PinDotsInput from '../../components/PinDotsInput'
 
 
 
@@ -291,13 +293,6 @@ export default function Wallet() {
 
 
 
-  // Truncate helper
-  const truncateDid = (did: string) => {
-    if (!did) return 'Unknown'
-    if (did.length <= 32) return did
-    return did.slice(0, 32) + '...'
-  }
-
   return (
     <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
       <style>{spinStyles}</style>
@@ -422,57 +417,33 @@ export default function Wallet() {
                             </button>
                           )}
                         </div>
-                        <div className="flex flex-row gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-                          {displayCreds.map((c) => {
-                            return (
-                    <div 
-                      key={c.id}
-                      onClick={() => handleCardClick(c.id)}
-                      className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start border-l-4 border-indigo-600 overflow-hidden shadow-sm bg-white rounded-xl border border-gray-200 cursor-pointer"
-                    >
-                      {/* Card Content Wrapper */}
-                      <div className="p-4 md:p-6 flex justify-between items-center">
-                        <div className="w-full">
-                          {/* Top row */}
-                          <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
-                            <div>
-                              <strong className="text-base text-gray-900 block font-bold leading-snug">
-                                {c.institution_name ? `${c.institution_name} — ` : ''}{c.degree_title}
-                              </strong>
-                              <div className="text-xs text-gray-500 mt-0.5">
-                                {c.institution_name || 'Encrypted Certificate'}
-                              </div>
-                            </div>
-                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200 shrink-0">{t('wallet.verified')}</span>
+                        {displayCreds.length === 1 ? (
+                          // A single credential shouldn't sit in a scroll container —
+                          // there's nothing to scroll to, so it just looked clipped.
+                          <CredentialCard
+                            degreeTitle={displayCreds[0].degree_title}
+                            institutionName={displayCreds[0].institution_name}
+                            issuerDid={displayCreds[0].issuer_did}
+                            graduationDate={displayCreds[0].graduation_date}
+                            createdAt={displayCreds[0].created_at}
+                            onClick={() => handleCardClick(displayCreds[0].id)}
+                          />
+                        ) : (
+                          <div className="flex flex-row gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+                            {displayCreds.map((c) => (
+                              <CredentialCard
+                                key={c.id}
+                                degreeTitle={c.degree_title}
+                                institutionName={c.institution_name}
+                                issuerDid={c.issuer_did}
+                                graduationDate={c.graduation_date}
+                                createdAt={c.created_at}
+                                onClick={() => handleCardClick(c.id)}
+                                className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start"
+                              />
+                            ))}
                           </div>
-
-                          {/* Bottom row */}
-                          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-xs text-gray-500">
-                            <div>
-                              <span>{t('wallet.issued_by')}</span>
-                              <code className="font-mono text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded text-[10px] break-all">
-                                {c.issuer_did ? truncateDid(c.issuer_did) : 'did:web:...'}
-                              </code>
-                            </div>
-                            <div className="flex gap-4">
-                              <div>
-                                <span>{t('wallet.year')}</span>
-                                <strong className="text-gray-950">
-                                  {c.graduation_date ? new Date(c.graduation_date).getFullYear().toString() : '—'}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>{t('wallet.issued_on')}</span>
-                                <strong className="text-gray-950">{new Date(c.created_at).toLocaleDateString()}</strong>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-                        </div>
+                        )}
                       </div>
                     )
                   })}
@@ -487,8 +458,8 @@ export default function Wallet() {
           MODAL 1: UNLOCK VAULT DIALOG
          ======================================================= */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🔒</div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
@@ -501,20 +472,18 @@ export default function Wallet() {
               <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5 mb-2">
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {unlockError && (
-                  <p className="text-red-600 text-xs text-center font-semibold mb-2">
+                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
                     {unlockError}
                   </p>
                 )}
@@ -560,7 +529,7 @@ export default function Wallet() {
                 ) : (
                   <>
                     {unlockError && (
-                      <p className="text-red-600 text-xs font-semibold mb-1">
+                      <p className="text-rose-600 text-xs font-semibold mb-1">
                         {unlockError}
                       </p>
                     )}
@@ -594,20 +563,18 @@ export default function Wallet() {
               <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5 mb-2">
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {unlockError && (
-                  <p className="text-red-600 text-xs text-center font-semibold mb-2">
+                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
                     {unlockError}
                   </p>
                 )}
@@ -654,8 +621,8 @@ export default function Wallet() {
           MODAL 2: SETUP NEEDED DIALOG
          ======================================================= */}
       {showSetupNeededModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-6">
               <div className="text-4xl mb-2">🛡️</div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.setup_required_title')}</h3>

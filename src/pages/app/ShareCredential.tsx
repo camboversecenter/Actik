@@ -7,6 +7,7 @@ import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import { checkRateLimit } from '../../lib/rateLimit'
 import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock } from 'lucide-react'
+import PinDotsInput from '../../components/PinDotsInput'
 
 // Note: The prompt expects: import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -1348,15 +1349,13 @@ export default function ShareCredential() {
               <form onSubmit={handleUnlockSubmit}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem', textAlign: 'left' }}>
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    style={{ textAlign: 'center', fontSize: '1.1rem', padding: '0.6rem', width: '100%' }}
                   />
                 </div>
 
@@ -1479,15 +1478,13 @@ export default function ShareCredential() {
               <form onSubmit={handleUnlockSubmit}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem', textAlign: 'left' }}>
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    style={{ textAlign: 'center', fontSize: '1.1rem', padding: '0.6rem', width: '100%' }}
                   />
                 </div>
 

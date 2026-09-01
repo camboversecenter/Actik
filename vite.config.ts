@@ -25,8 +25,8 @@ export default defineConfig({
         name: 'Actik — Digital Proof of Ownership',
         short_name: 'Actik',
         description: 'Proof of ownership — starting with verifiable certificates.',
-        theme_color: '#1b3a2f',
-        background_color: '#f6f3ec',
+        theme_color: '#097bb7',
+        background_color: '#fafaf9',
         display: 'standalone',
         start_url: '/',
         icons: [

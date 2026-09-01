@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox } from 'lucide-react'
+import PinDotsInput from '../../components/PinDotsInput'
 
 interface PendingCredential {
   id: string
@@ -339,10 +340,10 @@ export default function Notifications() {
       )}
 
       {loadError && !loading && (
-        <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 text-center shadow-sm">
-          <h3 className="font-semibold text-red-900 text-lg mb-2">{t('wallet.failed_load_notifications')}</h3>
-          <p className="text-sm text-red-700 mb-4">{t('wallet.refresh_to_try_again')}</p>
-          <button className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" onClick={() => loadPending(currentUser)}>
+        <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-6 text-center shadow-sm">
+          <h3 className="font-semibold text-rose-900 text-lg mb-2">{t('wallet.failed_load_notifications')}</h3>
+          <p className="text-sm text-rose-700 mb-4">{t('wallet.refresh_to_try_again')}</p>
+          <button className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" onClick={() => loadPending(currentUser)}>
             {t('wallet.retry_btn')}
           </button>
         </div>
@@ -393,7 +394,7 @@ export default function Notifications() {
                   </div>
 
                   {claimErrors[c.id] && (
-                    <div className="w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded p-2.5 mt-2">
+                    <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded p-2.5 mt-2">
                       {t('wallet.claim_failed_msg')}{claimErrors[c.id]}
                     </div>
                   )}
@@ -408,8 +409,8 @@ export default function Notifications() {
           MODAL 1: UNLOCK VAULT DIALOG
          ======================================================= */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🔒</div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
@@ -422,20 +423,18 @@ export default function Notifications() {
               <form onSubmit={handleUnlockAndClaimSubmit} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5 mb-2">
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_vault_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {unlockError && (
-                  <p className="text-red-600 text-xs text-center font-semibold mb-2">
+                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
                     {unlockError}
                   </p>
                 )}
@@ -476,7 +475,7 @@ export default function Notifications() {
                 </div>
 
                 {unlockError && (
-                  <p className="text-red-600 text-xs text-center font-semibold mb-2">
+                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
                     {unlockError}
                   </p>
                 )}
@@ -513,20 +512,18 @@ export default function Notifications() {
               <form onSubmit={handleUnlockAndClaimSubmit} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5 mb-2">
                   <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_vault_pin')}</label>
-                  <input
-                    type="password"
-                    autoComplete="current-password"
-                    name="vault-pin"
+                  <PinDotsInput
                     value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    placeholder="••••"
+                    onChange={setPinInput}
+                    name="vault-pin"
+                    autoComplete="current-password"
+                    autoFocus
                     required
-                    className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {unlockError && (
-                  <p className="text-red-600 text-xs text-center font-semibold mb-2">
+                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
                     {unlockError}
                   </p>
                 )}
@@ -574,8 +571,8 @@ export default function Notifications() {
           MODAL 2: VAULT SETUP NEEDED DIALOG
          ======================================================= */}
       {showSetupNeededModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in text-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in text-center">
             <div className="text-4xl mb-2">⚙️</div>
             <h3 className="text-lg font-bold text-stone-900">{t('wallet.vault_setup_required_title')}</h3>
             <p className="text-xs text-stone-500 mt-2 mb-6 leading-relaxed">
