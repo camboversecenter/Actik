@@ -20,8 +20,9 @@ const translations = {
       install_app: 'Install app'
     },
     wallet: {
-      title: 'My wallet',
+      title: 'My credential wallet',
       subtitle: 'Your digital credentials, encrypted and controlled by you',
+      subtitle_count: 'My credentials · {count} held',
       vault_not_setup: 'Vault not set up (Setup)',
       vault_locked: 'Vault locked',
       vault_unlocked: 'Vault unlocked',
@@ -36,6 +37,7 @@ const translations = {
       category_academic_degree: 'Academic Degrees',
       category_other: 'Other',
       see_all: 'See all ({count})',
+      all_count: 'All {count}',
       verified: '✓ Verified',
       verified_label: 'Verified',
       encrypted_certificate_fallback: 'Encrypted certificate',
@@ -583,8 +585,9 @@ const translations = {
       install_app: 'ដំឡើងកម្មវិធី' // TODO(km-review)
     },
     wallet: {
-      title: 'កាបូបរបស់ខ្ញុំ',
+      title: 'កាបូបលិខិតរបស់ខ្ញុំ',
       subtitle: 'វិញ្ញាបនបត្រឌីជីថលរបស់អ្នក ដែលត្រូវបានអ៊ិនគ្រីប និងគ្រប់គ្រងដោយអ្នកផ្ទាល់',
+      subtitle_count: 'លិខិតរបស់ខ្ញុំ · កាន់កាប់ {count}', // TODO(km-review)
       vault_not_setup: 'មិនទាន់បានរៀបចំកាបូប (រៀបចំ)',
       vault_locked: 'កាបូបបានចាក់សោ',
       vault_unlocked: 'កាបូបបានបើកសោ',
@@ -599,6 +602,7 @@ const translations = {
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
+      all_count: 'ទាំងអស់ {count}',
       verified: '✓ បានផ្ទៀងផ្ទាត់',
       verified_label: 'បានផ្ទៀងផ្ទាត់', // TODO(km-review)
       encrypted_certificate_fallback: 'លិខិតបញ្ជាក់ដែលបានគ្រីប', // TODO(km-review)

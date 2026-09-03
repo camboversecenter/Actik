@@ -41,7 +41,7 @@ export default function Wallet() {
     unlockWithPasskey,
     lock,
   } = useZkVault()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // Vault setup state
   const [vaultExists, setVaultExists] = useState<boolean | null>(null)
@@ -315,7 +315,7 @@ export default function Wallet() {
       <div className="mb-4">
         <h2 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">{t('wallet.title')}</h2>
         <p className="text-sm text-stone-500 mt-1">
-          {t('wallet.subtitle')}
+          {t('wallet.subtitle_count', { count: claimedCredentials.length })}
         </p>
       </div>
 
@@ -370,15 +370,6 @@ export default function Wallet() {
               SECTION B: CLAIMED CREDENTIALS
              ======================================================= */}
           <div>
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-stone-900">
-                {t('wallet.encrypted_title')}
-              </h3>
-              <p className="text-sm text-stone-500 mt-1">
-                {t('wallet.encrypted_desc')}
-              </p>
-            </div>
-
             {/* Empty State */}
             {claimedCredentials.length === 0 && (
               <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-8 md:p-12 text-center">
@@ -429,51 +420,50 @@ export default function Wallet() {
                     
                     const isOther = type === 'other';
                     const displayLabel = isOther ? t('wallet.category_other') : getLabel(type);
-                    const displayCreds = groupCreds.slice(0, 3);
-                    const hasMore = groupCreds.length > 3;
+                    // Mockup shows every credential in a category inline, no
+                    // cap — the "All N" link is a shortcut to the dedicated
+                    // per-category page, not a "there's more hidden" affordance.
+                    const displayCreds = groupCreds;
+
+                    // Short English caption next to the Khmer category label —
+                    // matches the mockup's "Khmer · English" pairing. Only
+                    // shown when Khmer is the active language (when English
+                    // is active, displayLabel is already English, so a
+                    // second copy of the same word would be redundant).
+                    const categoryCaption = type === 'academic_degree' ? 'Degrees' : 'Other'
 
                     return (
                       <div key={type}>
                         <div className="flex justify-between items-end mb-4 px-1">
-                          <h4 className="font-khmer text-[13px] font-semibold text-stone-600">{displayLabel}</h4>
-                          {hasMore && (
-                            <button 
+                          <h4 className="font-khmer text-[13px] font-semibold text-stone-600">
+                            {displayLabel}
+                            {language === 'km' && <span className="font-sans text-stone-400"> · {categoryCaption}</span>}
+                          </h4>
+                          {groupCreds.length > 1 && (
+                            <button
                               onClick={() => navigate(`/app/wallet/type/${type}`)}
-                              className="text-indigo-600 text-sm font-semibold hover:underline"
+                              className="text-indigo-600 text-sm font-semibold hover:underline shrink-0"
                             >
-                              {t('wallet.see_all', { count: groupCreds.length })}
+                              {t('wallet.all_count', { count: groupCreds.length })}
                             </button>
                           )}
                         </div>
-                        {displayCreds.length === 1 ? (
-                          // A single credential shouldn't sit in a scroll container —
-                          // there's nothing to scroll to, so it just looked clipped.
-                          <CredentialCard
-                            degreeTitle={displayCreds[0].degree_title}
-                            institutionName={displayCreds[0].institution_name}
-                            issuerDid={displayCreds[0].issuer_did}
-                            graduationDate={displayCreds[0].graduation_date}
-                            createdAt={displayCreds[0].created_at}
-                            onClick={() => handleCardClick(displayCreds[0].id)}
-                            shareCount={shareCounts[displayCreds[0].id]}
-                          />
-                        ) : (
-                          <div className="flex flex-row gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-                            {displayCreds.map((c) => (
-                              <CredentialCard
-                                key={c.id}
-                                degreeTitle={c.degree_title}
-                                institutionName={c.institution_name}
-                                issuerDid={c.issuer_did}
-                                graduationDate={c.graduation_date}
-                                createdAt={c.created_at}
-                                onClick={() => handleCardClick(c.id)}
-                                className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start"
-                                shareCount={shareCounts[c.id]}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        {/* Stacked full-width, matching the mockup — no horizontal
+                            slide/carousel. */}
+                        <div className="flex flex-col gap-4">
+                          {displayCreds.map((c) => (
+                            <CredentialCard
+                              key={c.id}
+                              degreeTitle={c.degree_title}
+                              institutionName={c.institution_name}
+                              issuerDid={c.issuer_did}
+                              graduationDate={c.graduation_date}
+                              createdAt={c.created_at}
+                              onClick={() => handleCardClick(c.id)}
+                              shareCount={shareCounts[c.id]}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )
                   })}
