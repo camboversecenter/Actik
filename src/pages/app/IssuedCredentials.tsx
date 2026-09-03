@@ -2,13 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useLanguage } from '../../lib/i18n'
-// Reuse spinner styles
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import { Loader2, IdCard } from 'lucide-react'
+import StatusPill from '../../components/ui/StatusPill'
 
 interface IssuedRecord {
   id: string
@@ -127,15 +122,7 @@ export default function IssuedCredentials() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-        <style>{spinStyles}</style>
-        <div style={{
-          width: 44,
-          height: 44,
-          border: '4px solid #e0e7ff',
-          borderTop: '4px solid #4f46e5',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
+        <Loader2 size={40} className="animate-spin text-indigo-600" />
       </div>
     )
   }
@@ -149,7 +136,9 @@ export default function IssuedCredentials() {
 
       {records.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-          <div className="text-4xl mb-4">📇</div>
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <IdCard size={26} className="text-indigo-500" />
+          </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.no_creds_issued')}</h3>
           <p className="text-gray-500 text-sm max-w-sm mx-auto">
             {t('dashboard.no_creds_issued_desc')}
@@ -198,9 +187,11 @@ export default function IssuedCredentials() {
                                   {c.title}
                                 </strong>
                               </div>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${isClaimed ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
-                                {isClaimed ? t('dashboard.status_claimed') : t('dashboard.status_pending')}
-                              </span>
+                              <StatusPill
+                                status={isClaimed ? 'verified' : 'pending'}
+                                label={isClaimed ? t('dashboard.status_claimed') : t('dashboard.status_pending')}
+                                className="shrink-0"
+                              />
                             </div>
 
                             {/* Bottom row */}

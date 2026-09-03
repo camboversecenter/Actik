@@ -5,6 +5,12 @@ import MoEYSIdentityCard from '../../components/admin/MoEYSIdentityCard'
 import PublicRegistryManager from '../../components/admin/PublicRegistryManager'
 import AuditLogView from '../../components/admin/AuditLogView'
 import { logApproval, logRevocation, logRejection, logInstitutionRestore } from '../../lib/auditLog'
+import {
+  ShieldCheck, ScrollText, Building2, CheckCircle2, Clock, XCircle,
+  Award, BarChart3, ClipboardList, AlertTriangle, Search, Copy,
+} from 'lucide-react'
+import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
 
 // --- TypeScript Types ---
 interface Issuer {
@@ -468,19 +474,19 @@ export default function AdminDashboard() {
     if (issuer.accredited) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span>✓</span> ACCREDITED
+          <CheckCircle2 size={12} /> ACCREDITED
         </span>
       )
     } else if (issuer.revoked_at !== null) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-          <span>✕</span> REVOKED
+          <XCircle size={12} /> REVOKED
         </span>
       )
     } else {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <span>⏳</span> PENDING
+          <Clock size={12} /> PENDING
         </span>
       )
     }
@@ -590,23 +596,20 @@ export default function AdminDashboard() {
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight">Trust Registry Management</h1>
-            <p className="text-sm text-stone-500 mt-1 font-medium">
-              Manage accredited institutions and verify trust settings on behalf of MoEYS
-            </p>
-          </div>
-          <button
-            onClick={() => setIsAuditLogOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            System Audit Log
-          </button>
-        </div>
+        <PageHeader
+          icon={ShieldCheck}
+          title="Trust Registry Management"
+          subtitle="Manage accredited institutions and verify trust settings on behalf of MoEYS"
+          actions={
+            <button
+              onClick={() => setIsAuditLogOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
+            >
+              <ScrollText size={16} />
+              System Audit Log
+            </button>
+          }
+        />
 
         {/* MoEYS Identity Section */}
         <MoEYSIdentityCard />
@@ -617,53 +620,35 @@ export default function AdminDashboard() {
           countAccredited={countAccredited} 
         />
 
-        {/* 📊 TRUST REGISTRY OVERVIEW */}
+        {/* TRUST REGISTRY OVERVIEW */}
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>📊</span> Trust Registry Overview
+            <BarChart3 size={14} /> Trust Registry Overview
           </h2>
-          
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-indigo-600">{countTotal}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Total institutions
-              </div>
-            </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-emerald-600">{countAccredited}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Accredited
-              </div>
-            </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-amber-500">{countPending}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Pending Approval
-              </div>
-            </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-purple-600">{totalCredentials}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Credentials Issued {totalStudents > 0 && `(${totalStudents} wallets)`}
-              </div>
-            </div>
+            <StatCard icon={Building2} value={countTotal} label="Total institutions" />
+            <StatCard icon={CheckCircle2} value={countAccredited} label="Accredited" tone="success" />
+            <StatCard icon={Clock} value={countPending} label="Pending approval" tone="warning" />
+            <StatCard
+              icon={Award}
+              value={totalCredentials}
+              label={`Credentials issued${totalStudents > 0 ? ` (${totalStudents} wallets)` : ''}`}
+            />
           </div>
         </section>
 
-        {/* 🏛️ INSTITUTIONS MANAGEMENT */}
+        {/* INSTITUTIONS MANAGEMENT */}
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>🏛️</span> Institutions Management
+            <Building2 size={14} /> Institutions Management
           </h2>
 
           {/* Filter and Search Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-stone-200/80 p-4 rounded-xl shadow-sm">
             {/* Search Box */}
             <div className="relative flex-1 w-full md:max-w-md">
-              <svg className="absolute left-3 top-3.5 h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-stone-400" strokeWidth={2} />
               <input
                 type="text"
                 placeholder="Search by institution name or domain..."
@@ -702,7 +687,9 @@ export default function AdminDashboard() {
           <div className="bg-white border border-stone-200 shadow-sm rounded-xl overflow-hidden">
             {filteredIssuers.length === 0 ? (
               <div className="text-center py-16 px-4">
-                <span className="text-3xl block mb-3">📋</span>
+                <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center mx-auto mb-3">
+                  <ClipboardList size={22} className="text-stone-400" />
+                </div>
                 {issuers.length === 0 ? (
                   <>
                     <h3 className="text-base font-bold text-stone-850">
@@ -759,9 +746,7 @@ export default function AdminDashboard() {
                                 title="Click to copy"
                               >
                                 {issuer.domain}
-                                <svg className="w-3.5 h-3.5 text-stone-300 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                </svg>
+                                <Copy size={14} className="text-stone-300 group-hover:text-indigo-500 transition-colors" />
                               </button>
                             </td>
                             <td className="py-4 px-4 text-xs font-medium text-stone-500">
@@ -995,8 +980,9 @@ export default function AdminDashboard() {
                   ) : confirmModal.error ? (
                     <p className="text-xs text-rose-500 font-semibold">{confirmModal.error}</p>
                   ) : (
-                    <p className="text-rose-700 font-bold bg-rose-50 border border-rose-100 rounded px-2.5 py-1.5 text-xs">
-                      ⚠️ This affects {confirmModal.credentialCount ?? 0} credentials already issued by this institution.
+                    <p className="text-rose-700 font-bold bg-rose-50 border border-rose-100 rounded px-2.5 py-1.5 text-xs flex items-center gap-1.5">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      This affects {confirmModal.credentialCount ?? 0} credentials already issued by this institution.
                     </p>
                   )}
                 </div>

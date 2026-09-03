@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
-import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
+import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle, Check, AlertTriangle, KeyRound, ShieldCheck, Ban, Settings2, Building2 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PinDotsInput from '../../components/PinDotsInput'
@@ -343,8 +343,8 @@ export default function VaultSetup() {
         <div className="space-y-6 max-w-xl mx-auto">
           {/* Status Message */}
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center shadow-sm">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 text-2xl font-bold mb-3">
-              ✓
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-3">
+              <CheckCircle size={24} />
             </div>
             <h2 className="text-lg font-bold text-stone-900">{t('account.title')}</h2>
             <p className="text-xs text-stone-500 mt-1 leading-relaxed max-w-md mx-auto">
@@ -474,7 +474,7 @@ export default function VaultSetup() {
                   step === 1 ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-emerald-500 border-emerald-500 text-white'
                 }`}
               >
-                {step > 1 ? '✓' : '1'}
+                {step > 1 ? <Check size={16} /> : '1'}
               </div>
               <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-gray-500 hidden sm:inline">{t('account.step_choose_method')}</span>
             </div>
@@ -486,7 +486,7 @@ export default function VaultSetup() {
                   step === 2 ? 'bg-indigo-600 border-indigo-600 text-white' : step > 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-200 text-gray-400'
                 }`}
               >
-                {step > 2 ? '✓' : '2'}
+                {step > 2 ? <Check size={16} /> : '2'}
               </div>
               <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-gray-500 hidden sm:inline">{t('account.step_create_vault')}</span>
             </div>
@@ -631,17 +631,21 @@ export default function VaultSetup() {
 
                 {explainOpen && (
                   <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs leading-relaxed text-gray-500 space-y-3">
-                    <p>
-                      🔑 <strong>Local Key Derivation:</strong> Your encryption key is derived directly from your PIN using the browser&apos;s WebCrypto API.
+                    <p className="flex gap-2">
+                      <KeyRound size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <span><strong>Local Key Derivation:</strong> Your encryption key is derived directly from your PIN using the browser&apos;s WebCrypto API.</span>
                     </p>
-                    <p>
-                      🚫 <strong>Zero Knowledge:</strong> The key never leaves your device. Actik servers only store the encrypted envelopes (gibberish without your device key).
+                    <p className="flex gap-2">
+                      <Ban size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <span><strong>Zero Knowledge:</strong> The key never leaves your device. Actik servers only store the encrypted envelopes (gibberish without your device key).</span>
                     </p>
-                    <p>
-                      🔒 <strong>AES-GCM 256 Encryption:</strong> We use industry-standard AES-GCM 256-bit symmetric encryption to wrap certificates.
+                    <p className="flex gap-2">
+                      <Lock size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <span><strong>AES-GCM 256 Encryption:</strong> We use industry-standard AES-GCM 256-bit symmetric encryption to wrap certificates.</span>
                     </p>
-                    <p>
-                      ⚙️ <strong>Technical stack:</strong> A PIN-derived KEK envelope secures the main Data Encryption Key (DEK).
+                    <p className="flex gap-2">
+                      <Settings2 size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <span><strong>Technical stack:</strong> A PIN-derived KEK envelope secures the main Data Encryption Key (DEK).</span>
                     </p>
                   </div>
                 )}
@@ -729,8 +733,8 @@ export default function VaultSetup() {
           {step === 3 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 text-center shadow-sm">
               
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4 text-xl">
-                ✓
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4">
+                <CheckCircle size={28} />
               </div>
 
               <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('account.vault_ready_title')}</h2>
@@ -741,21 +745,21 @@ export default function VaultSetup() {
               {/* Explainer cards */}
               <div className="flex flex-col gap-3 text-left mb-8">
                 <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
-                  <span className="text-base shrink-0">🛡️</span>
+                  <ShieldCheck size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.only_you_open')}</strong> {t('account.only_you_open_desc')}
                   </p>
                 </div>
 
                 <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
-                  <span className="text-base shrink-0">🏫</span>
+                  <Building2 size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.if_lose_access')}</strong> {t('account.if_lose_access_desc')}
                   </p>
                 </div>
 
                 <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
-                  <span className="text-base shrink-0">🔑</span>
+                  <KeyRound size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.backup_methods')}</strong> {t('account.backup_methods_desc')}
                   </p>
@@ -799,7 +803,9 @@ export default function VaultSetup() {
       {showResetModal && (
         <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[1000] p-0 md:p-4 flex-col">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in text-center">
-            <div className="text-4xl mb-2">⚠️</div>
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle size={22} className="text-rose-600" />
+            </div>
             <h3 className="text-lg font-bold text-rose-600 mb-2">{t('account.delete_vault_warning')}</h3>
             
             <p className="text-xs text-gray-500 mb-6 leading-relaxed text-left">
@@ -857,7 +863,9 @@ export default function VaultSetup() {
         <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[1000] p-0 md:p-4 flex-col">
           <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
             <div className="text-center mb-6">
-              <div className="text-4xl mb-2">⚠️</div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-2">
+                <AlertTriangle size={22} className="text-amber-600" />
+              </div>
               <h3 className="text-lg font-bold text-stone-900">{t('account.change_unlock_method_q')}</h3>
               <p className="text-xs text-stone-500 mt-2 leading-relaxed text-center">
                 {t('account.change_unlock_desc')}

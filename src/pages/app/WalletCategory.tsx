@@ -5,6 +5,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
 import PinDotsInput from '../../components/PinDotsInput'
+import { Lock } from 'lucide-react'
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -26,15 +27,6 @@ interface Credential {
   iv?: string
 }
 
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
-
-
 export default function WalletCategory() {
   const navigate = useNavigate()
   const { credentialType } = useParams<{ credentialType: string }>()
@@ -43,6 +35,8 @@ export default function WalletCategory() {
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  // credential_id -> number of shares created for it (best-effort, see Wallet.tsx)
+  const [shareCounts, setShareCounts] = useState<Record<string, number>>({})
 
   // Modals & Action States
   
@@ -156,6 +150,25 @@ export default function WalletCategory() {
 
       setCredentials(claimedList)
       setLoading(false)
+
+      if (claimedList.length > 0) {
+        try {
+          const { data: shareRows } = await supabase
+            .from('shares')
+            .select('credential_id')
+            .eq('owner', user.id)
+            .in('credential_id', claimedList.map(c => c.id))
+
+          const counts: Record<string, number> = {}
+          ;(shareRows || []).forEach((r: any) => {
+            if (!r.credential_id) return
+            counts[r.credential_id] = (counts[r.credential_id] || 0) + 1
+          })
+          setShareCounts(counts)
+        } catch {
+          // non-fatal — cards just render without a share count
+        }
+      }
     } catch (err) {
       setLoadError(true)
       setLoading(false)
@@ -271,8 +284,6 @@ export default function WalletCategory() {
 
   return (
     <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
-      <style>{spinStyles}</style>
-
       {/* Header with back button */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex flex-col gap-2">
@@ -324,6 +335,7 @@ export default function WalletCategory() {
                   graduationDate={c.graduation_date}
                   createdAt={c.created_at}
                   onClick={() => handleViewDetailsClick(c.id)}
+                  shareCount={shareCounts[c.id]}
                 />
               ))}
             </div>
@@ -336,7 +348,9 @@ export default function WalletCategory() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                <Lock size={22} className="text-indigo-600" />
+              </div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
             </div>
             {/* Logic based on unlock method */}

@@ -2,20 +2,16 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { generateIssuerKeys, didWeb } from '../../lib/did'
+import { Building2, FileSignature, Award, CheckCircle2, Clock, Eye, ArrowRight, Loader2 } from 'lucide-react'
 
 import { useLanguage } from '../../lib/i18n'
 import { useZkVault } from '../../vault/zk-vault/hooks'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
+import PageHeader from '../../components/ui/PageHeader'
+import StatCard from '../../components/ui/StatCard'
+import Banner from '../../components/ui/Banner'
 
 const MIN_PIN_LEN = 8
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
 
 interface IssuerInfo {
   id: string
@@ -49,7 +45,7 @@ export default function IssuerDashboard() {
   const [registerSuccessMsg, setRegisterSuccessMsg] = useState<string | null>(null)
 
   // Quick stats: certificates issued by this institution
-  const [stats, setStats] = useState<{ total: number; claimed: number; pending: number } | null>(null)
+  const [stats, setStats] = useState<{ total: number; claimed: number; pending: number; verifications: number } | null>(null)
 
 
   // Check registration and keys on mount/update
@@ -113,14 +109,25 @@ export default function IssuerDashboard() {
           }
 
           // Quick stats: how many certificates this institution has issued
-          const [claimedRes, pendingRes] = await Promise.all([
+          const [claimedRes, pendingRes, sharesRes] = await Promise.all([
             supabase.from('credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did),
-            supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did)
+            supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did),
+            // Best-effort: view_count is summed client-side since Supabase-js
+            // has no clean aggregate select; a failure here (e.g. migration
+            // not yet applied) just leaves the verifications stat at 0.
+            // TODO: unbounded select — PostgREST's default 1000-row cap means
+            // this will silently under-count once a high-volume issuer's
+            // shares pass that many rows. Fine for now; revisit with a
+            // server-side sum (RPC or view) if that becomes real.
+            supabase.from('shares').select('view_count').eq('issuer_did', issuerData.did)
           ])
           if (active) {
             const claimed = claimedRes.count || 0
             const pending = pendingRes.count || 0
-            setStats({ claimed, pending, total: claimed + pending })
+            const verifications = (sharesRes.data || []).reduce(
+              (sum: number, row: any) => sum + (row.view_count || 0), 0
+            )
+            setStats({ claimed, pending, total: claimed + pending, verifications })
           }
         } else {
           setIssuerInfo(null)
@@ -250,15 +257,7 @@ export default function IssuerDashboard() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-        <style>{spinStyles}</style>
-        <div style={{
-          width: 44,
-          height: 44,
-          border: '4px solid #e0e7ff',
-          borderTop: '4px solid #4f46e5',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
+        <Loader2 size={40} className="animate-spin text-indigo-600" />
         <p className="text-gray-500 mt-4 font-semibold text-sm">{t('dashboard.loading_dashboard')}</p>
       </div>
     )
@@ -266,14 +265,14 @@ export default function IssuerDashboard() {
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 md:py-10">
-      <style>{spinStyles}</style>
-
       {/* SECTION 1 — REGISTER INSTITUTION (if not registered yet) */}
       {!issuerInfo ? (
         <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-10">
           <div className="text-center mb-6">
-            <span className="text-4xl">🏛️</span>
-            <h1 className="text-2xl font-bold text-stone-900 mt-3">{t('dashboard.register_institution')}</h1>
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto">
+              <Building2 size={28} className="text-indigo-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-stone-900 mt-4">{t('dashboard.register_institution')}</h1>
             <p className="text-sm text-stone-500 mt-1">
               {t('dashboard.register_desc')}
             </p>
@@ -367,12 +366,7 @@ export default function IssuerDashboard() {
               disabled={isRegistering}
               className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isRegistering && (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+              {isRegistering && <Loader2 size={18} className="animate-spin" />}
               <span>{t('dashboard.register_btn')}</span>
             </button>
           </form>
@@ -380,49 +374,25 @@ export default function IssuerDashboard() {
       ) : (
         /* SECTION 2 — REGISTRATION SUCCESS AND ISSUANCE CONTROL */
         <div className="space-y-6">
-          
+
           {registerSuccessMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 flex justify-between items-center text-sm font-semibold mb-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span>✅</span>
-                <span>{registerSuccessMsg}</span>
-              </div>
-              <button 
-                onClick={() => setRegisterSuccessMsg(null)}
-                className="text-emerald-500 hover:text-emerald-700 font-bold"
-              >
-                ✕
-              </button>
-            </div>
+            <Banner tone="success" onDismiss={() => setRegisterSuccessMsg(null)}>
+              {registerSuccessMsg}
+            </Banner>
           )}
 
-          {/* Heading */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-stone-200 gap-4">
-            <div>
-              <h1 className="text-2xl font-extrabold text-stone-900 tracking-tight">{t('dashboard.issuer_dashboard')}</h1>
-              <p className="text-sm text-stone-500 mt-0.5">
-                {t('dashboard.manage_desc')}
-              </p>
-            </div>
-          </div>
+          <PageHeader
+            icon={Building2}
+            title={t('dashboard.issuer_dashboard')}
+            subtitle={t('dashboard.manage_desc')}
+          />
 
-
-          {/* If NOT Accredited: Warning Yellow Card */}
+          {/* If NOT Accredited: Warning Banner */}
           {!issuerInfo.accredited ? (
-            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-6 md:p-8 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className="text-3xl mt-0.5">⏳</div>
-                <div>
-                  <h2 className="text-lg font-bold text-amber-800">{t('dashboard.awaiting_approval')}</h2>
-                  <p className="text-sm text-stone-600 mt-2 leading-relaxed">
-                    {t('dashboard.awaiting_desc')}
-                  </p>
-                  <p className="text-xs text-stone-500 mt-3 font-medium italic">
-                    {t('dashboard.awaiting_note')}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <Banner tone="warning" title={t('dashboard.awaiting_approval')}>
+              <p>{t('dashboard.awaiting_desc')}</p>
+              <p className="text-xs mt-2 font-medium italic opacity-80">{t('dashboard.awaiting_note')}</p>
+            </Banner>
           ) : (
             /* If Accredited: Check Session Cryptographic Key */
             !privateKey ? (
@@ -438,24 +408,18 @@ export default function IssuerDashboard() {
             ) : (
               <>
                 {/* Quick stats: certificates issued by this institution */}
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
-                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
-                    <div className="text-2xl md:text-3xl font-extrabold text-stone-900">{stats?.total ?? '—'}</div>
-                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Total issued</div>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
-                    <div className="text-2xl md:text-3xl font-extrabold text-emerald-600">{stats?.claimed ?? '—'}</div>
-                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Claimed</div>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-stone-200 p-4 md:p-5 shadow-sm text-center">
-                    <div className="text-2xl md:text-3xl font-extrabold text-amber-600">{stats?.pending ?? '—'}</div>
-                    <div className="text-[11px] md:text-xs text-stone-500 font-semibold mt-1">Awaiting claim</div>
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <StatCard icon={Award} value={stats?.total ?? '—'} label="Total issued" />
+                  <StatCard icon={CheckCircle2} value={stats?.claimed ?? '—'} label="Claimed" tone="success" />
+                  <StatCard icon={Clock} value={stats?.pending ?? '—'} label="Awaiting claim" tone="warning" />
+                  <StatCard icon={Eye} value={stats?.verifications ?? '—'} label="Verifications" />
                 </div>
 
                 {/* If accredited & key is active: Credential Issuance Panel (Navigates to new flow) */}
                 <div className="bg-white rounded-2xl border border-stone-200 p-8 shadow-sm flex flex-col items-center text-center py-16">
-                  <div className="text-5xl mb-4">📋</div>
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-5">
+                    <FileSignature size={30} className="text-indigo-600" />
+                  </div>
                   <h2 className="text-xl font-bold text-stone-900 mb-2">{t('dashboard.issue_credential')}</h2>
                   <p className="text-sm text-stone-500 mb-6 max-w-md mx-auto">
                     {t('dashboard.issue_credential_desc')}
@@ -465,9 +429,7 @@ export default function IssuerDashboard() {
                     className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-8 rounded-lg text-sm transition-all focus:outline-none cursor-pointer inline-flex items-center gap-2"
                   >
                     <span>{t('dashboard.start_issuance')}</span>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                    <ArrowRight size={16} />
                   </button>
                 </div>
               </>

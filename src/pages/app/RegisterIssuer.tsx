@@ -4,16 +4,9 @@ import { supabase } from '../../lib/supabase'
 import { generateIssuerKeys, didWeb } from '../../lib/did'
 import { useLanguage } from '../../lib/i18n'
 import { useZkVault } from '../../vault/zk-vault/hooks'
+import { Building2, CheckCircle2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 
 const MIN_PIN_LEN = 8
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
 
 interface IssuerData {
   id?: string
@@ -211,17 +204,9 @@ export default function RegisterIssuer() {
 
   if (checking) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <style>{spinStyles}</style>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '4px solid var(--forest-soft)',
-          borderTop: '4px solid var(--forest)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <p className="muted" style={{ marginTop: '1rem' }}>{t('dashboard.checking_registration')}</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 size={36} className="animate-spin text-indigo-600" />
+        <p className="text-stone-500 mt-4 text-sm font-medium">{t('dashboard.checking_registration')}</p>
       </div>
     )
   }
@@ -232,7 +217,9 @@ export default function RegisterIssuer() {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
-          <div className="text-5xl mb-4">🏛️</div>
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <Building2 size={28} className="text-indigo-600" />
+          </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.inst_already_registered')}</h2>
           <p className="text-sm text-stone-500 mb-6 leading-relaxed">
             {t('dashboard.inst_linked_desc')}
@@ -299,7 +286,9 @@ export default function RegisterIssuer() {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
-          <div className="text-5xl text-emerald-500 mb-4">✓</div>
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={28} className="text-emerald-600" />
+          </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.inst_registered')}</h2>
           
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
@@ -353,8 +342,6 @@ export default function RegisterIssuer() {
   // Registration Form State
   return (
     <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-      <style>{spinStyles}</style>
-
       {/* Headers */}
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-stone-900 tracking-tight">
@@ -411,7 +398,7 @@ export default function RegisterIssuer() {
               className="w-full px-4 py-2.5 flex justify-between items-center bg-transparent border-none cursor-pointer text-left text-xs md:text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
             >
               <span>{t('dashboard.what_is_did')}</span>
-              <span>{didExplanationExpanded ? '▲' : '▼'}</span>
+              {didExplanationExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
             {didExplanationExpanded && (
@@ -483,16 +470,7 @@ export default function RegisterIssuer() {
             disabled={isSubmitting}
             className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
           >
-            {isSubmitting && (
-              <svg 
-                className="animate-spin h-5 w-5 text-white"
-                fill="none" 
-                viewBox="0 0 24 24"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            )}
+            {isSubmitting && <Loader2 size={18} className="animate-spin" />}
             <span>{t('dashboard.register_btn_text')}</span>
           </button>
         </form>

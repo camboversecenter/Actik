@@ -1,14 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useLanguage } from '../../lib/i18n'
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import { Loader2, Link2 } from 'lucide-react'
 
 interface ShareRecord {
   id: string
@@ -210,8 +203,6 @@ export default function Activity() {
   // Main Page Layout
   return (
     <div className="w-full max-w-2xl mx-auto mb-16 md:mb-0 relative">
-      <style>{spinStyles}</style>
-      
       <div className="mb-8 text-center md:text-left">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('wallet.share_activity_title')}</h1>
         <p className="text-gray-500">{t('wallet.share_activity_desc')}</p>
@@ -220,7 +211,7 @@ export default function Activity() {
       {/* Main Content Area */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <div style={{ animation: 'spin 1s linear infinite', width: 40, height: 40, border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%' }}></div>
+          <Loader2 size={36} className="animate-spin text-indigo-600" />
           <p className="mt-4 text-gray-500 font-medium">{t('wallet.loading_activity')}</p>
         </div>
       ) : loadError ? (
@@ -235,7 +226,9 @@ export default function Activity() {
         </div>
       ) : shares.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-          <div className="text-4xl mb-4">🔗</div>
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <Link2 size={26} className="text-indigo-500" />
+          </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('wallet.no_share_links_yet')}</h3>
           <p className="text-gray-500 text-sm max-w-sm mx-auto">
             {t('wallet.no_share_links_desc')}

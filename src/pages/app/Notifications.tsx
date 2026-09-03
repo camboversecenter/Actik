@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
-import { Bell, ArrowLeft, Inbox } from 'lucide-react'
+import { Bell, ArrowLeft, Inbox, Lock, ShieldAlert } from 'lucide-react'
 import PinDotsInput from '../../components/PinDotsInput'
 
 interface PendingCredential {
@@ -14,6 +14,7 @@ interface PendingCredential {
   issuer_did: string
   institution_name: string
   degree_title: string
+  degree_type?: string
   sd_jwt: string
   claimed: boolean
   claimed_at: string | null
@@ -140,6 +141,7 @@ export default function Notifications() {
         issuer_did: p.issuer_did,
         institution_name: p.institution_name || '',
         degree_title: p.label || p.degree_type || 'Degree Certificate',
+        degree_type: p.degree_type,
         sd_jwt: p.sdjwt,
         claimed: false,
         claimed_at: null,
@@ -273,6 +275,7 @@ export default function Notifications() {
           iv: encryptedPayload.iv,
           credential_type: cred.credential_type,
           type_metadata: cred.type_metadata,
+          degree_type: cred.degree_type,
           student_id: cred.student_id,
           major: cred.major,
           graduation_date: cred.graduation_date,
@@ -412,7 +415,9 @@ export default function Notifications() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                <Lock size={22} className="text-indigo-600" />
+              </div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
               <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                 {t('wallet.unlock_vault_modal_desc')}
@@ -573,7 +578,9 @@ export default function Notifications() {
       {showSetupNeededModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in text-center">
-            <div className="text-4xl mb-2">⚙️</div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+              <ShieldAlert size={22} className="text-indigo-600" />
+            </div>
             <h3 className="text-lg font-bold text-stone-900">{t('wallet.vault_setup_required_title')}</h3>
             <p className="text-xs text-stone-500 mt-2 mb-6 leading-relaxed">
               {t('wallet.vault_setup_required_desc')}

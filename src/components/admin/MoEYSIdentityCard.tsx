@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Landmark } from 'lucide-react'
 
 const HARDCODED_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElQ+v04qE...
@@ -49,8 +50,8 @@ export default function MoEYSIdentityCard() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 border-b border-indigo-100 pb-4 mb-4">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm border border-indigo-100 shrink-0">
-              🏛️
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm border border-indigo-100 shrink-0">
+              <Landmark size={22} className="text-indigo-600" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">

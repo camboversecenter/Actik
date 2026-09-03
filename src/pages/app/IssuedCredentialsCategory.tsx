@@ -2,13 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useLanguage } from '../../lib/i18n'
-// Reuse spinner styles
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import { Loader2 } from 'lucide-react'
+import StatusPill from '../../components/ui/StatusPill'
 
 interface IssuedRecord {
   id: string
@@ -119,15 +114,7 @@ export default function IssuedCredentialsCategory() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-        <style>{spinStyles}</style>
-        <div style={{
-          width: 44,
-          height: 44,
-          border: '4px solid #e0e7ff',
-          borderTop: '4px solid #4f46e5',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
+        <Loader2 size={40} className="animate-spin text-indigo-600" />
       </div>
     )
   }
@@ -164,9 +151,11 @@ export default function IssuedCredentialsCategory() {
                         {c.title}
                       </strong>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${isClaimed ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
-                      {isClaimed ? t('dashboard.status_claimed') : t('dashboard.status_pending')}
-                    </span>
+                    <StatusPill
+                      status={isClaimed ? 'verified' : 'pending'}
+                      label={isClaimed ? t('dashboard.status_claimed') : t('dashboard.status_pending')}
+                      className="shrink-0"
+                    />
                   </div>
 
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-xs text-gray-500">

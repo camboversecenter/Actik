@@ -4,14 +4,10 @@ import { supabase } from '../../lib/supabase'
 import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import {
+  AlertTriangle, CheckCircle2, GraduationCap, UserCheck, Star,
+  HeartHandshake, Briefcase, Loader2,
+} from 'lucide-react'
 
 interface IssuerInfo {
   name: string
@@ -276,7 +272,7 @@ export default function IssueCredential() {
       if (photoDataUrl) claims.photo = photoDataUrl
 
       if (selectedType === 'academic_degree') {
-        claims.degree = degreeTitle
+        claims.degree_type = degreeTitle
         claims.student_id = studentId.trim()
         claims.major = major.trim()
         claims.graduation_date = graduationDate
@@ -350,7 +346,7 @@ export default function IssueCredential() {
       }
 
       if (selectedType === 'academic_degree') {
-        insertData.degree_title = degreeTitle
+        insertData.degree_type = degreeTitle
         insertData.student_id = studentId.trim()
         insertData.major = major.trim()
         insertData.graduation_date = graduationDate
@@ -371,6 +367,7 @@ export default function IssueCredential() {
         }
         if (selectedType === 'academic_degree') {
            fallbackData.label = degreeTitle
+           fallbackData.degree_type = degreeTitle
            fallbackData.student_id = studentId.trim()
            fallbackData.major = major.trim()
            fallbackData.graduation_date = graduationDate
@@ -444,17 +441,9 @@ export default function IssueCredential() {
   // Main Mount Loading
   if (checking) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <style>{spinStyles}</style>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '4px solid var(--forest-soft)',
-          borderTop: '4px solid var(--forest)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <p className="muted" style={{ marginTop: '1rem' }}>{t('dashboard.checking_auth')}</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 size={36} className="animate-spin text-indigo-600" />
+        <p className="text-stone-500 mt-4 text-sm font-medium">{t('dashboard.checking_auth')}</p>
       </div>
     )
   }
@@ -482,7 +471,9 @@ export default function IssueCredential() {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={28} className="text-amber-500" />
+          </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.inst_not_registered')}</h2>
           <p className="text-sm text-stone-500 mb-6 leading-relaxed">
             {t('dashboard.inst_not_registered_desc')}
@@ -544,7 +535,9 @@ export default function IssueCredential() {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
-          <div className="text-5xl text-emerald-500 mb-4">✓</div>
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={28} className="text-emerald-600" />
+          </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.credential_issued')}</h2>
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
@@ -644,7 +637,6 @@ export default function IssueCredential() {
   if (showConfirm) {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-        <style>{spinStyles}</style>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-1">{t('dashboard.review_title')}</h2>
           <p className="text-sm text-stone-500 mb-6 leading-relaxed">{t('dashboard.review_desc')}</p>
@@ -709,12 +701,7 @@ export default function IssueCredential() {
               onClick={handleIssue}
               className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
-              {isSubmitting && (
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+              {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               <span>{t('dashboard.confirm_issue_btn')}</span>
             </button>
             <button
@@ -740,8 +727,6 @@ export default function IssueCredential() {
   // Form & Preview Screen
   return (
     <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
-      <style>{spinStyles}</style>
-
       {/* Back button */}
       <div className="mb-4">
         <button
@@ -780,19 +765,21 @@ export default function IssueCredential() {
       {!selectedType ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
-            { id: 'academic_degree', icon: '🎓', title: t('dashboard.type_academic'), desc: t('dashboard.type_academic_desc') },
-            { id: 'attendance_participation', icon: '✋', title: t('dashboard.type_attendance'), desc: t('dashboard.type_attendance_desc') },
-            { id: 'completion', icon: '✅', title: t('dashboard.type_completion'), desc: t('dashboard.type_completion_desc') },
-            { id: 'merit_excellence', icon: '⭐', title: t('dashboard.type_merit'), desc: t('dashboard.type_merit_desc') },
-            { id: 'appreciation_service', icon: '🤝', title: t('dashboard.type_appreciation'), desc: t('dashboard.type_appreciation_desc') },
-            { id: 'professional_certification', icon: '💼', title: t('dashboard.type_professional'), desc: t('dashboard.type_professional_desc') }
+            { id: 'academic_degree', icon: GraduationCap, title: t('dashboard.type_academic'), desc: t('dashboard.type_academic_desc') },
+            { id: 'attendance_participation', icon: UserCheck, title: t('dashboard.type_attendance'), desc: t('dashboard.type_attendance_desc') },
+            { id: 'completion', icon: CheckCircle2, title: t('dashboard.type_completion'), desc: t('dashboard.type_completion_desc') },
+            { id: 'merit_excellence', icon: Star, title: t('dashboard.type_merit'), desc: t('dashboard.type_merit_desc') },
+            { id: 'appreciation_service', icon: HeartHandshake, title: t('dashboard.type_appreciation'), desc: t('dashboard.type_appreciation_desc') },
+            { id: 'professional_certification', icon: Briefcase, title: t('dashboard.type_professional'), desc: t('dashboard.type_professional_desc') }
           ].map(c => (
-            <button 
-              key={c.id} 
-              onClick={() => setSelectedType(c.id)} 
+            <button
+              key={c.id}
+              onClick={() => setSelectedType(c.id)}
               className="p-5 bg-white border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-sm text-left flex items-start gap-4 transition-all cursor-pointer"
             >
-              <div className="text-3xl shrink-0 mt-0.5">{c.icon}</div>
+              <div className="shrink-0 w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <c.icon size={22} className="text-indigo-600" />
+              </div>
               <div>
                 <h3 className="font-bold text-stone-900 text-[15px]">{c.title}</h3>
                 <p className="text-xs text-stone-500 mt-1 leading-relaxed">{c.desc}</p>
@@ -1232,16 +1219,7 @@ export default function IssueCredential() {
               disabled={isSubmitting}
               className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isSubmitting && (
-                <svg 
-                  className="animate-spin h-5 w-5 text-white"
-                  fill="none" 
-                  viewBox="0 0 24 24"
-                >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              )}
+              {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               <span>{t('dashboard.issue_credential_btn')}</span>
             </button>
 

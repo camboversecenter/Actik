@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Globe, CheckCircle2, Clock, Zap, ExternalLink } from 'lucide-react'
 import RegistryExportModal from './RegistryExportModal'
 
 export default function PublicRegistryManager({ countTotal = 0, countAccredited = 0 }) {
@@ -29,7 +30,7 @@ export default function PublicRegistryManager({ countTotal = 0, countAccredited 
     <section className="space-y-4 mb-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5">
-          <span>🌐</span> Public Registry Management
+          <Globe size={14} /> Public Registry Management
         </h2>
         
         {/* Auto-publish Toggle */}
@@ -57,15 +58,16 @@ export default function PublicRegistryManager({ countTotal = 0, countAccredited 
           <div>
             <div className="flex items-center gap-3 mb-4">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border ${
-                isPublished 
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                isPublished
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                   : 'bg-amber-100 text-amber-800 border-amber-200'
               }`}>
-                {isPublished ? '✅ PUBLISHED' : '⏳ DRAFT PENDING'}
+                {isPublished ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                {isPublished ? 'PUBLISHED' : 'DRAFT PENDING'}
               </span>
               {autoPublish && (
-                <span className="text-[10px] font-bold text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full uppercase tracking-wider border border-sky-200">
-                  ⚡ Auto-sync Active
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-600 bg-sky-100 px-2 py-0.5 rounded-full uppercase tracking-wider border border-sky-200">
+                  <Zap size={11} /> Auto-sync Active
                 </span>
               )}
             </div>
@@ -75,9 +77,7 @@ export default function PublicRegistryManager({ countTotal = 0, countAccredited 
                 <span className="text-sky-700 block text-xs font-semibold uppercase tracking-wider mb-0.5">Public URL</span>
                 <a href="https://registry.actik.kh/public" target="_blank" rel="noreferrer" className="text-indigo-600 font-semibold hover:underline flex items-center gap-1">
                   registry.actik.kh/public
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <ExternalLink size={12} />
                 </a>
               </div>
               <div>

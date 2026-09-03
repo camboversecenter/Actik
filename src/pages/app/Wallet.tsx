@@ -7,16 +7,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
 import PinDotsInput from '../../components/PinDotsInput'
-
-
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import { Briefcase, Lock, ShieldAlert } from 'lucide-react'
 
 interface Credential {
   id: string
@@ -43,11 +34,12 @@ export default function Wallet() {
   const [currentUser, setCurrentUser] = useState<any | null>(null)
   
   // ZK-Vault state via the custom useZkVault hook
-  const { 
-    isUnlocked, 
-    checkVaultStatus, 
-    unlockWithPin, 
-    unlockWithPasskey 
+  const {
+    isUnlocked,
+    checkVaultStatus,
+    unlockWithPin,
+    unlockWithPasskey,
+    lock,
   } = useZkVault()
   const { t } = useLanguage()
 
@@ -60,6 +52,9 @@ export default function Wallet() {
   const [claimedCredentials, setClaimedCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<boolean>(false)
+  // credential_id -> number of shares created for it. Best-effort: a failure
+  // here just means cards render without a share count, not a page error.
+  const [shareCounts, setShareCounts] = useState<Record<string, number>>({})
 
   // Modals & Action States
   const [showUnlockModal, setShowUnlockModal] = useState(false)
@@ -160,6 +155,27 @@ export default function Wallet() {
 
       setClaimedCredentials(claimedList)
       setLoading(false)
+
+      // Share counts: one aggregate query instead of one per card. Best-effort —
+      // errors here (e.g. migration not yet applied) shouldn't affect the wallet.
+      if (claimedList.length > 0) {
+        try {
+          const { data: shareRows } = await supabase
+            .from('shares')
+            .select('credential_id')
+            .eq('owner', user.id)
+            .in('credential_id', claimedList.map(c => c.id))
+
+          const counts: Record<string, number> = {}
+          ;(shareRows || []).forEach((r: any) => {
+            if (!r.credential_id) return
+            counts[r.credential_id] = (counts[r.credential_id] || 0) + 1
+          })
+          setShareCounts(counts)
+        } catch {
+          // non-fatal — cards just render without a share count
+        }
+      }
     } catch (err) {
       setLoadError(true)
       setLoading(false)
@@ -295,40 +311,50 @@ export default function Wallet() {
 
   return (
     <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
-      <style>{spinStyles}</style>
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">{t('wallet.title')}</h2>
+        <p className="text-sm text-stone-500 mt-1">
+          {t('wallet.subtitle')}
+        </p>
+      </div>
 
-      {/* Header and top buttons */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">{t('wallet.title')}</h2>
-          <p className="text-sm text-stone-500 mt-1">
-            {t('wallet.subtitle')}
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          {/* Vault Status pill */}
-          {!vaultStatusLoading && (
-            <div className="flex justify-stretch sm:justify-end">
-              {vaultExists === false && (
-                <button className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-11 px-4 rounded-lg text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer flex items-center justify-center" onClick={() => navigate('/app/vault-setup')}>
-                  {t('wallet.vault_not_setup')}
-                </button>
-              )}
-              {vaultExists === true && !isUnlocked && (
-                <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg">
-                  {t('wallet.vault_locked')}
-                </span>
-              )}
-              {vaultExists === true && isUnlocked && (
-                <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold rounded-lg">
-                  {t('wallet.vault_unlocked')}
-                </span>
-              )}
+      {/* Vault status strip */}
+      {!vaultStatusLoading && (
+        <div className="mb-6">
+          {vaultExists === false && (
+            <button
+              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-11 px-4 rounded-lg text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => navigate('/app/vault-setup')}
+            >
+              <ShieldAlert size={16} />
+              {t('wallet.vault_not_setup')}
+            </button>
+          )}
+          {vaultExists === true && !isUnlocked && (
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-stone-100 border border-stone-200 rounded-xl">
+              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0" />
+              <Lock size={14} className="text-stone-500 shrink-0" />
+              <span className="text-sm font-semibold text-stone-700">{t('wallet.vault_locked')}</span>
+            </div>
+          )}
+          {vaultExists === true && isUnlocked && (
+            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-stone-200 rounded-xl">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_0_3px_rgba(5,150,105,0.14)]" />
+              <div className="flex-1 min-w-0">
+                <div className="font-khmer text-sm font-semibold text-stone-900">{t('wallet.vault_unlocked')}</div>
+              </div>
+              <button
+                onClick={lock}
+                className="shrink-0 inline-flex items-center gap-1.5 border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                <Lock size={13} />
+                {t('wallet.lock_now')}
+              </button>
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Main loading spinner */}
       {loading && claimedCredentials.length === 0 && (
@@ -356,7 +382,9 @@ export default function Wallet() {
             {/* Empty State */}
             {claimedCredentials.length === 0 && (
               <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-8 md:p-12 text-center">
-                <div className="text-5xl mb-4 text-stone-300">💼</div>
+                <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-4">
+                  <Briefcase size={26} className="text-stone-400" />
+                </div>
                 <h3 className="text-lg font-bold text-stone-900">{t('wallet.empty_title')}</h3>
                 <p className="text-sm text-stone-500 max-w-sm mx-auto mb-6 mt-2 leading-relaxed">
                   {t('wallet.empty_desc')}
@@ -407,7 +435,7 @@ export default function Wallet() {
                     return (
                       <div key={type}>
                         <div className="flex justify-between items-end mb-4 px-1">
-                          <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{displayLabel}</h4>
+                          <h4 className="font-khmer text-[13px] font-semibold text-stone-600">{displayLabel}</h4>
                           {hasMore && (
                             <button 
                               onClick={() => navigate(`/app/wallet/type/${type}`)}
@@ -427,6 +455,7 @@ export default function Wallet() {
                             graduationDate={displayCreds[0].graduation_date}
                             createdAt={displayCreds[0].created_at}
                             onClick={() => handleCardClick(displayCreds[0].id)}
+                            shareCount={shareCounts[displayCreds[0].id]}
                           />
                         ) : (
                           <div className="flex flex-row gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
@@ -440,6 +469,7 @@ export default function Wallet() {
                                 createdAt={c.created_at}
                                 onClick={() => handleCardClick(c.id)}
                                 className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start"
+                                shareCount={shareCounts[c.id]}
                               />
                             ))}
                           </div>
@@ -461,7 +491,9 @@ export default function Wallet() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                <Lock size={22} className="text-indigo-600" />
+              </div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
               <p className="text-xs text-stone-500 mt-1 leading-relaxed">
                 {t('wallet.unlock_vault_desc')}
@@ -624,7 +656,9 @@ export default function Wallet() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-6">
-              <div className="text-4xl mb-2">🛡️</div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                <ShieldAlert size={22} className="text-indigo-600" />
+              </div>
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.setup_required_title')}</h3>
               <p className="text-xs text-stone-500 mt-2 leading-relaxed">
                 {t('wallet.setup_required_desc')}

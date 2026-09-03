@@ -6,7 +6,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import { checkRateLimit } from '../../lib/rateLimit'
-import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock } from 'lucide-react'
+import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check } from 'lucide-react'
 import PinDotsInput from '../../components/PinDotsInput'
 
 // Note: The prompt expects: import { useVault } from '../../vault/zk-vault/useVault'
@@ -413,6 +413,7 @@ export default function ShareCredential() {
       const res = await supabase.from('shares').insert({
         id: token,
         owner: currentUser.id,
+        credential_id: credential.id,
         presentation: presentationStr,
         issuer_did: credential.issuer_did || '',
         revealed: selectedFields,
@@ -507,7 +508,7 @@ export default function ShareCredential() {
     return (
       <div className="max-w-2xl mx-auto text-center" style={{ maxWidth: '36rem', margin: '3rem auto' }}>
         <div className="card" style={{ padding: '2.5rem 2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+          <AlertTriangle size={40} style={{ marginBottom: '1rem', color: 'var(--danger)' }} />
           <h2 style={{ fontSize: '1.5rem', color: 'var(--danger)', marginTop: 0 }}>Credential not found</h2>
           <p className="muted" style={{ marginBottom: '2rem' }}>
             This credential does not exist or does not belong to your account.
@@ -692,7 +693,7 @@ export default function ShareCredential() {
                     ? 'bg-emerald-500 border-emerald-500 text-white' 
                     : 'bg-indigo-600 border-indigo-600 text-white'
                 }`}>
-                  {step === 'success' ? '✓' : '1'}
+                  {step === 'success' ? <Check size={16} /> : '1'}
                 </div>
                 <span className="text-[11px] font-bold tracking-tight text-indigo-650">
                   {t('wallet.step_configure')}
@@ -706,7 +707,7 @@ export default function ShareCredential() {
                     ? 'bg-indigo-600 border-indigo-600 text-white' 
                     : 'bg-white border-stone-300 text-stone-400'
                 }`}>
-                  {step === 'success' ? '✓' : '2'}
+                  {step === 'success' ? <Check size={16} /> : '2'}
                 </div>
                 <span className={`text-[11px] font-bold tracking-tight ${
                   step === 'success' ? 'text-indigo-650' : 'text-stone-400'
@@ -719,8 +720,8 @@ export default function ShareCredential() {
 
           {/* Status Pill */}
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <span className="pill ok" style={{ backgroundColor: '#e2efe7', color: 'var(--ok)', fontWeight: 600, padding: '0.25rem 0.65rem' }}>
-              ✓ {t('wallet.vault_unlocked')}
+            <span className="pill ok" style={{ backgroundColor: '#e2efe7', color: 'var(--ok)', fontWeight: 600, padding: '0.25rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+              <Check size={13} /> {t('wallet.vault_unlocked')}
             </span>
           </div>
 
@@ -1339,7 +1340,7 @@ export default function ShareCredential() {
           }}
         >
           <div className="card" style={{ maxWidth: '380px', width: '100%', padding: '2rem 1.5rem', textAlign: 'center', background: '#fff', margin: 0 }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
+            <Lock size={36} style={{ marginBottom: '0.5rem', color: 'var(--forest)' }} />
             <h3 style={{ margin: '0 0 0.5rem', color: 'var(--forest)' }}>{t('wallet.unlock_vault_title')}</h3>
             <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>
               {t('wallet.unlock_vault_modal_desc')}

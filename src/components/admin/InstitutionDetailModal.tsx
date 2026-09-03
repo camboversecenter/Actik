@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { X, CheckCircle2, Clock, XCircle, ExternalLink } from 'lucide-react'
 
 interface Issuer {
   id: string
@@ -110,10 +111,10 @@ export default function InstitutionDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="text-stone-400 hover:text-stone-600 font-bold text-base focus:outline-none p-1.5 rounded-full hover:bg-stone-50 transition-all cursor-pointer"
+            className="text-stone-400 hover:text-stone-600 focus:outline-none p-1.5 rounded-full hover:bg-stone-50 transition-all cursor-pointer"
             aria-label="Close"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
@@ -142,9 +143,7 @@ export default function InstitutionDetailModal({
                   className="text-indigo-650 hover:underline font-bold inline-flex items-center gap-1 mt-0.5"
                 >
                   {issuer.domain}
-                  <svg className="w-3 h-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <ExternalLink size={12} className="text-indigo-400" />
                 </a>
               </div>
               <div>
@@ -152,17 +151,17 @@ export default function InstitutionDetailModal({
                 <div className="mt-1">
                   {isAccredited && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      ✅ ACCREDITED (since {formatDate(issuer.accredited_at).split(',')[0]})
+                      <CheckCircle2 size={11} /> ACCREDITED (since {formatDate(issuer.accredited_at).split(',')[0]})
                     </span>
                   )}
                   {isPending && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                      ⏳ PENDING APPROVAL
+                      <Clock size={11} /> PENDING APPROVAL
                     </span>
                   )}
                   {isRevoked && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                      ❌ REVOKED
+                      <XCircle size={11} /> REVOKED
                     </span>
                   )}
                 </div>

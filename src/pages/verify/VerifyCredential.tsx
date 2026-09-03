@@ -456,6 +456,15 @@ export default function VerifyCredential() {
         setParsedPresentation(parsed)
 
         if (active) setStatus('success')
+
+        // Best-effort verification count — fire-and-forget, never blocks
+        // rendering the result. The RPC itself re-validates expiry/revocation
+        // server-side, so this can't inflate the count past what's genuine.
+        if (token) {
+          supabase.rpc('record_verification', { p_share_id: token }).then(({ error }) => {
+            if (error) console.error('[verify] record_verification failed:', error)
+          })
+        }
       } catch (err) {
         console.error(err)
         if (active) {

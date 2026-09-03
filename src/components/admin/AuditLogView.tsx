@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { CheckCircle2, XCircle, ClipboardList, FileEdit } from 'lucide-react'
 
 export interface AuditLog {
   id: string
@@ -124,15 +125,15 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
   // Formatting helpers
   const getActionStyles = (action: string) => {
     if (action.includes('APPROVED') || action.includes('RESTORED')) {
-      return { icon: '✅', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+      return { icon: CheckCircle2, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     }
     if (action.includes('REVOKED') || action.includes('REJECTED')) {
-      return { icon: '❌', color: 'text-rose-700 bg-rose-50 border-rose-200' }
+      return { icon: XCircle, color: 'text-rose-700 bg-rose-50 border-rose-200' }
     }
     if (action.includes('REGISTERED')) {
-      return { icon: '📋', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
+      return { icon: ClipboardList, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
     }
-    return { icon: '📝', color: 'text-stone-700 bg-stone-50 border-stone-200' }
+    return { icon: FileEdit, color: 'text-stone-700 bg-stone-50 border-stone-200' }
   }
 
   const filteredLogs = logs.filter(log => {
@@ -223,7 +224,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
                 
                 <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
                   <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border mb-4 ${style.color}`}>
-                    <span>{style.icon}</span> {log.action}
+                    <style.icon size={13} /> {log.action}
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm mb-4">

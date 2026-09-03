@@ -11,6 +11,10 @@ interface PinDotsInputProps {
   disabled?: boolean
   reveal?: boolean
   className?: string
+  // 'dark' for the full-bleed navy vault-unlock screen (VaultSetup.tsx) —
+  // white-on-transparent dots with a teal fill/focus ring instead of the
+  // default light card styling.
+  tone?: 'light' | 'dark'
 }
 
 // A 6-digit vault PIN field styled as a dot-progress row instead of raw
@@ -31,8 +35,10 @@ export default function PinDotsInput({
   disabled,
   reveal = false,
   className = '',
+  tone = 'light',
 }: PinDotsInputProps) {
   const id = useId()
+  const dark = tone === 'dark'
 
   return (
     <div className={`relative mx-auto ${className}`} style={{ width: 220, height: 56 }}>
@@ -53,18 +59,26 @@ export default function PinDotsInput({
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-gray-300 bg-white peer-focus:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500 peer-disabled:opacity-50"
+        className={
+          dark
+            ? 'pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-white/20 bg-transparent peer-focus:border-teal-400 peer-focus:ring-2 peer-focus:ring-teal-400/40 peer-disabled:opacity-50'
+            : 'pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-gray-300 bg-white peer-focus:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500 peer-disabled:opacity-50'
+        }
       >
         {Array.from({ length }).map((_, i) => {
           const filled = i < value.length
           return reveal ? (
-            <span key={i} className="flex h-7 w-4 items-center justify-center text-lg font-bold text-stone-900">
+            <span key={i} className={`flex h-7 w-4 items-center justify-center text-lg font-bold ${dark ? 'text-white' : 'text-stone-900'}`}>
               {value[i] ?? ''}
             </span>
           ) : (
             <span
               key={i}
-              className={`size-3 rounded-full transition-colors ${filled ? 'bg-indigo-600' : 'border border-stone-300 bg-transparent'}`}
+              className={`size-3 rounded-full transition-colors ${
+                filled
+                  ? dark ? 'bg-teal-400' : 'bg-indigo-600'
+                  : dark ? 'border border-white/30 bg-transparent' : 'border border-stone-300 bg-transparent'
+              }`}
             />
           )
         })}

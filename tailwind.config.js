@@ -9,6 +9,10 @@ export default {
       fontFamily: {
         sans: ['"IBM Plex Sans"', '"Public Sans"', '"Noto Sans Khmer"', 'sans-serif'],
         mono: ['"IBM Plex Mono"', '"Noto Sans Khmer"', 'monospace'],
+        // Khmer-primary text (headings, degree/institution names) — heavier
+        // weight + looser line-height reads better for the script than the
+        // default sans stack tuned for Latin text.
+        khmer: ['"Noto Sans Khmer"', '"IBM Plex Sans"', 'sans-serif'],
       },
       colors: {
         indigo: {
