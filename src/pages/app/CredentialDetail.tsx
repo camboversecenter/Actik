@@ -315,7 +315,7 @@ export default function CredentialDetail() {
   const renderField = (label: string, sublabel: string, value: any, mono = false) => {
     const has = value !== undefined && value !== null && value !== ''
     return (
-      <div className="flex justify-between items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0">
+      <div className={`flex justify-between items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 ${has ? '' : 'bg-amber-50/60'}`}>
         <span className="font-khmer text-[13px] text-stone-500 shrink-0">
           {label}
           <span className="block font-sans text-[10px] text-stone-400 mt-0.5">{sublabel}</span>
@@ -323,7 +323,7 @@ export default function CredentialDetail() {
         {has ? (
           <span className={`font-semibold text-stone-900 text-right break-words ${mono ? 'font-mono text-xs' : 'text-sm'}`}>{value}</span>
         ) : (
-          <span className="text-amber-600 italic text-xs text-right shrink-0">{t('wallet.not_specified')}</span>
+          <span className="font-khmer text-amber-700 italic text-xs text-right shrink-0">{t('wallet.not_specified')}</span>
         )}
       </div>
     )

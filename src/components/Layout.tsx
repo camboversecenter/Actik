@@ -245,6 +245,14 @@ export default function Layout() {
                 >
                   <LogOut size={20} strokeWidth={1.9} />
                 </button>
+                {session?.user?.email && (
+                  <div
+                    className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-semibold shrink-0"
+                    title={session.user.email}
+                  >
+                    {session.user.email.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -10,6 +10,11 @@ interface NumericKeypadProps {
 }
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+// Khmer numerals — matches the mockup's small secondary digit under each key.
+const KHMER_DIGITS: Record<string, string> = {
+  '0': '០', '1': '១', '2': '២', '3': '៣', '4': '៤',
+  '5': '៥', '6': '៦', '7': '៧', '8': '៨', '9': '៩',
+}
 
 // Decorative on-screen numeric pad for the dark vault-unlock/PIN-entry
 // screens — writes into the same controlled value as PinDotsInput rather
@@ -47,6 +52,7 @@ export default function NumericKeypad({
           className={keyClasses}
         >
           <span className="font-mono text-xl font-normal text-white">{k}</span>
+          <span className="font-khmer text-[9px] text-white/45 -mt-0.5">{KHMER_DIGITS[k]}</span>
         </button>
       ))}
 

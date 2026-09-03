@@ -6,7 +6,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import { checkRateLimit } from '../../lib/rateLimit'
-import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check, Loader2 } from 'lucide-react'
+import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check, Loader2, EyeOff } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 
 // Note: The prompt expects: import { useVault } from '../../vault/zk-vault/useVault'
@@ -585,7 +585,7 @@ export default function ShareCredential() {
   ) => {
     const checked = selectedFields.includes(fieldKey)
     return (
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm">
+      <div className={`flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm ${checked ? '' : 'bg-stone-50'}`}>
         <button
           type="button"
           onClick={() => toggleSelectableField(fieldKey)}
@@ -596,8 +596,12 @@ export default function ShareCredential() {
           <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
         </button>
         <div className="min-w-0 flex-1">
-          <span className="font-semibold text-stone-800">{label}</span>
-          <span className={`ml-2 text-stone-500 ${opts?.mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+          <span className={`font-semibold ${checked ? 'text-stone-800' : 'text-stone-500'}`}>{label}</span>
+          {checked ? (
+            <span className={`ml-2 text-stone-500 ${opts?.mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+          ) : (
+            <span className="ml-2 text-stone-400 text-xs">{t('wallet.will_be_hidden')}</span>
+          )}
         </div>
         {opts?.badge && (
           <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
@@ -606,6 +610,7 @@ export default function ShareCredential() {
             {opts.badge.label}
           </span>
         )}
+        {!checked && <EyeOff size={15} className="text-stone-400 shrink-0" />}
       </div>
     )
   }
@@ -824,7 +829,7 @@ export default function ShareCredential() {
                     }
                     const val = availableClaims.photo || availableClaims.student_photo
                     return (
-                      <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm">
+                      <div className={`flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm ${checked ? '' : 'bg-stone-50'}`}>
                         <button
                           type="button"
                           onClick={toggle}
@@ -835,15 +840,18 @@ export default function ShareCredential() {
                           <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
                         </button>
                         <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-stone-800">Certificate photo / scan</div>
-                          <div className="text-xs text-stone-500 mt-0.5">Share the actual certificate image with the employer</div>
+                          <div className={`font-semibold ${checked ? 'text-stone-800' : 'text-stone-500'}`}>Certificate photo / scan</div>
+                          <div className="text-xs text-stone-500 mt-0.5">
+                            {checked ? 'Share the actual certificate image with the employer' : t('wallet.will_be_hidden')}
+                          </div>
                         </div>
                         <img
                           src={val.startsWith('data:') || val.startsWith('http') ? val : `data:image/jpeg;base64,${val}`}
                           alt="Certificate"
-                          className="w-12 h-12 object-cover rounded-md border border-stone-200 shrink-0"
+                          className={`w-12 h-12 object-cover rounded-md border border-stone-200 shrink-0 ${checked ? '' : 'opacity-40 grayscale'}`}
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                         />
+                        {!checked && <EyeOff size={15} className="text-stone-400 shrink-0" />}
                       </div>
                     )
                   })()}
