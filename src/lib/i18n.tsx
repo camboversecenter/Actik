@@ -516,6 +516,51 @@ const translations = {
       final_cta_desc: 'Sign in with Google — takes less than a minute.',
       final_cta_button: 'Sign in',
       footer_rights: '© 2026 Actik. All rights reserved.'
+    },
+    verify: {
+      tagline: 'Proof of ownership',
+      result_label: 'Verification result',
+      invalid_link_title: 'Invalid verification link',
+      invalid_link_desc: 'This does not appear to be a valid Actik verification link',
+      invalid_link_hint: 'Check that you have the full URL',
+      loading_title: 'Verifying credential…',
+      loading_subtitle: 'Running security checks…',
+      check_1: 'Loading credential…',
+      check_2: 'Checking link validity…',
+      check_3: 'Verifying issuer signature…',
+      check_4: 'Checking issuer trust registry…',
+      check_rate_limit: 'Security check',
+      rate_limit_error: 'Verification service temporarily unavailable due to too many requests. Please try again later.',
+      success_title: 'Credential verified',
+      success_desc: 'This credential is authentic and was issued by an accredited institution',
+      issued_by_label: 'Issued by:',
+      accredited_badge: 'Accredited',
+      credential_details_heading: 'Credential details',
+      hidden_fields_notice: 'Some fields are hidden by the holder (selective disclosure).',
+      hidden_label: 'Hidden:',
+      link_valid_until: 'Link valid until:',
+      link_expiring_soon: 'This link expires soon',
+      technical_details_toggle: 'Technical verification details',
+      issuer_did_label: 'Issuer DID:',
+      share_token_label: 'Share token:',
+      verified_at_label: 'Verified at:',
+      format_label: 'Format:',
+      algorithm_label: 'Algorithm:',
+      failed_title: 'Verification failed',
+      verification_steps_heading: 'Verification steps',
+      what_to_do_label: 'What to do:',
+      reason_label: 'Reason:',
+      footer_heading: 'How does Actik verification work?',
+      trust_signature_title: 'Cryptographic signature',
+      trust_signature_desc: "The issuer's digital seal proves authenticity",
+      trust_registry_title: 'Trust registry',
+      trust_registry_desc: 'MoEYS confirms the institution is legitimate',
+      trust_disclosure_title: 'Selective disclosure',
+      trust_disclosure_desc: 'Holder controls what you see',
+      powered_by: 'Powered by Actik — Proof of ownership',
+      learn_more: 'Learn more at actik.app',
+      close: 'Close',
+      pdf_not_supported: 'PDF preview not supported in this browser.',
     }
   },
   km: {
@@ -1032,6 +1077,51 @@ const translations = {
       final_cta_desc: 'ចូលគណនីជាមួយ Google — ចំណាយពេលតិចជាងមួយនាទី។',
       final_cta_button: 'ចូលគណនី',
       footer_rights: '© 2026 Actik។ រក្សាសិទ្ធិគ្រប់យ៉ាង។'
+    },
+    verify: {
+      tagline: 'ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)
+      result_label: 'លទ្ធផលការផ្ទៀងផ្ទាត់',
+      invalid_link_title: 'តំណផ្ទៀងផ្ទាត់មិនត្រឹមត្រូវ', // TODO(km-review)
+      invalid_link_desc: 'នេះមិនមែនជាតំណផ្ទៀងផ្ទាត់ Actik ត្រឹមត្រូវទេ', // TODO(km-review)
+      invalid_link_hint: 'សូមពិនិត្យមើលថាអ្នកមាន URL ពេញលេញ', // TODO(km-review)
+      loading_title: 'កំពុងផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រ…',
+      loading_subtitle: 'កំពុងដំណើរការត្រួតពិនិត្យសុវត្ថិភាព…', // TODO(km-review)
+      check_1: 'ទាញយកវិញ្ញាបនបត្រ…', // TODO(km-review)
+      check_2: 'ពិនិត្យសុពលភាពតំណ…',
+      check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
+      check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្ត…',
+      check_rate_limit: 'ត្រួតពិនិត្យសុវត្ថិភាព', // TODO(km-review)
+      rate_limit_error: 'សេវាផ្ទៀងផ្ទាត់មិនអាចប្រើបានជាបណ្តោះអាសន្នដោយសារមានសំណើច្រើនពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។', // TODO(km-review)
+      success_title: 'វិញ្ញាបនបត្រមានសុពលភាព',
+      success_desc: 'វិញ្ញាបនបត្រនេះពិតប្រាកដ និងបានចេញដោយស្ថាប័នទទួលស្គាល់', // TODO(km-review)
+      issued_by_label: 'ចេញដោយ៖',
+      accredited_badge: 'ទទួលស្គាល់',
+      credential_details_heading: 'ព័ត៌មានវិញ្ញាបនបត្រ',
+      hidden_fields_notice: 'ព័ត៌មានមួយចំនួនត្រូវបានលាក់ដោយម្ចាស់ (ការបង្ហាញដោយជ្រើសរើស)។', // TODO(km-review)
+      hidden_label: 'បានលាក់៖', // TODO(km-review)
+      link_valid_until: 'តំណមានសុពលភាពដល់៖',
+      link_expiring_soon: 'តំណនេះជិតផុតកំណត់ហើយ', // TODO(km-review)
+      technical_details_toggle: 'ព័ត៌មានលម្អិតបច្ចេកទេស', // TODO(km-review)
+      issuer_did_label: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
+      share_token_label: 'កូដតំណចែករំលែក៖', // TODO(km-review)
+      verified_at_label: 'ផ្ទៀងផ្ទាត់នៅ៖', // TODO(km-review)
+      format_label: 'ទម្រង់៖', // TODO(km-review)
+      algorithm_label: 'ក្បួនដោះស្រាយ៖', // TODO(km-review)
+      failed_title: 'ការផ្ទៀងផ្ទាត់បរាជ័យ',
+      verification_steps_heading: 'ជំហានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      what_to_do_label: 'គួរធ្វើអ្វី៖',
+      reason_label: 'មូលហេតុ៖', // TODO(km-review)
+      footer_heading: 'តើ Actik ផ្ទៀងផ្ទាត់ដោយរបៀបណា?',
+      trust_signature_title: 'ហត្ថលេខាគ្រីបតូ',
+      trust_signature_desc: 'ត្រាឌីជីថលរបស់ស្ថាប័នបញ្ជាក់ភាពត្រឹមត្រូវ',
+      trust_registry_title: 'បញ្ជីទុកចិត្ត',
+      trust_registry_desc: 'ក្រសួងអប់រំបញ្ជាក់ថាស្ថាប័ននេះស្របច្បាប់',
+      trust_disclosure_title: 'ការបង្ហាញដោយជ្រើសរើស',
+      trust_disclosure_desc: 'ម្ចាស់វិញ្ញាបនបត្រគ្រប់គ្រងអ្វីដែលអ្នកឃើញ',
+      powered_by: 'ដំណើរការដោយ Actik — ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)
+      learn_more: 'ស្វែងយល់បន្ថែមនៅ actik.app', // TODO(km-review)
+      close: 'បិទ',
+      pdf_not_supported: 'កម្មវិធីរុករកនេះមិនអាចមើល PDF ជាមុនបានទេ។', // TODO(km-review)
     }
   }
 };

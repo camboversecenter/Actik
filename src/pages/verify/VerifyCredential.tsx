@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useLanguage } from '../../lib/i18n'
 
 // Function name may differ — check actual exports of sdjwt.ts
 import { verify as verifyPresentation, readDisclosures } from '../../lib/sdjwt'
@@ -101,43 +102,45 @@ function parsePresentation(presentation: string): ParsedPresentation {
 }
 
 /**
- * Formats keys to standard Cambodian / human-readable labels.
+ * Formats keys to Khmer-primary, human-readable labels — reuses the same
+ * i18n keys the wallet/share screens already use for these exact fields,
+ * so the label a holder sees when sharing matches what a verifier sees here.
  */
-function getFieldLabel(key: string): string {
+function getFieldLabel(key: string, t: (k: string) => string): string {
   switch (key) {
     case 'name':
-      return 'Full name'
+      return t('wallet.student_name').replace(/[:៖]\s*$/, '')
     case 'degree':
-      return 'Degree'
+      return t('wallet.degree_title')
     case 'institution':
-      return 'Institution'
+      return t('wallet.institution_name')
     case 'year':
-      return 'Year'
+      return t('wallet.field_year')
     case 'gpa':
-      return 'GPA'
+      return t('wallet.field_gpa')
     case 'national_id':
-      return 'National ID'
+      return t('wallet.field_national_id')
     case 'notes':
-      return 'Notes'
+      return t('wallet.field_notes')
     case 'iss':
-      return 'Issued by'
+      return t('wallet.detail_issued_by')
     case 'iat':
-      return 'Issue date'
+      return t('wallet.issue_date_label')
     case 'email':
-      return 'Email address'
+      return t('wallet.student_email').replace(/[:៖]\s*$/, '')
     case 'student_id':
-      return 'Student ID'
+      return t('wallet.student_id').replace(/[:៖]\s*$/, '')
     case 'degree_type':
-      return 'Degree type'
+      return t('wallet.degree_type').replace(/[:៖]\s*$/, '')
     case 'major':
-      return 'Major'
+      return t('wallet.major').replace(/[:៖]\s*$/, '')
     case 'graduation_date':
-      return 'Graduation date'
+      return t('wallet.graduation_date').replace(/[:៖]\s*$/, '')
     case 'certificate_id':
-      return 'Certificate ID'
+      return t('wallet.certificate_id').replace(/[:៖]\s*$/, '')
     case 'photo':
     case 'student_photo':
-      return 'Certificate photo / scan'
+      return t('wallet.field_photo')
     default:
       return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
   }
@@ -149,6 +152,7 @@ function getFieldLabel(key: string): string {
  * Scans row average luminance (perceptual) — robust against JPEG compression artifacts.
  */
 function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFullscreen: () => void }) {
+  const { t } = useLanguage()
   const imgRef = useRef<HTMLImageElement>(null)
   const [clipHeight, setClipHeight] = useState<number | undefined>(undefined)
 
@@ -245,7 +249,7 @@ function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFul
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
-          View Full Screen
+          {t('wallet.view_full_screen')}
         </button>
       </div>
     </>
@@ -253,15 +257,16 @@ function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFul
 }
 
 export default function VerifyCredential() {
+  const { t } = useLanguage()
   const { token } = useParams<{ token: string }>()
   const isTokenInvalid = !token || token.length < 10
 
   const [status, setStatus] = useState<'loading' | 'success' | 'failed' | 'idle'>('idle')
   const [checks, setChecks] = useState<VerificationCheck[]>([
-    { id: '1', label: 'Loading credential...', status: 'waiting' },
-    { id: '2', label: 'Checking link validity...', status: 'waiting' },
-    { id: '3', label: 'Verifying issuer signature...', status: 'waiting' },
-    { id: '4', label: 'Checking issuer trust registry...', status: 'waiting' },
+    { id: '1', label: t('verify.check_1'), status: 'waiting' },
+    { id: '2', label: t('verify.check_2'), status: 'waiting' },
+    { id: '3', label: t('verify.check_3'), status: 'waiting' },
+    { id: '4', label: t('verify.check_4'), status: 'waiting' },
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
@@ -287,7 +292,7 @@ export default function VerifyCredential() {
       
       if (!limit.allowed) {
         setChecks([
-          { id: 'rate-limit', label: 'Security Check', status: 'failed', errorMessage: 'Verification service temporarily unavailable due to too many requests. Please try again later.' }
+          { id: 'rate-limit', label: t('verify.check_rate_limit'), status: 'failed', errorMessage: t('verify.rate_limit_error') }
         ])
         setStatus('failed')
         return
@@ -295,10 +300,10 @@ export default function VerifyCredential() {
 
       // Initialize checks list
       setChecks([
-        { id: '1', label: 'Loading credential...', status: 'running' },
-        { id: '2', label: 'Checking link validity...', status: 'waiting' },
-        { id: '3', label: 'Verifying issuer signature...', status: 'waiting' },
-        { id: '4', label: 'Checking issuer trust registry...', status: 'waiting' },
+        { id: '1', label: t('verify.check_1'), status: 'running' },
+        { id: '2', label: t('verify.check_2'), status: 'waiting' },
+        { id: '3', label: t('verify.check_3'), status: 'waiting' },
+        { id: '4', label: t('verify.check_4'), status: 'waiting' },
       ])
       setStatus('loading')
 
@@ -615,7 +620,7 @@ export default function VerifyCredential() {
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Close
+            {t('verify.close')}
           </button>
           <img
             src={fullscreenImage}
@@ -662,14 +667,17 @@ export default function VerifyCredential() {
       {/* Top bar */}
       <header className="border-b border-stone-100 bg-white no-print">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xl font-semibold text-indigo-600">Actik</span>
-            <span className="text-[10px] text-stone-500 -mt-0.5 font-medium">
-              Proof of ownership
-            </span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold text-indigo-600">Actik</span>
+              <span className="font-khmer text-[10px] text-stone-500 -mt-0.5 font-medium">
+                {t('verify.tagline')}
+              </span>
+            </div>
           </div>
-          <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-            Verification result
+          <span className="font-khmer text-xs font-semibold text-stone-400 uppercase tracking-wider">
+            {t('verify.result_label')}
           </span>
         </div>
       </header>
@@ -688,11 +696,11 @@ export default function VerifyCredential() {
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-stone-900 mb-2">Invalid verification link</h2>
+              <h2 className="font-khmer text-xl font-semibold text-stone-900 mb-2">{t('verify.invalid_link_title')}</h2>
               <p className="text-sm text-stone-600 mb-1">
-                This does not appear to be a valid Actik verification link
+                {t('verify.invalid_link_desc')}
               </p>
-              <p className="text-xs text-stone-400 font-medium">Check that you have the full URL</p>
+              <p className="text-xs text-stone-400 font-medium">{t('verify.invalid_link_hint')}</p>
             </div>
           )}
 
@@ -700,8 +708,8 @@ export default function VerifyCredential() {
           {!isTokenInvalid && status === 'loading' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-stone-900">Verifying credential...</h2>
-                <p className="text-sm text-stone-500 mt-1 font-medium">Running security checks...</p>
+                <h2 className="font-khmer text-xl font-semibold text-stone-900">{t('verify.loading_title')}</h2>
+                <p className="text-sm text-stone-500 mt-1 font-medium">{t('verify.loading_subtitle')}</p>
               </div>
               <div className="space-y-4 pt-4 border-t border-stone-100">
                 {checks.map((check) => (
@@ -764,17 +772,17 @@ export default function VerifyCredential() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-emerald-700">Credential verified</h2>
+                <h2 className="font-khmer text-2xl font-bold text-emerald-700">{t('verify.success_title')}</h2>
                 <p className="text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
-                  This credential is authentic and was issued by an accredited institution
+                  {t('verify.success_desc')}
                 </p>
               </div>
 
               {/* Issuer Trust Badge */}
               <div className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
-                    Issued by:
+                  <span className="font-khmer text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                    {t('verify.issued_by_label')}
                   </span>
                   <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
                   <a
@@ -803,7 +811,7 @@ export default function VerifyCredential() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    Accredited
+                    {t('verify.accredited_badge')}
                   </div>
                   <div className="px-1.5 py-0.5 bg-stone-100 border border-stone-200 rounded text-[9px] font-bold text-stone-400 uppercase tracking-wider select-none">
                     MoEYS
@@ -813,7 +821,7 @@ export default function VerifyCredential() {
 
               {/* Disclosed Fields Section */}
               <div className="space-y-3">
-                <h3 className="text-lg font-medium text-stone-900">Credential details</h3>
+                <h3 className="font-khmer text-lg font-medium text-stone-900">{t('verify.credential_details_heading')}</h3>
                 <hr className="border-stone-100" />
                 <div className="divide-y divide-stone-100">
                   {sortedFields.map(([key, value]) => {
@@ -822,15 +830,15 @@ export default function VerifyCredential() {
                       const isPdf = valStr.startsWith('data:application/pdf') || valStr.endsWith('.pdf')
                       return (
                         <div key={key} style={{ marginBottom: '1rem', marginTop: '1rem' }}>
-                          <div style={{ 
-                            fontSize: '0.75rem', 
-                            color: 'var(--muted)', 
+                          <div className="font-khmer" style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--muted)',
                             marginBottom: '0.4rem',
                             fontWeight: 600,
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
-                            {getFieldLabel(key)}
+                            {getFieldLabel(key, t)}
                           </div>
                           {isPdf ? (
                             <div style={{ width: '100%', borderRadius: 8, border: '1px solid #e7e5e4', overflow: 'hidden', background: '#f5f5f4' }}>
@@ -842,7 +850,7 @@ export default function VerifyCredential() {
                                 style={{ display: 'block' }}
                               >
                                 <div style={{ padding: '1.5rem', textAlign: 'center', color: '#78716c', fontSize: '0.875rem' }}>
-                                  PDF preview not supported in this browser.
+                                  {t('verify.pdf_not_supported')}
                                 </div>
                               </object>
                             </div>
@@ -874,7 +882,7 @@ export default function VerifyCredential() {
                       } catch {}
                       return (
                         <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                          <span className="text-stone-500 font-medium">{getFieldLabel(key)}</span>
+                          <span className="font-khmer text-stone-500 font-medium">{getFieldLabel(key, t)}</span>
                           <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
                             {formatted}
                           </span>
@@ -883,7 +891,7 @@ export default function VerifyCredential() {
                     }
                     return (
                       <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                        <span className="text-stone-500 font-medium">{getFieldLabel(key)}</span>
+                        <span className="font-khmer text-stone-500 font-medium">{getFieldLabel(key, t)}</span>
                         <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
                           {String(value)}
                         </span>
@@ -892,7 +900,7 @@ export default function VerifyCredential() {
                   })}
                   {parsedPresentation?.issuedAt && (
                     <div className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                      <span className="text-stone-500 font-medium">Issue date</span>
+                      <span className="font-khmer text-stone-500 font-medium">{t('wallet.issue_date_label')}</span>
                       <span className="text-stone-900 font-semibold sm:text-right">
                         {formatTimestamp(parsedPresentation.issuedAt)}
                       </span>
@@ -908,9 +916,9 @@ export default function VerifyCredential() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>
-                    Some fields are hidden by the holder (selective disclosure).{' '}
+                    {t('verify.hidden_fields_notice')}{' '}
                     <span className="font-semibold text-stone-400">
-                      Hidden: {hiddenFields.map((f) => getFieldLabel(f)).join(', ')}
+                      {t('verify.hidden_label')} {hiddenFields.map((f) => getFieldLabel(f, t)).join(', ')}
                     </span>
                   </span>
                 </div>
@@ -920,7 +928,7 @@ export default function VerifyCredential() {
               {share?.expires_at && (
                 <div className="border-t border-stone-100 pt-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span className="font-medium">Link valid until:</span>
+                    <span className="font-khmer font-medium">{t('verify.link_valid_until')}</span>
                     <span className="font-semibold text-stone-700">
                       {formatExpiryDate(share.expires_at)}
                     </span>
@@ -935,20 +943,22 @@ export default function VerifyCredential() {
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                         />
                       </svg>
-                      This link expires soon
+                      {t('verify.link_expiring_soon')}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Collapsible Technical Details */}
+              {/* Collapsible Technical Details — labels stay English/mono, same as
+                  the mockup's own choice for this section (ISSUER DID, SHARE
+                  TOKEN, etc. are shown in caps mono regardless of language). */}
               <div className="border-t border-stone-100 pt-4 no-print">
                 <button
                   type="button"
                   onClick={() => setDetailsExpanded(!detailsExpanded)}
                   className="w-full flex items-center justify-between text-xs font-semibold text-stone-400 hover:text-indigo-600 focus:outline-none transition-colors"
                 >
-                  <span>Technical verification details</span>
+                  <span className="font-khmer">{t('verify.technical_details_toggle')}</span>
                   <span>{detailsExpanded ? '▲' : '▼'}</span>
                 </button>
                 {detailsExpanded && (
@@ -995,7 +1005,7 @@ export default function VerifyCredential() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-rose-700">Verification failed</h2>
+                <h2 className="font-khmer text-2xl font-bold text-rose-700">{t('verify.failed_title')}</h2>
                 <p className="text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
                   {getFailureSubtext()}
                 </p>
@@ -1003,8 +1013,8 @@ export default function VerifyCredential() {
 
               {/* Sequential check results list */}
               <div className="mt-8 border border-rose-100 rounded-xl p-4 bg-rose-50/10 space-y-4">
-                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                  Verification Steps
+                <h3 className="font-khmer text-xs font-bold text-stone-400 uppercase tracking-widest">
+                  {t('verify.verification_steps_heading')}
                 </h3>
                 <div className="space-y-3.5">
                   {checks.map((check) => (
@@ -1043,7 +1053,7 @@ export default function VerifyCredential() {
                       </div>
                       {check.status === 'failed' && check.errorMessage && (
                         <p className="pl-8 pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
-                          Reason: {check.errorMessage}
+                          {t('verify.reason_label')} {check.errorMessage}
                         </p>
                       )}
                     </div>
@@ -1054,7 +1064,7 @@ export default function VerifyCredential() {
               {/* Guidance / What to do */}
               {failedCheck && (
                 <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 text-stone-600 text-xs leading-relaxed">
-                  <span className="font-bold text-stone-700 block mb-1">What to do:</span>
+                  <span className="font-khmer font-bold text-stone-700 block mb-1">{t('verify.what_to_do_label')}</span>
                   <p className="font-medium">{getGuidanceText()}</p>
                 </div>
               )}
@@ -1068,8 +1078,8 @@ export default function VerifyCredential() {
       {!isTokenInvalid && status !== 'loading' && (
         <footer className="mt-12 text-center space-y-6 pb-12 no-print border-t border-stone-200/60 pt-8">
           <div className="text-left max-w-lg mx-auto">
-            <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest text-center mb-6">
-              How does Actik verification work?
+            <h4 className="font-khmer text-xs font-bold text-stone-400 uppercase tracking-widest text-center mb-6">
+              {t('verify.footer_heading')}
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-stone-600 px-4">
               <div className="space-y-1 text-center">
@@ -1083,9 +1093,9 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Cryptographic signature</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_signature_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  The issuer's digital seal proves authenticity
+                  {t('verify.trust_signature_desc')}
                 </p>
               </div>
               <div className="space-y-1 text-center">
@@ -1099,9 +1109,9 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Trust registry</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_registry_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  MoEYS confirms the institution is legitimate
+                  {t('verify.trust_registry_desc')}
                 </p>
               </div>
               <div className="space-y-1 text-center">
@@ -1121,22 +1131,22 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Selective disclosure</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_disclosure_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  Holder controls what you see
+                  {t('verify.trust_disclosure_desc')}
                 </p>
               </div>
             </div>
           </div>
           <div className="space-y-1 text-xs text-stone-400">
-            <p className="font-medium">Powered by Actik — Proof of ownership</p>
+            <p className="font-medium">{t('verify.powered_by')}</p>
             <a
               href="https://actik.app"
               target="_blank"
               rel="noopener noreferrer"
               className="text-indigo-500 hover:underline font-semibold"
             >
-              Learn more at actik.app
+              {t('verify.learn_more')}
             </a>
           </div>
         </footer>
