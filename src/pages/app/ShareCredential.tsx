@@ -7,7 +7,7 @@ import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import { checkRateLimit } from '../../lib/rateLimit'
 import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check } from 'lucide-react'
-import PinDotsInput from '../../components/PinDotsInput'
+import VaultUnlockModal from '../../components/VaultUnlockModal'
 
 // Note: The prompt expects: import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -1320,241 +1320,19 @@ export default function ShareCredential() {
         </div>
       )}
 
-      {/* =======================================================
-          MODAL: UNLOCK VAULT DIALOG
-         ======================================================= */}
+      {/* MODAL: UNLOCK VAULT DIALOG */}
       {showUnlockModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
-        >
-          <div className="card" style={{ maxWidth: '380px', width: '100%', padding: '2rem 1.5rem', textAlign: 'center', background: '#fff', margin: 0 }}>
-            <Lock size={36} style={{ marginBottom: '0.5rem', color: 'var(--forest)' }} />
-            <h3 style={{ margin: '0 0 0.5rem', color: 'var(--forest)' }}>{t('wallet.unlock_vault_title')}</h3>
-            <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              {t('wallet.unlock_vault_modal_desc')}
-            </p>
-
-            {unlockMethod === 'pin' && (
-              <form onSubmit={handleUnlockSubmit}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem', textAlign: 'left' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
-                  <PinDotsInput
-                    value={pinInput}
-                    onChange={setPinInput}
-                    name="vault-pin"
-                    autoComplete="current-password"
-                    autoFocus
-                    required
-                  />
-                </div>
-
-                {unlockError && (
-                  <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '0 0 1rem', fontWeight: 500 }}>
-                    {unlockError}
-                  </p>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={isUnlocking}
-                    style={{
-                      margin: 0,
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      backgroundColor: '#4f46e5',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0.6rem 1rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isUnlocking && (
-                      <div style={{ animation: 'spin 1s linear infinite', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>
-                    )}
-                    <span>{t('wallet.unlock_with_pin')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => {
-                      setShowUnlockModal(false)
-                      setPinInput('')
-                    }}
-                    disabled={isUnlocking}
-                    style={{ width: '100%', borderColor: 'transparent', color: 'var(--muted)', margin: 0 }}
-                  >
-                    {t('wallet.cancel')}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                {isUnlocking ? (
-                  <>
-                    <div style={{ 
-                      animation: 'spin 1s linear infinite', 
-                      width: 28, height: 28, 
-                      border: '3px solid rgba(79,70,229,0.2)', 
-                      borderTop: '3px solid #4f46e5', 
-                      borderRadius: '50%',
-                      margin: '0.5rem auto'
-                    }} />
-                    <p style={{ fontSize: '0.9rem', color: 'var(--forest)', fontWeight: 500, margin: 0 }}>
-                      {t('wallet.authenticating')}
-                    </p>
-                    <p className="muted" style={{ fontSize: '0.8rem', margin: 0 }}>
-                      {t('wallet.complete_biometric')}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 0.5rem' }}>
-                      {t('wallet.device_ask_biometric')}
-                    </p>
-                    {unlockError && (
-                      <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '0 0 0.5rem', fontWeight: 500 }}>
-                        {unlockError}
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleUnlockWithPasskeyClick}
-                      disabled={isUnlocking}
-                      style={{ 
-                        width: '100%',
-                        backgroundColor: '#4f46e5',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '0.7rem 1rem',
-                        cursor: 'pointer',
-                        fontWeight: 600
-                      }}
-                    >
-                      {t('wallet.try_again')}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => { setShowUnlockModal(false); setUnlockError(null) }}
-                  disabled={isUnlocking}
-                  style={{ 
-                    background: 'none', 
-                    border: 'none', 
-                    color: 'var(--muted)', 
-                    cursor: isUnlocking ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem',
-                    opacity: isUnlocking ? 0.5 : 1
-                  }}
-                >
-                  {t('wallet.cancel')}
-                </button>
-              </div>
-            )}
-
-            {(unlockMethod === 'both' || unlockMethod === null) && (
-              <form onSubmit={handleUnlockSubmit}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem', textAlign: 'left' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink)' }}>{t('wallet.enter_vault_pin')}</label>
-                  <PinDotsInput
-                    value={pinInput}
-                    onChange={setPinInput}
-                    name="vault-pin"
-                    autoComplete="current-password"
-                    autoFocus
-                    required
-                  />
-                </div>
-
-                {unlockError && (
-                  <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '0 0 1rem', fontWeight: 500 }}>
-                    {unlockError}
-                  </p>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={isUnlocking}
-                    style={{
-                      margin: 0,
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      backgroundColor: '#4f46e5',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0.6rem 1rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {isUnlocking && (
-                      <div style={{ animation: 'spin 1s linear infinite', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>
-                    )}
-                    <span>{t('wallet.unlock_with_pin')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={handleUnlockWithPasskeyClick}
-                    disabled={isUnlocking}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      margin: 0
-                    }}
-                  >
-                    <span>{t('wallet.unlock_with_passkey')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={() => {
-                      setShowUnlockModal(false)
-                      setPinInput('')
-                    }}
-                    disabled={isUnlocking}
-                    style={{ width: '100%', borderColor: 'transparent', color: 'var(--muted)', margin: 0 }}
-                  >
-                    {t('wallet.cancel')}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+        <VaultUnlockModal
+          unlockMethod={unlockMethod}
+          pinInput={pinInput}
+          onPinChange={setPinInput}
+          onSubmitPin={handleUnlockSubmit}
+          onPasskeyClick={handleUnlockWithPasskeyClick}
+          isUnlocking={isUnlocking}
+          unlockError={unlockError}
+          onCancel={() => { setShowUnlockModal(false); setPinInput(''); setUnlockError(null) }}
+          desc={t('wallet.unlock_vault_modal_desc')}
+        />
       )}
     </div>
   )

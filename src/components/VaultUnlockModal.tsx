@@ -16,6 +16,9 @@ interface VaultUnlockModalProps {
   onCancel: () => void
   title?: string
   desc?: string
+  cancelLabel?: string
+  submitLabel?: string
+  passkeyLabel?: string
 }
 
 // The recurring "enter your vault PIN" dialog — same dark full-bleed
@@ -35,6 +38,9 @@ export default function VaultUnlockModal({
   onCancel,
   title,
   desc,
+  cancelLabel,
+  submitLabel,
+  passkeyLabel,
 }: VaultUnlockModalProps) {
   const { t } = useLanguage()
 
@@ -73,7 +79,7 @@ export default function VaultUnlockModal({
                 disabled={isUnlocking || pinInput.length < 6}
                 className="w-full bg-teal-400 hover:bg-teal-300 active:bg-teal-500 text-indigo-950 font-semibold h-11 rounded-xl text-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
+                {isUnlocking ? t('wallet.unlocking') : (submitLabel || t('wallet.unlock_with_pin'))}
               </button>
               <button
                 type="button"
@@ -81,7 +87,7 @@ export default function VaultUnlockModal({
                 disabled={isUnlocking}
                 className="w-full text-white/50 hover:text-white/80 font-semibold h-10 rounded-xl text-sm cursor-pointer transition-colors"
               >
-                {t('wallet.cancel')}
+                {cancelLabel || t('wallet.cancel')}
               </button>
             </div>
           </form>
@@ -95,14 +101,14 @@ export default function VaultUnlockModal({
             ) : (
               <>
                 {unlockError && <p className="text-rose-300 text-xs font-semibold">{unlockError}</p>}
-                <p className="text-sm text-white/60">{t('wallet.biometric_failed')}</p>
+                {!passkeyLabel && <p className="text-sm text-white/60">{t('wallet.biometric_failed')}</p>}
                 <button
                   type="button"
                   onClick={onPasskeyClick}
                   disabled={isUnlocking}
                   className="w-full bg-teal-400 hover:bg-teal-300 text-indigo-950 font-semibold h-11 rounded-xl text-sm cursor-pointer transition-colors"
                 >
-                  {t('wallet.try_again')}
+                  {passkeyLabel || t('wallet.try_again')}
                 </button>
               </>
             )}
@@ -112,7 +118,7 @@ export default function VaultUnlockModal({
               disabled={isUnlocking}
               className="w-full text-white/50 hover:text-white/80 font-semibold h-10 rounded-xl text-sm cursor-pointer transition-colors"
             >
-              {t('wallet.cancel')}
+              {cancelLabel || t('wallet.cancel')}
             </button>
           </div>
         )}

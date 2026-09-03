@@ -4,8 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
-import PinDotsInput from '../../components/PinDotsInput'
-import { Lock } from 'lucide-react'
+import VaultUnlockModal from '../../components/VaultUnlockModal'
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -345,52 +344,16 @@ export default function WalletCategory() {
 
       {/* UNLOCK MODAL */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
-            <div className="text-center mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
-                <Lock size={22} className="text-indigo-600" />
-              </div>
-              <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
-            </div>
-            {/* Logic based on unlock method */}
-            {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
-              <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
-                <PinDotsInput
-                  value={pinInput}
-                  onChange={setPinInput}
-                  name="vault-pin"
-                  autoComplete="current-password"
-                  autoFocus
-                  required
-                />
-                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="submit" disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
-                </button>
-                {(unlockMethod === 'both' || !unlockMethod) && (
-                  <button type="button" onClick={handleUnlockWithPasskeyClick} className="w-full border border-gray-300 text-gray-700 font-semibold h-11 rounded-lg">
-                    {t('wallet.unlock_with_passkey')}
-                  </button>
-                )}
-                <button type="button" onClick={() => setShowUnlockModal(false)} className="w-full text-gray-500 font-semibold h-11 rounded-lg">
-                  {t('wallet.cancel')}
-                </button>
-              </form>
-            )}
-            {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
-              <div className="flex flex-col gap-3 items-center text-center">
-                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="button" onClick={handleUnlockWithPasskeyClick} disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_passkey')}
-                </button>
-                <button type="button" onClick={() => setShowUnlockModal(false)} className="w-full text-gray-400 font-semibold h-11 rounded-lg">
-                  {t('wallet.cancel')}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <VaultUnlockModal
+          unlockMethod={unlockMethod}
+          pinInput={pinInput}
+          onPinChange={setPinInput}
+          onSubmitPin={handleUnlockSubmit}
+          onPasskeyClick={handleUnlockWithPasskeyClick}
+          isUnlocking={isUnlocking}
+          unlockError={unlockError}
+          onCancel={() => setShowUnlockModal(false)}
+        />
       )}
 
     </div>
