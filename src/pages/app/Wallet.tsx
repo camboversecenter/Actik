@@ -420,10 +420,9 @@ export default function Wallet() {
                     
                     const isOther = type === 'other';
                     const displayLabel = isOther ? t('wallet.category_other') : getLabel(type);
-                    // Mockup shows every credential in a category inline, no
-                    // cap — the "All N" link is a shortcut to the dedicated
-                    // per-category page, not a "there's more hidden" affordance.
-                    const displayCreds = groupCreds;
+                    // Wallet home shows at most 2 per category — "All N" goes
+                    // to the dedicated per-category page for the rest.
+                    const displayCreds = groupCreds.slice(0, 2);
 
                     // Short English caption next to the Khmer category label —
                     // matches the mockup's "Khmer · English" pairing. Only

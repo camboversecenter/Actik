@@ -364,6 +364,7 @@ export default function IssueCredential() {
           recipient_email: studentEmail.trim().toLowerCase(),
           sdjwt: sdJwt,
           issuer_did: issuerInfo.did,
+          institution_name: issuerInfo.name,
           credential_type: selectedType
         }
         if (selectedType === 'academic_degree') {

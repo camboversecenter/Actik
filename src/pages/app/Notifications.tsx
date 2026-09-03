@@ -279,7 +279,9 @@ export default function Notifications() {
           student_id: cred.student_id,
           major: cred.major,
           graduation_date: cred.graduation_date,
-          certificate_id: cred.certificate_id
+          certificate_id: cred.certificate_id,
+          issuer_did: cred.issuer_did,
+          institution_name: cred.institution_name
         })
 
         if (!updateRes.error) {
