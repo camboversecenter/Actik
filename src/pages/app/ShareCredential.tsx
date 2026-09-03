@@ -6,7 +6,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import { checkRateLimit } from '../../lib/rateLimit'
-import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check } from 'lucide-react'
+import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check, Loader2 } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 
 // Note: The prompt expects: import { useVault } from '../../vault/zk-vault/useVault'
@@ -561,6 +561,55 @@ export default function ShareCredential() {
     return did.slice(0, 30) + '...'
   }
 
+  // A field that's always disclosed (issuer DID, institution, degree, issue
+  // date) — shown with a lock icon and "always shown" text instead of a
+  // toggle, since there's nothing to toggle.
+  const renderAlwaysShownField = (label: string, value: React.ReactNode) => (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-stone-100 bg-stone-50/70 text-sm">
+      <div className="flex items-center gap-2 min-w-0">
+        <Lock size={13} className="text-stone-400 shrink-0" />
+        <span className="font-semibold text-stone-700 shrink-0">{label}</span>
+        <span className="text-stone-500 font-mono text-xs truncate">{value}</span>
+      </div>
+      <span className="text-stone-400 text-[11px] italic shrink-0">{t('wallet.always_shown')}</span>
+    </div>
+  )
+
+  // A selectable field — real toggle switch driven by the same
+  // selectedFields/toggleSelectableField state as before, just restyled.
+  const renderToggleField = (
+    fieldKey: string,
+    label: string,
+    value: React.ReactNode,
+    opts?: { mono?: boolean; badge?: { label: string; tone: 'warning' | 'danger' } }
+  ) => {
+    const checked = selectedFields.includes(fieldKey)
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm">
+        <button
+          type="button"
+          onClick={() => toggleSelectableField(fieldKey)}
+          aria-pressed={checked}
+          aria-label={label}
+          className={`w-9 h-5 rounded-full transition-colors relative shrink-0 cursor-pointer ${checked ? 'bg-indigo-600' : 'bg-stone-300'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <span className="font-semibold text-stone-800">{label}</span>
+          <span className={`ml-2 text-stone-500 ${opts?.mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+        </div>
+        {opts?.badge && (
+          <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+            opts.badge.tone === 'danger' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+          }`}>
+            {opts.badge.label}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   const generatedShareUrl = createdShare ? `${window.location.origin}/verify/${createdShare.id}` : ''
 
   return (
@@ -729,331 +778,119 @@ export default function ShareCredential() {
           {step === 'sharing' && decryptedSDJwt && (
             <>
               {/* FIELD PICKER */}
-              <div className="card" style={{ padding: '1.5rem', background: '#fff', textAlign: 'left' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--forest)', margin: '0 0 0.25rem' }}>
+              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 md:p-6 text-left">
+                <h3 className="font-khmer text-lg font-bold text-stone-900 mb-1">
                   {t('wallet.choose_what_to_share')}
                 </h3>
-                <p className="muted" style={{ fontSize: '0.82rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                <p className="text-sm text-stone-500 mb-5 leading-relaxed">
                   {t('wallet.choose_what_to_share_desc')}
                 </p>
 
                 {/* Field Rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', border: '1px solid var(--line)', borderRadius: '8px', overflow: 'hidden' }}>
-                  
-                  {/* ALWAYS SHOWN: Issuer DID */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfbf9', borderBottom: '1px solid var(--line)', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Lock size={14} style={{ color: 'var(--muted)' }} />
-                      <span style={{ fontWeight: 600 }}>{t('wallet.issuer_did')}</span>
-                      <code className="mono" style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>
-                        {truncateDid(credential?.issuer_did || '')}
-                      </code>
-                    </div>
-                    <span className="muted" style={{ fontSize: '0.72rem', fontStyle: 'italic' }}>{t('wallet.always_shown')}</span>
-                  </div>
+                <div className="border border-stone-200 rounded-xl overflow-hidden">
+                  {renderAlwaysShownField(t('wallet.issuer_did'), truncateDid(credential?.issuer_did || ''))}
+                  {renderAlwaysShownField(t('wallet.institution_name'), credential?.institution_name)}
+                  {renderAlwaysShownField(t('wallet.degree_title'), credential?.degree_title)}
+                  {renderAlwaysShownField(t('wallet.issue_date'), credential && new Date(credential.created_at).toLocaleDateString())}
 
-                  {/* ALWAYS SHOWN: Institution */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfbf9', borderBottom: '1px solid var(--line)', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Lock size={14} style={{ color: 'var(--muted)' }} />
-                      <span style={{ fontWeight: 600 }}>{t('wallet.institution_name')}</span>
-                      <span style={{ color: 'var(--muted)' }}>
-                        {credential?.institution_name}
-                      </span>
-                    </div>
-                    <span className="muted" style={{ fontSize: '0.72rem', fontStyle: 'italic' }}>{t('wallet.always_shown')}</span>
-                  </div>
+                  {availableClaims.name !== undefined && availableClaims.name !== '' &&
+                    renderToggleField('name', t('wallet.student_name').replace(':', ''), availableClaims.name)}
 
-                  {/* ALWAYS SHOWN: Degree */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfbf9', borderBottom: '1px solid var(--line)', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Lock size={14} style={{ color: 'var(--muted)' }} />
-                      <span style={{ fontWeight: 600 }}>{t('wallet.degree_title')}</span>
-                      <span style={{ color: 'var(--muted)' }}>
-                        {credential?.degree_title}
-                      </span>
-                    </div>
-                    <span className="muted" style={{ fontSize: '0.72rem', fontStyle: 'italic' }}>{t('wallet.always_shown')}</span>
-                  </div>
+                  {availableClaims.email !== undefined && availableClaims.email !== '' &&
+                    renderToggleField('email', t('wallet.student_email').replace(':', ''), availableClaims.email, { mono: true })}
 
-                  {/* ALWAYS SHOWN: Issue date */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fcfbf9', borderBottom: '1px solid var(--line)', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Lock size={14} style={{ color: 'var(--muted)' }} />
-                      <span style={{ fontWeight: 600 }}>{t('wallet.issue_date')}</span>
-                      <span style={{ color: 'var(--muted)' }}>
-                        {credential && new Date(credential.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <span className="muted" style={{ fontSize: '0.72rem', fontStyle: 'italic' }}>{t('wallet.always_shown')}</span>
-                  </div>
+                  {availableClaims.student_id !== undefined && availableClaims.student_id !== '' &&
+                    renderToggleField('student_id', t('wallet.student_id').replace(':', ''), availableClaims.student_id, { mono: true })}
 
-                  {/* SELECTABLE: Full name */}
-                  {availableClaims.name !== undefined && availableClaims.name !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('name')} 
-                          onChange={() => toggleSelectableField('name')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.student_name').replace(':', '')}</strong>
-                        <span className="muted">{availableClaims.name}</span>
-                      </label>
-                    </div>
-                  )}
+                  {availableClaims.year !== undefined && availableClaims.year !== '' &&
+                    renderToggleField('year', t('wallet.field_year'), availableClaims.year)}
 
-                  {/* SELECTABLE: Student Email */}
-                  {availableClaims.email !== undefined && availableClaims.email !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('email')} 
-                          onChange={() => toggleSelectableField('email')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.student_email').replace(':', '')}</strong>
-                        <span className="muted font-mono" style={{ fontSize: '0.78rem' }}>{availableClaims.email}</span>
-                      </label>
-                    </div>
-                  )}
+                  {availableClaims.graduation_date !== undefined && availableClaims.graduation_date !== '' &&
+                    renderToggleField(
+                      'graduation_date',
+                      t('wallet.graduation_date').replace(':', ''),
+                      new Date(availableClaims.graduation_date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+                    )}
 
-                  {/* SELECTABLE: Student ID */}
-                  {availableClaims.student_id !== undefined && availableClaims.student_id !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('student_id')} 
-                          onChange={() => toggleSelectableField('student_id')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.student_id').replace(':', '')}</strong>
-                        <span className="muted font-mono" style={{ fontSize: '0.78rem' }}>{availableClaims.student_id}</span>
-                      </label>
-                    </div>
-                  )}
+                  {availableClaims.certificate_id !== undefined && availableClaims.certificate_id !== '' &&
+                    renderToggleField('certificate_id', t('wallet.certificate_id').replace(':', ''), availableClaims.certificate_id, { mono: true })}
 
-                  {/* SELECTABLE: Completion Year */}
-                  {availableClaims.year !== undefined && availableClaims.year !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('year')} 
-                          onChange={() => toggleSelectableField('year')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.graduation_date').replace(':', '')}</strong>
-                        <span className="muted">{availableClaims.year}</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {/* SELECTABLE: Graduation Date */}
-                  {availableClaims.graduation_date !== undefined && availableClaims.graduation_date !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('graduation_date')} 
-                          onChange={() => toggleSelectableField('graduation_date')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.graduation_date').replace(':', '')}</strong>
-                        <span className="muted">
-                          {new Date(availableClaims.graduation_date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </span>
-                      </label>
-                    </div>
-                  )}
-
-                  {/* SELECTABLE: Certificate ID */}
-                  {availableClaims.certificate_id !== undefined && availableClaims.certificate_id !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0, width: '100%' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('certificate_id')} 
-                          onChange={() => toggleSelectableField('certificate_id')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>{t('wallet.certificate_id').replace(':', '')}</strong>
-                        <span className="muted font-mono" style={{ fontSize: '0.78rem' }}>{availableClaims.certificate_id}</span>
-                      </label>
-                    </div>
-                  )}
-
-                  {/* SELECTABLE: Certificate Photo */}
-                  {(availableClaims.photo || availableClaims.student_photo) && (
-                    <div
-                      style={{
-                        border: selectedFields.includes('photo') || selectedFields.includes('student_photo')
-                          ? '2px solid #4f46e5' 
-                          : '1.5px solid #e7e5e4',
-                        borderRadius: '10px',
-                        padding: '0.75rem 1rem',
-                        cursor: 'pointer',
-                        background: selectedFields.includes('photo') || selectedFields.includes('student_photo')
-                          ? '#f0f0ff' 
-                          : '#fff',
-                        transition: 'all 0.15s',
-                        marginBottom: '1rem'
-                      }}
-                      onClick={() => {
-                        if (availableClaims.photo) toggleSelectableField('photo')
-                        if (availableClaims.student_photo) toggleSelectableField('student_photo')
-                      }}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.75rem' 
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedFields.includes('photo') || selectedFields.includes('student_photo')}
-                          onChange={() => {
-                            if (availableClaims.photo) toggleSelectableField('photo')
-                            if (availableClaims.student_photo) toggleSelectableField('student_photo')
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ width: 16, height: 16, accentColor: '#4f46e5', cursor: 'pointer' }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ 
-                            fontSize: '0.85rem', 
-                            fontWeight: 600, 
-                            color: 'var(--ink)',
-                            marginBottom: '0.35rem'
-                          }}>
-                            Certificate photo / scan
-                          </div>
-                          <div style={{ 
-                            fontSize: '0.75rem', 
-                            color: 'var(--muted)' 
-                          }}>
-                            Share the actual certificate image with the employer
-                          </div>
+                  {/* Certificate Photo — its own row since it needs a thumbnail preview */}
+                  {(availableClaims.photo || availableClaims.student_photo) && (() => {
+                    const checked = selectedFields.includes('photo') || selectedFields.includes('student_photo')
+                    const toggle = () => {
+                      if (availableClaims.photo) toggleSelectableField('photo')
+                      if (availableClaims.student_photo) toggleSelectableField('student_photo')
+                    }
+                    const val = availableClaims.photo || availableClaims.student_photo
+                    return (
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm">
+                        <button
+                          type="button"
+                          onClick={toggle}
+                          aria-pressed={checked}
+                          aria-label="Certificate photo / scan"
+                          className={`w-9 h-5 rounded-full transition-colors relative shrink-0 cursor-pointer ${checked ? 'bg-indigo-600' : 'bg-stone-300'}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-stone-800">Certificate photo / scan</div>
+                          <div className="text-xs text-stone-500 mt-0.5">Share the actual certificate image with the employer</div>
                         </div>
-                        {(availableClaims.photo || availableClaims.student_photo) && (() => {
-                          const val = availableClaims.photo || availableClaims.student_photo;
-                          return (
-                            <img
-                              src={val.startsWith('data:') || val.startsWith('http')
-                                ? val 
-                                : `data:image/jpeg;base64,${val}`}
-                              alt="Certificate"
-                              style={{
-                                width: 48,
-                                height: 48,
-                                objectFit: 'cover',
-                                borderRadius: 6,
-                                border: '1px solid #e7e5e4',
-                                flexShrink: 0
-                              }}
-                              onError={(e) => { 
-                                (e.target as HTMLImageElement).style.display = 'none' 
-                              }}
-                            />
-                          )
-                        })()}
+                        <img
+                          src={val.startsWith('data:') || val.startsWith('http') ? val : `data:image/jpeg;base64,${val}`}
+                          alt="Certificate"
+                          className="w-12 h-12 object-cover rounded-md border border-stone-200 shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
 
-                  {/* SELECTABLE: GPA */}
-                  {availableClaims.gpa !== undefined && availableClaims.gpa !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('gpa')} 
-                          onChange={() => toggleSelectableField('gpa')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>GPA</strong>
-                        <span className="muted">{availableClaims.gpa}</span>
-                      </label>
-                      <span className="pill gold" style={{ fontSize: '0.65rem', backgroundColor: '#f4e9d4', color: 'var(--gold)', fontWeight: 600 }}>
-                        {t('wallet.sensitive')}
-                      </span>
-                    </div>
-                  )}
+                  {availableClaims.gpa !== undefined && availableClaims.gpa !== '' &&
+                    renderToggleField('gpa', t('wallet.field_gpa'), availableClaims.gpa, { badge: { label: t('wallet.sensitive'), tone: 'warning' } })}
 
-                  {/* SELECTABLE: National ID */}
-                  {availableClaims.national_id !== undefined && availableClaims.national_id !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem', borderBottom: '1px solid var(--line)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('national_id')} 
-                          onChange={() => toggleSelectableField('national_id')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>National ID</strong>
-                        <span className="muted">{availableClaims.national_id}</span>
-                      </label>
-                      <span className="pill bad" style={{ fontSize: '0.65rem', backgroundColor: '#f3e0e0', color: 'var(--danger)', fontWeight: 600 }}>
-                        {t('wallet.private')}
-                      </span>
-                    </div>
-                  )}
+                  {availableClaims.national_id !== undefined && availableClaims.national_id !== '' &&
+                    renderToggleField('national_id', t('wallet.field_national_id'), availableClaims.national_id, { badge: { label: t('wallet.private'), tone: 'danger' } })}
 
-                  {/* SELECTABLE: Notes */}
-                  {availableClaims.notes !== undefined && availableClaims.notes !== '' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', fontSize: '0.88rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', margin: 0 }}>
-                        <input 
-                          type="checkbox" 
-                          checked={selectedFields.includes('notes')} 
-                          onChange={() => toggleSelectableField('notes')}
-                          style={{ width: 'auto' }}
-                        />
-                        <strong style={{ fontWeight: 600 }}>Additional notes</strong>
-                        <span className="muted" style={{ display: 'inline-block', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {availableClaims.notes}
-                        </span>
-                      </label>
-                    </div>
-                  )}
+                  {availableClaims.notes !== undefined && availableClaims.notes !== '' &&
+                    renderToggleField('notes', t('wallet.field_notes'), availableClaims.notes)}
                 </div>
 
                 {/* LIVE FIELD PICKER SUMMARY */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                <div className="flex justify-between mt-3 text-xs text-stone-500 gap-3">
                   <span>{t('wallet.sharing_fields').replace('{disclosed}', disclosedFieldsCount.toString()).replace('{total}', totalFields.toString())}</span>
                   {hiddenFields.length > 0 && (
-                    <span>{t('wallet.hidden_fields').replace('{fields}', hiddenFields.join(', '))}</span>
+                    <span className="text-right">{t('wallet.hidden_fields').replace('{fields}', hiddenFields.join(', '))}</span>
                   )}
                 </div>
               </div>
 
               {/* STEP 3: SET EXPIRY */}
-              <div className="card" style={{ padding: '1.5rem', background: '#fff', textAlign: 'left' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--forest)', margin: '0 0 0.25rem' }}>
+              <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 md:p-6 text-left">
+                <h3 className="font-khmer text-lg font-bold text-stone-900 mb-1">
                   {t('wallet.who_is_this_for')}
                 </h3>
-                <div style={{ marginBottom: '1.5rem' }}>
+                <div className="mb-6">
                   <input
                     type="text"
                     value={recipientLabel}
                     onChange={(e) => setRecipientLabel(e.target.value)}
                     placeholder={t('wallet.recipient_placeholder')}
-                    style={{ width: '100%', padding: '0.6rem 0.8rem', fontSize: '0.9rem', borderRadius: '6px', border: '1px solid var(--line)' }}
+                    className="w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
 
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--forest)', margin: '0 0 0.25rem' }}>
+                <h3 className="font-khmer text-lg font-bold text-stone-900 mb-1">
                   {t('wallet.how_long_active')}
                 </h3>
-                <p className="muted" style={{ fontSize: '0.82rem', marginBottom: '1.25rem' }}>
+                <p className="text-sm text-stone-500 mb-5">
                   {t('wallet.duration_desc')}
                 </p>
 
                 {/* Duration choices row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                <div className="grid grid-cols-5 gap-2 mb-5">
                   {['1day', '7days', '30days', '90days', 'custom'].map((opt) => {
                     const isSelected = expiryOption === opt
                     const labels: Record<string, string> = {
@@ -1068,17 +905,11 @@ export default function ShareCredential() {
                         key={opt}
                         type="button"
                         onClick={() => setExpiryOption(opt as ExpiryOption)}
-                        style={{
-                          padding: '0.45rem 0.25rem',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          border: isSelected ? '2px solid #4f46e5' : '1px solid var(--line)',
-                          backgroundColor: isSelected ? '#f5f3ff' : '#fff',
-                          color: isSelected ? '#4f46e5' : 'var(--muted)',
-                          textAlign: 'center'
-                        }}
+                        className={`px-1 py-2 text-[13px] font-semibold rounded-lg text-center transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'border-2 border-indigo-600 bg-indigo-50 text-indigo-650'
+                            : 'border border-stone-200 bg-white text-stone-500 hover:border-stone-300'
+                        }`}
                       >
                         {labels[opt]}
                       </button>
@@ -1088,36 +919,36 @@ export default function ShareCredential() {
 
                 {/* Custom Date Picker (when selected) */}
                 {expiryOption === 'custom' && (
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ fontWeight: 600, color: 'var(--ink)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block' }}>
+                  <div className="mb-4">
+                    <label className="font-semibold text-stone-700 text-sm mb-1.5 block">
                       {t('wallet.choose_expiration_date')}
                     </label>
-                    <div style={{ position: 'relative' }}>
+                    <div className="relative">
                       <input
                         type="date"
                         value={customDate}
                         min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]} // tomorrow
                         max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} // 1 year
                         onChange={(e) => setCustomDate(e.target.value)}
-                        style={{ paddingLeft: '2.5rem' }}
+                        className="w-full rounded-lg border border-stone-300 pl-10 pr-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
-                      <Calendar size={16} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--muted)' }} />
+                      <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                     </div>
                   </div>
                 )}
 
                 {/* Calculated expiry string */}
-                <div style={{ fontSize: '0.85rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1.25rem' }}>
+                <div className="text-sm text-stone-500 flex items-center gap-1.5 mb-5">
                   <Clock size={15} />
                   <span>
-                    {t('wallet.link_expires_on')} <strong>{liveExpiry.toLocaleString()}</strong>
+                    {t('wallet.link_expires_on')} <strong className="text-stone-800">{liveExpiry.toLocaleString()}</strong>
                   </span>
                 </div>
 
-                {/* Gray Warning box */}
-                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', padding: '0.8rem 1rem', backgroundColor: 'var(--paper)', borderRadius: '8px', border: '1px solid var(--line)', fontSize: '0.78rem', color: 'var(--muted)', lineHeight: '1.4' }}>
-                  <AlertTriangle size={16} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: '0.1rem' }} />
-                  <p style={{ margin: 0 }}>
+                {/* Warning box */}
+                <div className="flex gap-2.5 items-start px-4 py-3 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-500 leading-relaxed">
+                  <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <p className="m-0">
                     {t('wallet.expiry_warning')}
                   </p>
                 </div>
@@ -1125,7 +956,7 @@ export default function ShareCredential() {
 
               {/* SUBMIT BUTTON */}
               {shareError && (
-                <div className="notice err" style={{ margin: 0, padding: '0.6rem 1rem' }}>
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg px-4 py-2.5 font-medium">
                   {shareError}
                 </div>
               )}
@@ -1134,27 +965,9 @@ export default function ShareCredential() {
                 type="button"
                 onClick={handleCreateShare}
                 disabled={isSharing || selectedFields.length === 0}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  borderRadius: '8px',
-                  border: 'none',
-                  color: '#fff',
-                  backgroundColor: selectedFields.length === 0 ? '#cbd5e1' : '#4f46e5',
-                  cursor: selectedFields.length === 0 || isSharing ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  boxShadow: 'var(--shadow)',
-                  margin: '0 0 1rem 0'
-                }}
+                className="w-full h-12 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 mb-4 transition-colors disabled:cursor-not-allowed disabled:bg-stone-300 bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
               >
-                {isSharing && (
-                  <div style={{ animation: 'spin 1s linear infinite', width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>
-                )}
+                {isSharing && <Loader2 size={16} className="animate-spin" />}
                 <span>{t('wallet.create_share_link')}</span>
               </button>
             </>
