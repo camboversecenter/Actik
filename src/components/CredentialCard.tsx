@@ -9,12 +9,13 @@ interface CredentialCardProps {
   createdAt: string
   onClick?: () => void
   className?: string
-  // Omitted when not yet known/loaded — renders nothing rather than "0" so a
-  // loading list never flashes a false-zero share count.
+  // Always rendered, defaulting to 0 — a share count is a real fact ("this
+  // hasn't been shared yet"), not something to hide until it's nonzero.
   shareCount?: number
-  // Certificate type (Bachelor/Master/…) and major — shown as a subtitle
-  // line under the degree title, when the issuer recorded them.
-  degreeType?: string | null
+  // Major/concentration — shown as a subtitle line under the degree title,
+  // when the issuer recorded it. (Degree *type*, e.g. "Bachelor", is not a
+  // separate field from degreeTitle in this schema — it's the same string —
+  // so it isn't repeated here.)
   major?: string | null
 }
 
@@ -56,7 +57,6 @@ export default function CredentialCard({
   onClick,
   className = '',
   shareCount,
-  degreeType,
   major,
 }: CredentialCardProps) {
   const { t } = useLanguage()
@@ -87,11 +87,7 @@ export default function CredentialCard({
       <div className="flex items-start gap-3.5 p-4">
         <div className="min-w-0 flex-1">
           <h4 className="font-khmer font-bold text-stone-900 text-[17px] leading-snug">{degreeTitle}</h4>
-          {(degreeType || major) && (
-            <p className="text-sm text-stone-500 mt-0.5 truncate">
-              {[degreeType, major].filter(Boolean).join(' · ')}
-            </p>
-          )}
+          {major && <p className="text-sm text-stone-500 mt-0.5 truncate">{major}</p>}
           <div className="flex items-center gap-4 mt-3">
             <div>
               <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide">{t('wallet.issued_on_label')}</div>
@@ -103,15 +99,13 @@ export default function CredentialCard({
                 <div className="font-mono text-xs font-medium text-stone-700">{year}</div>
               </div>
             )}
-            {typeof shareCount === 'number' && shareCount > 0 && (
-              <div>
-                <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide flex items-center gap-1">
-                  <Share2 size={9} />
-                  {t('wallet.share_label')}
-                </div>
-                <div className="font-mono text-xs font-medium text-stone-700">{shareCount}×</div>
+            <div>
+              <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide flex items-center gap-1">
+                <Share2 size={9} />
+                {t('wallet.share_label')}
               </div>
-            )}
+              <div className="font-mono text-xs font-medium text-stone-700">{shareCount ?? 0}×</div>
+            </div>
           </div>
         </div>
         <div className="w-14 h-14 rounded-full border-[1.5px] border-dashed border-teal-200 bg-teal-50 flex flex-col items-center justify-center shrink-0">

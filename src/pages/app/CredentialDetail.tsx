@@ -378,12 +378,10 @@ export default function CredentialDetail() {
             <ShieldCheck size={12} className="text-teal-300" />
             {t('wallet.trust_encrypted_vault')}
           </span>
-          {typeof shareCount === 'number' && shareCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
-              <Share2 size={12} className="text-teal-300" />
-              {t('wallet.share_count_label', { count: shareCount })}
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
+            <Share2 size={12} className="text-teal-300" />
+            {t('wallet.share_count_label', { count: shareCount ?? 0 })}
+          </span>
         </div>
       </div>
 

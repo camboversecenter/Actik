@@ -545,7 +545,6 @@ export default function Wallet() {
                                 createdAt={c.created_at}
                                 onClick={() => handleCardClick(c.id)}
                                 shareCount={shareCounts[c.id]}
-                                degreeType={c.degree_type || preview?.degree_type}
                                 major={c.major || preview?.major}
                               />
                             )

@@ -408,7 +408,6 @@ export default function WalletCategory() {
                     createdAt={c.created_at}
                     onClick={() => handleViewDetailsClick(c.id)}
                     shareCount={shareCounts[c.id]}
-                    degreeType={c.degree_type || preview?.degree_type}
                     major={c.major || preview?.major}
                   />
                 )
