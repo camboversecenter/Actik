@@ -9,9 +9,10 @@ import { readDisclosures } from '../../lib/sdjwt'
 
 // Best-effort decrypted fallback for credentials claimed before institution_name
 // (and friends) were threaded through at issuance/claim time — see Wallet.tsx.
+// No degree_type here: it's the exact same string as the card's title
+// (degree_title/label below), not a distinct field.
 interface DecryptedPreview {
   institution_name?: string
-  degree_type?: string
   major?: string
   issuer_did?: string
 }
@@ -40,7 +41,6 @@ interface Credential {
   created_at: string
   graduation_date?: string | null
   credential_type?: string
-  degree_type?: string | null
   major?: string | null
 
   cipher?: string
@@ -165,7 +165,6 @@ export default function WalletCategory() {
         created_at: c.created_at,
         graduation_date: c.graduation_date || null,
         credential_type: c.credential_type || null,
-        degree_type: c.degree_type || null,
         major: c.major || null,
         cipher: c.cipher,
         iv: c.iv
@@ -229,7 +228,6 @@ export default function WalletCategory() {
 
           results[cred.id] = {
             institution_name: claims.institution || undefined,
-            degree_type: claims.degree_type || claims.degree || undefined,
             major: claims.major || undefined,
             issuer_did: payload.iss || undefined,
           }

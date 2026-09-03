@@ -10,17 +10,20 @@ import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 import { Briefcase, Lock, ShieldAlert } from 'lucide-react'
 
-// Institution/degree_type/major/issuer_did are meant to come from plain DB
-// columns (fast, no decrypt needed) — but those columns went unpopulated for
-// every credential claimed before a recent fix, and stay unpopulated even
-// after it for anything issued before the columns existed at all. The real
-// values are still sitting inside each credential's encrypted payload, so
-// once the vault is unlocked we decrypt on top of the DB columns and fill in
+// Institution/major/issuer_did are meant to come from plain DB columns
+// (fast, no decrypt needed) — but those columns went unpopulated for every
+// credential claimed before a recent fix, and stay unpopulated even after it
+// for anything issued before the columns existed at all. The real values are
+// still sitting inside each credential's encrypted payload, so once the
+// vault is unlocked we decrypt on top of the DB columns and fill in
 // whatever they're missing, rather than showing blanks a vault-unlock could
 // have avoided.
+//
+// No degree_type here: it's the exact same string as the card's title
+// (degree_title/label — see the Credential interface below), not a distinct
+// field, so there's nothing for a decrypt to usefully fill in for it.
 interface DecryptedPreview {
   institution_name?: string
-  degree_type?: string
   major?: string
   issuer_did?: string
 }
@@ -48,7 +51,6 @@ interface Credential {
   created_at: string
   graduation_date?: string | null
   credential_type?: string
-  degree_type?: string | null
   major?: string | null
 
   // Decryption fallbacks for original schema.sql
@@ -181,7 +183,6 @@ export default function Wallet() {
         created_at: c.created_at,
         graduation_date: c.graduation_date || null,
         credential_type: c.credential_type || null,
-        degree_type: c.degree_type || null,
         major: c.major || null,
         cipher: c.cipher,
         iv: c.iv
@@ -249,7 +250,6 @@ export default function Wallet() {
 
           results[cred.id] = {
             institution_name: claims.institution || undefined,
-            degree_type: claims.degree_type || claims.degree || undefined,
             major: claims.major || undefined,
             issuer_did: payload.iss || undefined,
           }
