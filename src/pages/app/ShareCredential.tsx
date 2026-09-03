@@ -75,8 +75,10 @@ export default function ShareCredential() {
   const [isUnlocking, setIsUnlocking] = useState(false)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
 
-  // Selection states (Step 2 & 3)
-  const [selectedFields, setSelectedFields] = useState<string[]>(['name', 'year'])
+  // Selection states (Step 2 & 3) — only the student's name is on by
+  // default; everything else, including graduation year, starts off and is
+  // an explicit opt-in per share.
+  const [selectedFields, setSelectedFields] = useState<string[]>(['name'])
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>('7days')
   const [customDate, setCustomDate] = useState('')
   const [recipientLabel, setRecipientLabel] = useState('')
@@ -345,7 +347,11 @@ export default function ShareCredential() {
       } catch {}
 
       setAvailableClaims(claims)
-      const fieldsToSelect = ['name', 'year', 'email', 'student_id', 'graduation_date', 'certificate_id', 'photo', 'gpa', 'national_id', 'notes'].filter(f => claims[f] !== undefined && claims[f] !== '')
+      // Only the student's name defaults on, and only if it's actually
+      // available to disclose — everything else (including GPA and National
+      // ID, flagged Sensitive/Private below) is an explicit per-share opt-in,
+      // never pre-checked just because the credential happens to carry it.
+      const fieldsToSelect = ['name'].filter(f => claims[f] !== undefined && claims[f] !== '')
       setSelectedFields(fieldsToSelect)
     } catch {
       setUnlockError('Failed to decrypt credential. Your vault key may have changed.')
