@@ -512,6 +512,8 @@ const translations = {
       for_students_desc: 'Collect your credentials in one place and share them instantly when applying for jobs or further study.',
       for_institutions_title: 'Institutions',
       for_institutions_desc: 'Issue verifiable certificates once accredited by an admin — no more manual authentication letters.',
+      for_employers_title: 'Employers',
+      for_employers_desc: 'Verify a certificate in seconds, no account needed — just open the link.',
       final_cta_title: 'Ready to get started?',
       final_cta_desc: 'Sign in with Google — takes less than a minute.',
       final_cta_button: 'Sign in',
@@ -1073,6 +1075,8 @@ const translations = {
       for_students_desc: 'ប្រមូលលិខិតបញ្ជាក់របស់អ្នកនៅកន្លែងតែមួយ ហើយចែករំលែកភ្លាមៗនៅពេលដាក់ពាក្យសុំការងារ ឬការសិក្សាបន្ថែម។',
       for_institutions_title: 'ស្ថាប័ន',
       for_institutions_desc: 'ចេញវិញ្ញាបនបត្រដែលអាចផ្ទៀងផ្ទាត់បាន នៅពេលទទួលបានការទទួលស្គាល់ពីអ្នកគ្រប់គ្រង — លែងត្រូវការលិខិតបញ្ជាក់ដោយដៃទៀតហើយ។',
+      for_employers_title: 'និយោជក', // TODO(km-review)
+      for_employers_desc: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រក្នុងរយៈពេលប៉ុន្មានវិនាទី មិនចាំបាច់មានគណនី — គ្រាន់តែបើកតំណ។', // TODO(km-review)
       final_cta_title: 'ត្រៀមចាប់ផ្តើមហើយឬនៅ?',
       final_cta_desc: 'ចូលគណនីជាមួយ Google — ចំណាយពេលតិចជាងមួយនាទី។',
       final_cta_button: 'ចូលគណនី',

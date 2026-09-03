@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ShieldCheck, KeyRound, QrCode, GraduationCap, Building2, Globe } from 'lucide-react'
+import { ShieldCheck, KeyRound, QrCode, GraduationCap, Building2, Briefcase, Globe } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 
 export default function Landing() {
@@ -122,7 +122,7 @@ export default function Landing() {
           </h2>
           <p className="mt-3 text-stone-600 leading-relaxed">{t('landing.for_desc')}</p>
         </div>
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <div className="bg-white border border-stone-200 rounded-2xl p-6">
             <GraduationCap size={24} className="text-indigo-600" />
             <h3 className="mt-3 font-bold text-stone-900">{t('landing.for_students_title')}</h3>
@@ -132,6 +132,11 @@ export default function Landing() {
             <Building2 size={24} className="text-indigo-600" />
             <h3 className="mt-3 font-bold text-stone-900">{t('landing.for_institutions_title')}</h3>
             <p className="mt-1.5 text-sm text-stone-600 leading-relaxed">{t('landing.for_institutions_desc')}</p>
+          </div>
+          <div className="bg-white border border-stone-200 rounded-2xl p-6">
+            <Briefcase size={24} className="text-indigo-600" />
+            <h3 className="mt-3 font-bold text-stone-900">{t('landing.for_employers_title')}</h3>
+            <p className="mt-1.5 text-sm text-stone-600 leading-relaxed">{t('landing.for_employers_desc')}</p>
           </div>
         </div>
       </section>
