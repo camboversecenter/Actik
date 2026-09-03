@@ -95,6 +95,7 @@ const translations = {
       show_raw_token: 'Show raw token',
       trust_accredited_institution: 'Accredited institution',
       trust_encrypted_vault: 'Encrypted in vault',
+      share_count_label: 'Shared {count}×',
       not_specified: 'Not specified',
       issue_date_label: 'Issue date',
       no_decrypted_claims: 'No decrypted claims found.',
@@ -660,6 +661,7 @@ const translations = {
       show_raw_token: 'បង្ហាញកូដដើម',
       trust_accredited_institution: 'ស្ថាប័នទទួលស្គាល់', // TODO(km-review)
       trust_encrypted_vault: 'អ៊ិនគ្រីបក្នុងកាបូប', // TODO(km-review)
+      share_count_label: 'បានចែករំលែក {count} ដង', // TODO(km-review)
       not_specified: 'មិនបានបញ្ជាក់',
       issue_date_label: 'ថ្ងៃចេញ',
       no_decrypted_claims: 'រកមិនឃើញព័ត៌មានដែលបានបកប្រែទេ។',

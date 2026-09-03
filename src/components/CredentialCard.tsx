@@ -12,6 +12,10 @@ interface CredentialCardProps {
   // Omitted when not yet known/loaded — renders nothing rather than "0" so a
   // loading list never flashes a false-zero share count.
   shareCount?: number
+  // Certificate type (Bachelor/Master/…) and major — shown as a subtitle
+  // line under the degree title, when the issuer recorded them.
+  degreeType?: string | null
+  major?: string | null
 }
 
 function truncateDid(did: string) {
@@ -52,6 +56,8 @@ export default function CredentialCard({
   onClick,
   className = '',
   shareCount,
+  degreeType,
+  major,
 }: CredentialCardProps) {
   const { t } = useLanguage()
   const year = graduationDate ? new Date(graduationDate).getFullYear().toString() : null
@@ -81,6 +87,11 @@ export default function CredentialCard({
       <div className="flex items-start gap-3.5 p-4">
         <div className="min-w-0 flex-1">
           <h4 className="font-khmer font-bold text-stone-900 text-[17px] leading-snug">{degreeTitle}</h4>
+          {(degreeType || major) && (
+            <p className="text-sm text-stone-500 mt-0.5 truncate">
+              {[degreeType, major].filter(Boolean).join(' · ')}
+            </p>
+          )}
           <div className="flex items-center gap-4 mt-3">
             <div>
               <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide">{t('wallet.issued_on_label')}</div>

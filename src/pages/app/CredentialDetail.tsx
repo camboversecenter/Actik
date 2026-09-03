@@ -5,7 +5,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, ChevronUp, ChevronDown, Copy } from 'lucide-react'
+import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, ChevronUp, ChevronDown, Copy, Share2 } from 'lucide-react'
 
 // Reusing same Credential interface
 interface Credential {
@@ -48,6 +48,7 @@ export default function CredentialDetail() {
   
   const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [credential, setCredential] = useState<Credential | null>(null)
+  const [shareCount, setShareCount] = useState<number | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
@@ -160,6 +161,19 @@ export default function CredentialDetail() {
         iv: data.iv
       })
       setLoading(false)
+
+      // Best-effort — errors here (e.g. migration not yet applied) just
+      // leave the share count unshown, they don't affect the credential itself.
+      try {
+        const { count } = await supabase
+          .from('shares')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner', user.id)
+          .eq('credential_id', data.id)
+        setShareCount(count ?? 0)
+      } catch {
+        // non-fatal
+      }
     } catch (err) {
       setLoadError(true)
       setLoading(false)
@@ -364,6 +378,12 @@ export default function CredentialDetail() {
             <ShieldCheck size={12} className="text-teal-300" />
             {t('wallet.trust_encrypted_vault')}
           </span>
+          {typeof shareCount === 'number' && shareCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
+              <Share2 size={12} className="text-teal-300" />
+              {t('wallet.share_count_label', { count: shareCount })}
+            </span>
+          )}
         </div>
       </div>
 

@@ -1243,6 +1243,7 @@ export default function IssueCredential() {
               issuerDid={issuerInfo?.did}
               graduationDate={graduationDate || null}
               createdAt={new Date().toISOString()}
+              major={major || null}
             />
           </div>
         )}

@@ -21,6 +21,8 @@ interface Credential {
   created_at: string
   graduation_date?: string | null
   credential_type?: string
+  degree_type?: string | null
+  major?: string | null
 
   cipher?: string
   iv?: string
@@ -143,6 +145,8 @@ export default function WalletCategory() {
         created_at: c.created_at,
         graduation_date: c.graduation_date || null,
         credential_type: c.credential_type || null,
+        degree_type: c.degree_type || null,
+        major: c.major || null,
         cipher: c.cipher,
         iv: c.iv
       }))
@@ -335,6 +339,8 @@ export default function WalletCategory() {
                   createdAt={c.created_at}
                   onClick={() => handleViewDetailsClick(c.id)}
                   shareCount={shareCounts[c.id]}
+                  degreeType={c.degree_type}
+                  major={c.major}
                 />
               ))}
             </div>

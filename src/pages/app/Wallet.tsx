@@ -23,6 +23,8 @@ interface Credential {
   created_at: string
   graduation_date?: string | null
   credential_type?: string
+  degree_type?: string | null
+  major?: string | null
 
   // Decryption fallbacks for original schema.sql
   cipher?: string
@@ -149,6 +151,8 @@ export default function Wallet() {
         created_at: c.created_at,
         graduation_date: c.graduation_date || null,
         credential_type: c.credential_type || null,
+        degree_type: c.degree_type || null,
+        major: c.major || null,
         cipher: c.cipher,
         iv: c.iv
       }))
@@ -460,6 +464,8 @@ export default function Wallet() {
                               createdAt={c.created_at}
                               onClick={() => handleCardClick(c.id)}
                               shareCount={shareCounts[c.id]}
+                              degreeType={c.degree_type}
+                              major={c.major}
                             />
                           ))}
                         </div>
