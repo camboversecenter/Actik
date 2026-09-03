@@ -61,15 +61,25 @@ export default function NotificationsBell({
 
   const fetchPreview = async (addr: string) => {
     try {
+      // pending_credentials has no degree_title column — Notifications.tsx
+      // computes it client-side from label/degree_type (its fallback insert
+      // path writes one or the other depending on credential type; see
+      // IssueCredential.tsx), and this preview needs to match that or the
+      // query 400s outright and the bell silently never lights up.
       const { data, count: total, error } = await supabase
         .from('pending_credentials')
-        .select('id, institution_name, degree_title, created_at', { count: 'exact' })
+        .select('id, institution_name, label, degree_type, created_at', { count: 'exact' })
         .eq('recipient_email', addr.toLowerCase())
         .order('created_at', { ascending: false })
         .limit(PREVIEW_LIMIT)
 
       if (!error) {
-        setItems(data || [])
+        setItems((data || []).map((p: any) => ({
+          id: p.id,
+          institution_name: p.institution_name,
+          degree_title: p.label || p.degree_type || 'Degree Certificate',
+          created_at: p.created_at,
+        })))
         setCount(total ?? 0)
       }
     } catch (err) {
