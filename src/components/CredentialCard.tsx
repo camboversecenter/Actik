@@ -1,4 +1,4 @@
-import { CheckCircle2, ShieldCheck, Share2, Landmark } from 'lucide-react'
+import { Check, ShieldCheck, Share2, Landmark } from 'lucide-react'
 import { useLanguage } from '../lib/i18n'
 
 interface CredentialCardProps {
@@ -18,6 +18,18 @@ function truncateDid(did: string) {
   if (!did) return ''
   if (did.length <= 28) return did
   return did.slice(0, 28) + '…'
+}
+
+// Short crest code from the DID's own domain (e.g. "did:web:rupp.edu.kh" ->
+// "RUPP") — real data already shown in the footer, not a fabricated
+// initials guess at a Khmer name. Falls back to a generic building icon
+// when there's no DID to derive from.
+function crestCode(did?: string | null): string | null {
+  if (!did) return null
+  const domain = did.replace(/^did:web:/, '').split('/')[0]
+  const first = domain.split('.')[0]
+  if (!first || first.length < 2) return null
+  return first.slice(0, 4).toUpperCase()
 }
 
 // Shared visual for a single claimed credential — used on the Wallet home
@@ -43,6 +55,7 @@ export default function CredentialCard({
 }: CredentialCardProps) {
   const { t } = useLanguage()
   const year = graduationDate ? new Date(graduationDate).getFullYear().toString() : null
+  const code = crestCode(issuerDid)
 
   return (
     <div
@@ -51,13 +64,17 @@ export default function CredentialCard({
     >
       {/* Institution band */}
       <div className="bg-indigo-600 px-4 py-2.5 flex items-center gap-2.5">
-        <div className="w-6 h-6 rounded-md bg-white/20 flex items-center justify-center shrink-0">
-          <Landmark size={13} className="text-white" strokeWidth={2} />
+        <div className="h-5 px-1.5 rounded bg-white/20 flex items-center justify-center shrink-0">
+          {code ? (
+            <span className="font-mono text-[8px] font-bold text-white tracking-wide">{code}</span>
+          ) : (
+            <Landmark size={12} className="text-white" strokeWidth={2} />
+          )}
         </div>
         <div className="flex-1 min-w-0 font-khmer text-[13px] font-semibold text-white truncate">
           {institutionName || t('wallet.institution_unknown')}
         </div>
-        <CheckCircle2 size={15} className="text-white shrink-0" strokeWidth={2.4} />
+        <Check size={15} className="text-white shrink-0" strokeWidth={2.6} />
       </div>
 
       {/* Body */}
@@ -99,8 +116,8 @@ export default function CredentialCard({
             {truncateDid(issuerDid)}
           </span>
         ) : <span />}
-        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
-          <CheckCircle2 size={11} />
+        <span className="shrink-0 inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           {t('wallet.verified_label')}
         </span>
       </div>
