@@ -5,6 +5,25 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
+import { readDisclosures } from '../../lib/sdjwt'
+
+// Best-effort decrypted fallback for credentials claimed before institution_name
+// (and friends) were threaded through at issuance/claim time — see Wallet.tsx.
+interface DecryptedPreview {
+  institution_name?: string
+  degree_type?: string
+  major?: string
+  issuer_did?: string
+}
+
+function parseJwtPayload(jwt: string): any {
+  try {
+    const base64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    return JSON.parse(atob(base64))
+  } catch {
+    return {}
+  }
+}
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -42,8 +61,9 @@ export default function WalletCategory() {
   // Modals & Action States
   
   // Vault state
-  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus } = useZkVault()
+  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, decryptPayload } = useZkVault()
   const { t } = useLanguage()
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, DecryptedPreview>>({})
   const [vaultExists, setVaultExists] = useState<boolean | null>(null)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
   
@@ -177,6 +197,53 @@ export default function WalletCategory() {
       setLoading(false)
     }
   }, [credentialType, isOther])
+
+  // Once the vault is unlocked, decrypt whatever credentials are still
+  // missing institution_name and fill in the real values from inside the
+  // credential itself (mirrors Wallet.tsx). Best-effort per credential.
+  useEffect(() => {
+    if (!isUnlocked) return
+    const toDecrypt = credentials.filter(
+      (c) => !c.institution_name && !decryptedPreviews[c.id] && (c.cipher || c.sd_jwt)
+    )
+    if (toDecrypt.length === 0) return
+
+    let active = true
+    ;(async () => {
+      const results: Record<string, DecryptedPreview> = {}
+      for (const cred of toDecrypt) {
+        try {
+          let sdjwtString: string
+          if (cred.cipher && cred.iv) {
+            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          } else {
+            const parsedPayload = JSON.parse(cred.sd_jwt)
+            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          }
+
+          const claims: Record<string, any> = {}
+          readDisclosures(sdjwtString).forEach((d) => { claims[d.name] = d.value })
+          const payload = parseJwtPayload(sdjwtString.split('~')[0])
+
+          results[cred.id] = {
+            institution_name: claims.institution || undefined,
+            degree_type: claims.degree_type || claims.degree || undefined,
+            major: claims.major || undefined,
+            issuer_did: payload.iss || undefined,
+          }
+        } catch {
+          // non-fatal — this card just keeps showing whatever it already had
+        }
+      }
+      if (active && Object.keys(results).length > 0) {
+        setDecryptedPreviews((prev) => ({ ...prev, ...results }))
+      }
+    })()
+
+    return () => { active = false }
+  }, [isUnlocked, credentials, decryptPayload, decryptedPreviews])
 
   // Mount logic
   useEffect(() => {
@@ -329,20 +396,23 @@ export default function WalletCategory() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {credentials.map((c) => (
-                <CredentialCard
-                  key={c.id}
-                  degreeTitle={c.degree_title}
-                  institutionName={c.institution_name}
-                  issuerDid={c.issuer_did}
-                  graduationDate={c.graduation_date}
-                  createdAt={c.created_at}
-                  onClick={() => handleViewDetailsClick(c.id)}
-                  shareCount={shareCounts[c.id]}
-                  degreeType={c.degree_type}
-                  major={c.major}
-                />
-              ))}
+              {credentials.map((c) => {
+                const preview = decryptedPreviews[c.id]
+                return (
+                  <CredentialCard
+                    key={c.id}
+                    degreeTitle={c.degree_title}
+                    institutionName={c.institution_name || preview?.institution_name}
+                    issuerDid={c.issuer_did || preview?.issuer_did}
+                    graduationDate={c.graduation_date}
+                    createdAt={c.created_at}
+                    onClick={() => handleViewDetailsClick(c.id)}
+                    shareCount={shareCounts[c.id]}
+                    degreeType={c.degree_type || preview?.degree_type}
+                    major={c.major || preview?.major}
+                  />
+                )
+              })}
             </div>
           )}
         </div>

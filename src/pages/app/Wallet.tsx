@@ -5,9 +5,34 @@ import { supabase } from '../../lib/supabase'
 
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
+import { readDisclosures } from '../../lib/sdjwt'
 import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 import { Briefcase, Lock, ShieldAlert } from 'lucide-react'
+
+// Institution/degree_type/major/issuer_did are meant to come from plain DB
+// columns (fast, no decrypt needed) — but those columns went unpopulated for
+// every credential claimed before a recent fix, and stay unpopulated even
+// after it for anything issued before the columns existed at all. The real
+// values are still sitting inside each credential's encrypted payload, so
+// once the vault is unlocked we decrypt on top of the DB columns and fill in
+// whatever they're missing, rather than showing blanks a vault-unlock could
+// have avoided.
+interface DecryptedPreview {
+  institution_name?: string
+  degree_type?: string
+  major?: string
+  issuer_did?: string
+}
+
+function parseJwtPayload(jwt: string): any {
+  try {
+    const base64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    return JSON.parse(atob(base64))
+  } catch {
+    return {}
+  }
+}
 
 interface Credential {
   id: string
@@ -42,6 +67,7 @@ export default function Wallet() {
     unlockWithPin,
     unlockWithPasskey,
     lock,
+    decryptPayload,
   } = useZkVault()
   const { t, language } = useLanguage()
 
@@ -49,6 +75,10 @@ export default function Wallet() {
   const [vaultExists, setVaultExists] = useState<boolean | null>(null)
   const [vaultStatusLoading, setVaultStatusLoading] = useState(true)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
+
+  // Decrypted-on-top-of-DB-columns preview data — see the DecryptedPreview
+  // comment above. Keyed by credential id.
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, DecryptedPreview>>({})
 
   // Credentials State
   const [claimedCredentials, setClaimedCredentials] = useState<Credential[]>([])
@@ -185,6 +215,55 @@ export default function Wallet() {
       setLoading(false)
     }
   }, [])
+
+  // Once the vault is unlocked, decrypt whatever credentials are still
+  // missing institution_name (every one claimed before the fix — see
+  // DecryptedPreview above) and fill in the real values from inside the
+  // credential itself. Best-effort per credential: one failing to decrypt
+  // just leaves that card showing what it already had.
+  useEffect(() => {
+    if (!isUnlocked) return
+    const toDecrypt = claimedCredentials.filter(
+      (c) => !c.institution_name && !decryptedPreviews[c.id] && (c.cipher || c.sd_jwt)
+    )
+    if (toDecrypt.length === 0) return
+
+    let active = true
+    ;(async () => {
+      const results: Record<string, DecryptedPreview> = {}
+      for (const cred of toDecrypt) {
+        try {
+          let sdjwtString: string
+          if (cred.cipher && cred.iv) {
+            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          } else {
+            const parsedPayload = JSON.parse(cred.sd_jwt)
+            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          }
+
+          const claims: Record<string, any> = {}
+          readDisclosures(sdjwtString).forEach((d) => { claims[d.name] = d.value })
+          const payload = parseJwtPayload(sdjwtString.split('~')[0])
+
+          results[cred.id] = {
+            institution_name: claims.institution || undefined,
+            degree_type: claims.degree_type || claims.degree || undefined,
+            major: claims.major || undefined,
+            issuer_did: payload.iss || undefined,
+          }
+        } catch {
+          // non-fatal — this card just keeps showing whatever it already had
+        }
+      }
+      if (active && Object.keys(results).length > 0) {
+        setDecryptedPreviews((prev) => ({ ...prev, ...results }))
+      }
+    })()
+
+    return () => { active = false }
+  }, [isUnlocked, claimedCredentials, decryptPayload, decryptedPreviews])
 
   // Mount logic
   useEffect(() => {
@@ -454,20 +533,23 @@ export default function Wallet() {
                         {/* Stacked full-width, matching the mockup — no horizontal
                             slide/carousel. */}
                         <div className="flex flex-col gap-4">
-                          {displayCreds.map((c) => (
-                            <CredentialCard
-                              key={c.id}
-                              degreeTitle={c.degree_title}
-                              institutionName={c.institution_name}
-                              issuerDid={c.issuer_did}
-                              graduationDate={c.graduation_date}
-                              createdAt={c.created_at}
-                              onClick={() => handleCardClick(c.id)}
-                              shareCount={shareCounts[c.id]}
-                              degreeType={c.degree_type}
-                              major={c.major}
-                            />
-                          ))}
+                          {displayCreds.map((c) => {
+                            const preview = decryptedPreviews[c.id]
+                            return (
+                              <CredentialCard
+                                key={c.id}
+                                degreeTitle={c.degree_title}
+                                institutionName={c.institution_name || preview?.institution_name}
+                                issuerDid={c.issuer_did || preview?.issuer_did}
+                                graduationDate={c.graduation_date}
+                                createdAt={c.created_at}
+                                onClick={() => handleCardClick(c.id)}
+                                shareCount={shareCounts[c.id]}
+                                degreeType={c.degree_type || preview?.degree_type}
+                                major={c.major || preview?.major}
+                              />
+                            )
+                          })}
                         </div>
                       </div>
                     )
