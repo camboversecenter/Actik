@@ -47,7 +47,7 @@ export default function CredentialCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden ${className}`}
+      className={`bg-white rounded-2xl border border-stone-200 shadow-sm transition-all overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md' : ''} ${className}`}
     >
       {/* Institution band */}
       <div className="bg-indigo-600 px-4 py-2.5 flex items-center gap-2.5">

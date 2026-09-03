@@ -332,6 +332,8 @@ const translations = {
       issue_success_pending: 'The credential is saved in the pending registry. The student can claim it as soon as they sign up for an Actik account using this email address.',
       issue_another: 'Issue another credential',
       issue_credential_title: 'Issue a credential',
+      live_preview: 'Live preview',
+      degree_preview_placeholder: 'Select a degree type…',
       issue_credential_desc_form: 'Sign and send a digital certificate to a student.',
       signing_as: 'Signing as:',
       type_academic: 'Academic Degree',
@@ -845,6 +847,8 @@ const translations = {
       issue_success_pending: 'វិញ្ញាបនបត្រត្រូវបានរក្សាទុកក្នុងបញ្ជីរង់ចាំ។ និស្សិតអាចទទួលវាបាននៅពេលពួកគេចុះឈ្មោះគណនី Actik ដោយប្រើអ៊ីមែលនេះ។',
       issue_another: 'ចេញវិញ្ញាបនបត្រមួយទៀត',
       issue_credential_title: 'ចេញវិញ្ញាបនបត្រ',
+      live_preview: 'មើលជាមុន', // TODO(km-review)
+      degree_preview_placeholder: 'ជ្រើសរើសប្រភេទសញ្ញាបត្រ…', // TODO(km-review)
       issue_credential_desc_form: 'ចុះហត្ថលេខានិងផ្ញើវិញ្ញាបនបត្រឌីជីថលទៅនិស្សិត។',
       signing_as: 'ចុះហត្ថលេខាជា៖',
       type_academic: 'សញ្ញាបត្រសិក្សា',

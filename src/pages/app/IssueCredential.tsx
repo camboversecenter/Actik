@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
+import CredentialCard from '../../components/CredentialCard'
 import {
   AlertTriangle, CheckCircle2, GraduationCap, UserCheck, Star,
   HeartHandshake, Briefcase, Loader2,
@@ -788,11 +789,11 @@ export default function IssueCredential() {
           ))}
         </div>
       ) : (
-      <div className="max-w-2xl mx-auto">
-        
+      <div className={selectedType === 'academic_degree' ? 'grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6 items-start' : 'max-w-2xl mx-auto'}>
+
         {/* Form Card */}
-        <div className="bg-transparent md:bg-white rounded-xl md:shadow-sm md:border md:border-gray-200 p-0 md:p-8">
-          
+        <div className={`bg-transparent md:bg-white rounded-xl md:shadow-sm md:border md:border-gray-200 p-0 md:p-8 ${selectedType === 'academic_degree' ? '' : 'max-w-2xl mx-auto w-full'}`}>
+
           <button 
             onClick={() => setSelectedType(null)}
             className="mb-6 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors focus:outline-none cursor-pointer bg-indigo-50 px-3 py-1.5 rounded-full"
@@ -1226,7 +1227,24 @@ export default function IssueCredential() {
           </form>
         </div>
 
-
+        {/* Live preview — same CredentialCard the student will actually see,
+            fed with the form's current values, so the issuer can check the
+            result before signing anything. Only shown for academic degrees,
+            the one type this card is designed to represent. */}
+        {selectedType === 'academic_degree' && (
+          <div className="lg:sticky lg:top-6">
+            <div className="font-mono text-[9.5px] tracking-widest text-stone-400 uppercase mb-2">
+              {t('dashboard.live_preview')}
+            </div>
+            <CredentialCard
+              degreeTitle={degreeTitle || t('dashboard.degree_preview_placeholder')}
+              institutionName={issuerInfo?.name}
+              issuerDid={issuerInfo?.did}
+              graduationDate={graduationDate || null}
+              createdAt={new Date().toISOString()}
+            />
+          </div>
+        )}
 
       </div>
       )}
