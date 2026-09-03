@@ -6,11 +6,12 @@ import PublicRegistryManager from '../../components/admin/PublicRegistryManager'
 import AuditLogView from '../../components/admin/AuditLogView'
 import { logApproval, logRevocation, logRejection, logInstitutionRestore } from '../../lib/auditLog'
 import {
-  ShieldCheck, ScrollText, Building2, CheckCircle2, Clock, XCircle,
+  ShieldCheck, ScrollText, Building2, CheckCircle2, Clock,
   Award, BarChart3, ClipboardList, AlertTriangle, Search, Copy,
 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import StatCard from '../../components/ui/StatCard'
+import StatusPill from '../../components/ui/StatusPill'
 
 // --- TypeScript Types ---
 interface Issuer {
@@ -130,7 +131,6 @@ export default function AdminDashboard() {
   // State arrays
   const [issuers, setIssuers] = useState<Issuer[]>([])
   const [emailMap, setEmailMap] = useState<Record<string, string>>({})
-  const [totalCredentials, setTotalCredentials] = useState(0)
   const [totalStudents, setTotalStudents] = useState<number>(0)
 
   // Search and tabs filter state
@@ -170,9 +170,8 @@ export default function AdminDashboard() {
         })
       }
 
-      const [issuersRes, credentialsRes, studentsRes, profilesRes] = await Promise.all([
+      const [issuersRes, studentsRes, profilesRes] = await Promise.all([
         supabase.from('issuers').select('*').order('created_at', { ascending: false }),
-        supabase.from('credentials').select('id', { count: 'exact' }),
         supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('profiles').select('id, email'),
       ])
@@ -192,7 +191,6 @@ export default function AdminDashboard() {
       }
       setEmailMap(emails)
 
-      setTotalCredentials(credentialsRes.count || 0)
       setTotalStudents(studentsRes.count || 0)
       setActiveTab(filter)
       setLoading(false)
@@ -469,26 +467,15 @@ export default function AdminDashboard() {
     (confirmModal?.type === 'reject' && isRejectConfirmInvalid) ||
     (confirmModal?.type === 'restore' && isRestoreConfirmInvalid)
 
-  // Status Badge Rendering Helper
+  // Status Badge Rendering Helper — same 4-state vocabulary as StatusPill
+  // (verified/pending/failed here; "locked" doesn't apply to an issuer).
   const renderStatusBadge = (issuer: Issuer) => {
     if (issuer.accredited) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <CheckCircle2 size={12} /> ACCREDITED
-        </span>
-      )
+      return <StatusPill status="verified" label="ACCREDITED" />
     } else if (issuer.revoked_at !== null) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-          <XCircle size={12} /> REVOKED
-        </span>
-      )
+      return <StatusPill status="failed" label="REVOKED" />
     } else {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <Clock size={12} /> PENDING
-        </span>
-      )
+      return <StatusPill status="pending" label="PENDING" />
     }
   }
 
@@ -630,11 +617,13 @@ export default function AdminDashboard() {
             <StatCard icon={Building2} value={countTotal} label="Total institutions" />
             <StatCard icon={CheckCircle2} value={countAccredited} label="Accredited" tone="success" />
             <StatCard icon={Clock} value={countPending} label="Pending approval" tone="warning" />
-            <StatCard
-              icon={Award}
-              value={totalCredentials}
-              label={`Credentials issued${totalStudents > 0 ? ` (${totalStudents} wallets)` : ''}`}
-            />
+            {/* "Credentials issued" used to live here, sourced from a plain
+                `credentials` select — that table's RLS is owner-only
+                (auth.uid() = owner), so for an admin account (which owns no
+                credentials) the count was always wrong, not real data.
+                totalStudents comes from `profiles`, which admins DO have a
+                dedicated RLS policy to read, so it's shown here instead. */}
+            <StatCard icon={Award} value={totalStudents} label="Student wallets" />
           </div>
         </section>
 

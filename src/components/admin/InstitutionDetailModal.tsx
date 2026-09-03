@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { X, CheckCircle2, Clock, XCircle, ExternalLink } from 'lucide-react'
+import { X, ExternalLink } from 'lucide-react'
+import StatusPill from '../ui/StatusPill'
 
 interface Issuer {
   id: string
@@ -150,20 +151,10 @@ export default function InstitutionDetailModal({
                 <span className="text-stone-400 block font-semibold">Accreditation Status</span>
                 <div className="mt-1">
                   {isAccredited && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <CheckCircle2 size={11} /> ACCREDITED (since {formatDate(issuer.accredited_at).split(',')[0]})
-                    </span>
+                    <StatusPill status="verified" label={`ACCREDITED (since ${formatDate(issuer.accredited_at).split(',')[0]})`} />
                   )}
-                  {isPending && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                      <Clock size={11} /> PENDING APPROVAL
-                    </span>
-                  )}
-                  {isRevoked && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                      <XCircle size={11} /> REVOKED
-                    </span>
-                  )}
+                  {isPending && <StatusPill status="pending" label="PENDING APPROVAL" />}
+                  {isRevoked && <StatusPill status="failed" label="REVOKED" />}
                 </div>
               </div>
             </div>

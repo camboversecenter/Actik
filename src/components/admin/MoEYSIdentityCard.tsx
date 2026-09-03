@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Landmark } from 'lucide-react'
+import StatusPill from '../ui/StatusPill'
 
 const HARDCODED_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElQ+v04qE...
@@ -58,12 +59,7 @@ export default function MoEYSIdentityCard() {
                 <h2 className="text-lg md:text-xl font-bold text-indigo-900 leading-tight">
                   Ministry of Education, Youth and Sport
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                  VERIFIED
-                </span>
+                <StatusPill status="verified" label="VERIFIED" />
               </div>
               <div className="space-y-1 mt-2">
                 <p className="text-sm text-indigo-800 flex items-center gap-2">
