@@ -304,6 +304,14 @@ export default function Notifications() {
 
       setPendingList(prev => prev.filter(c => c.id !== cred.id))
       showToast(t('wallet.cred_claim_success'))
+      // NotificationsBell (in Layout.tsx, a sibling of this page — not a
+      // parent) has no other way to hear about this claim: it relies on a
+      // Postgres realtime subscription that only fires if this table was
+      // explicitly added to the supabase_realtime publication, which isn't
+      // guaranteed on every environment. This fires regardless, so the bell
+      // updates immediately instead of only on its next poll (see the
+      // fallback interval in NotificationsBell.tsx) or a full page reload.
+      window.dispatchEvent(new Event('actik:pending-credentials-changed'))
     } catch (err: any) {
       setClaimErrors(prev => ({ ...prev, [cred.id]: err.message || 'Claim failed' }))
     } finally {

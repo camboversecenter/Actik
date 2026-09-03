@@ -126,10 +126,24 @@ export default function NotificationsBell({
       )
       .subscribe()
 
+    // Belt-and-suspenders alongside the realtime subscription above: that
+    // channel only ever fires if pending_credentials was explicitly added to
+    // the supabase_realtime publication (not guaranteed — nothing in this
+    // repo's migrations does it), and Layout.tsx never unmounts this
+    // component across in-app navigation, so without this the badge could
+    // go stale for an entire session with no way to self-correct short of a
+    // full reload. A same-tab claim also updates instantly via the
+    // 'actik:pending-credentials-changed' event Notifications.tsx fires.
+    const poll = setInterval(() => fetchPreview(email), 20000)
+    const onLocalChange = () => fetchPreview(email)
+    window.addEventListener('actik:pending-credentials-changed', onLocalChange)
+
     return () => {
       // removeChannel (not channel.unsubscribe) actually deregisters the
       // channel from the client instead of just closing its socket.
       supabase.removeChannel(channel)
+      clearInterval(poll)
+      window.removeEventListener('actik:pending-credentials-changed', onLocalChange)
     }
   }, [email])
 
