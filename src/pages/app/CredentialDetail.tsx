@@ -3,9 +3,9 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures } from '../../lib/sdjwt'
-import { useLanguage } from '../../lib/i18n'
+import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, ChevronUp, ChevronDown, Copy, Share2 } from 'lucide-react'
+import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2 } from 'lucide-react'
 
 // Reusing same Credential interface
 interface Credential {
@@ -69,7 +69,7 @@ export default function CredentialDetail() {
   // Decryption state
   const [detail, setDetail] = useState<Record<string, any> | null>(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
-  const [expandedRawJwt, setExpandedRawJwt] = useState(false)
+  const [showRawTokenModal, setShowRawTokenModal] = useState(false)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -368,7 +368,7 @@ export default function CredentialDetail() {
             )}
           </div>
         </div>
-        <div className="font-khmer text-2xl font-bold leading-snug">{credential.degree_title}</div>
+        <div className="font-khmer text-2xl font-bold leading-snug">{formatDegreeTitle(credential.degree_title)}</div>
         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20">
           <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
             <CheckCircle2 size={12} className="text-teal-300" />
@@ -523,7 +523,13 @@ export default function CredentialDetail() {
                     {t('wallet.credential_info')}
                   </div>
                   <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-                    {renderField(t('wallet.degree_type'), 'Degree type', detail.degree_type)}
+                    {/* `degree` is the pre-6502ec7 claim name (see git history) —
+                        credentials signed before that fix disclose it under
+                        "degree" instead of "degree_type", and since an SD-JWT's
+                        disclosures are fixed forever at signing time, a code
+                        fix alone can't correct already-issued ones. Falling
+                        back to it here is the only way those still render. */}
+                    {renderField(t('wallet.degree_type'), 'Degree type', formatDegreeTitle(detail.degree_type || detail.degree) || undefined)}
                     {renderField(t('wallet.major'), 'Major', detail.major)}
                     {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
                     {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
@@ -536,47 +542,22 @@ export default function CredentialDetail() {
 
               {/* Encryption Status Badge */}
               <div className="pt-6 border-t border-stone-200 flex flex-wrap justify-between items-center gap-4">
-                <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-250 px-3 py-1.5 rounded text-xs uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded text-xs uppercase tracking-wider">
                   <CheckCircle2 size={13} />
                   {t('wallet.encrypted_badge')}
                 </span>
 
-                {/* Raw Collapsible */}
+                {/* De-emphasized on purpose: this exports every field with no
+                    selective disclosure, unlike Share — not a primary action. */}
                 <button
                   type="button"
-                  onClick={() => setExpandedRawJwt(!expandedRawJwt)}
-                  className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-650 hover:underline cursor-pointer"
+                  onClick={() => setShowRawTokenModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-stone-700 cursor-pointer"
                 >
-                  {expandedRawJwt ? t('wallet.hide_raw_token') : t('wallet.show_raw_token')}
-                  {expandedRawJwt ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  <Code size={13} />
+                  {t('wallet.raw_token_trigger')}
                 </button>
               </div>
-
-              {expandedRawJwt && (
-                <div className="bg-stone-50 border border-stone-200 rounded-lg overflow-hidden">
-                  <code className="font-mono text-[11px] block overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-stone-600 p-4">
-                    {detail.rawJwt}
-                  </code>
-                  <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-stone-200 bg-white">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(detail.rawJwt || '')
-                          showToast(t('wallet.copied'))
-                        } catch {
-                          showToast(t('wallet.copy_failed'))
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-650 hover:underline cursor-pointer"
-                    >
-                      <Copy size={12} />
-                      {t('wallet.copy')}
-                    </button>
-                    <span className="font-mono text-[10px] text-stone-400">ES256 · dc+sd-jwt</span>
-                  </div>
-                </div>
-              )}
 
             </div>
           ) : (
@@ -584,6 +565,60 @@ export default function CredentialDetail() {
           )}
         </div>
       </div>
+
+      {/* RAW TOKEN MODAL — overlay, not an inline expand, so opening it doesn't
+          shove the rest of the page down. Code box scrolls internally and is
+          capped in height so one very long credential can't blow out the modal. */}
+      {showRawTokenModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            <div className="px-5 py-4 border-b border-stone-200 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-stone-900">{t('wallet.raw_token_modal_title')}</h3>
+                <p className="text-xs text-stone-400 mt-0.5">{t('wallet.raw_token_modal_subtitle')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRawTokenModal(false)}
+                className="p-1.5 -m-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-5 pt-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed rounded-lg px-3.5 py-3">
+                {t('wallet.raw_token_modal_warning')}
+              </div>
+            </div>
+
+            <div className="p-5">
+              <code className="block max-h-64 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap break-all leading-relaxed text-stone-600 bg-stone-50 border border-stone-200 rounded-lg p-4">
+                {detail?.rawJwt}
+              </code>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-stone-200 bg-stone-50">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(detail?.rawJwt || '')
+                    showToast(t('wallet.copied'))
+                  } catch {
+                    showToast(t('wallet.copy_failed'))
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-650 hover:underline cursor-pointer"
+              >
+                <Copy size={12} />
+                {t('wallet.copy')}
+              </button>
+              <span className="font-mono text-[10px] text-stone-400">ES256 · dc+sd-jwt</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* UNLOCK MODAL — cancel navigates back to the wallet rather than just
           closing, since this page has nothing to show without unlocking. */}

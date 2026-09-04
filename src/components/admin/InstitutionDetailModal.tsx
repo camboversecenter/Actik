@@ -169,7 +169,7 @@ export default function InstitutionDetailModal({
               <div>
                 <span className="text-stone-400 block font-semibold">DID Identifier</span>
                 <div className="relative group mt-1">
-                  <code className="text-[10px] bg-stone-50 border border-stone-250 p-2 rounded block font-mono text-stone-600 break-all select-all font-medium pr-10">
+                  <code className="text-[10px] bg-stone-50 border border-stone-200 p-2 rounded block font-mono text-stone-600 break-all select-all font-medium pr-10">
                     {issuer.did}
                   </code>
                   <button
@@ -215,7 +215,7 @@ export default function InstitutionDetailModal({
               <div>
                 <span className="text-stone-400 block font-semibold">ES256 Public Key (JWK)</span>
                 <div className="relative group mt-1">
-                  <div className="bg-stone-50 border border-stone-250 p-2.5 rounded-lg max-h-24 overflow-auto">
+                  <div className="bg-stone-50 border border-stone-200 p-2.5 rounded-xl max-h-24 overflow-auto">
                     <code className="text-[9px] font-mono text-stone-500 break-all select-all block leading-normal pr-8">
                       {issuer.public_key}
                     </code>
@@ -226,7 +226,7 @@ export default function InstitutionDetailModal({
                     title="Copy Public Key"
                   >
                     {copiedText === 'key' ? (
-                      <span className="text-emerald-650 font-bold text-[9px]">Copied!</span>
+                      <span className="text-emerald-700 font-bold text-[9px]">Copied!</span>
                     ) : (
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -244,28 +244,28 @@ export default function InstitutionDetailModal({
               Credentials Issued
             </h4>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-stone-50 border border-stone-200 rounded-lg p-2.5">
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-2.5">
                 <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Total</span>
                 {loadingDetailCount ? (
                   <div className="w-4 h-4 border-2 border-stone-200 border-t-indigo-600 rounded-full animate-spin mx-auto mt-1" />
                 ) : (
-                  <strong className="text-stone-850 text-base mt-0.5 block">{credTotal}</strong>
+                  <strong className="font-mono text-stone-900 text-base mt-0.5 block">{credTotal}</strong>
                 )}
               </div>
-              <div className="bg-stone-50 border border-stone-200 rounded-lg p-2.5">
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-2.5">
                 <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Active</span>
                 {loadingDetailCount ? (
                   <div className="w-4 h-4 border-2 border-stone-200 border-t-indigo-600 rounded-full animate-spin mx-auto mt-1" />
                 ) : (
-                  <strong className="text-emerald-700 text-base mt-0.5 block">{credActive}</strong>
+                  <strong className="font-mono text-emerald-700 text-base mt-0.5 block">{credActive}</strong>
                 )}
               </div>
-              <div className="bg-stone-50 border border-stone-200 rounded-lg p-2.5">
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-2.5">
                 <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider block">Revoked</span>
                 {loadingDetailCount ? (
                   <div className="w-4 h-4 border-2 border-stone-200 border-t-indigo-600 rounded-full animate-spin mx-auto mt-1" />
                 ) : (
-                  <strong className="text-rose-700 text-base mt-0.5 block">{credRevoked}</strong>
+                  <strong className="font-mono text-rose-700 text-base mt-0.5 block">{credRevoked}</strong>
                 )}
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function InstitutionDetailModal({
                 [View Full Audit Log]
               </button>
             </div>
-            <div className="bg-stone-50 border border-stone-200 p-3 rounded-lg text-xs space-y-2 font-medium">
+            <div className="bg-stone-50 border border-stone-200 p-3 rounded-xl text-xs space-y-2 font-medium">
               <div>
                 <span className="text-stone-400 block font-semibold">Status</span>
                 <strong className={`block uppercase ${isAccredited ? 'text-emerald-700' : isRevoked ? 'text-rose-700' : 'text-amber-700'}`}>
@@ -355,7 +355,7 @@ export default function InstitutionDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 px-4 border border-stone-250 bg-white text-stone-600 hover:bg-stone-50 font-semibold rounded-lg text-xs transition-colors cursor-pointer"
+            className="h-10 px-4 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 font-semibold rounded-[9px] text-xs transition-colors cursor-pointer"
           >
             Close
           </button>
@@ -365,14 +365,14 @@ export default function InstitutionDetailModal({
               <button
                 type="button"
                 onClick={() => alert('Editing institution properties is coming soon in trust settings.')}
-                className="h-10 px-4 border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-semibold rounded-lg text-xs transition-colors cursor-pointer"
+                className="h-10 px-4 border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 font-semibold rounded-[9px] text-xs transition-colors cursor-pointer"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={onRevoke}
-                className="h-10 px-4 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-xs shadow-sm transition-colors cursor-pointer"
+                className="h-10 px-4 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-[9px] text-xs shadow-sm transition-colors cursor-pointer"
               >
                 Revoke Accreditation
               </button>
@@ -384,14 +384,14 @@ export default function InstitutionDetailModal({
               <button
                 type="button"
                 onClick={onReject}
-                className="h-10 px-4 border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                className="h-10 px-4 border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-[9px] text-xs transition-colors cursor-pointer"
               >
                 Reject
               </button>
               <button
                 type="button"
                 onClick={onApprove}
-                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs shadow-sm transition-colors cursor-pointer"
+                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-[9px] text-xs shadow-sm transition-colors cursor-pointer"
               >
                 Approve
               </button>
@@ -403,14 +403,14 @@ export default function InstitutionDetailModal({
               <button
                 type="button"
                 disabled
-                className="h-10 px-4 border border-stone-200 bg-stone-100 text-stone-400 font-semibold rounded-lg text-xs cursor-not-allowed"
+                className="h-10 px-4 border border-stone-200 bg-stone-100 text-stone-400 font-semibold rounded-[9px] text-xs cursor-not-allowed"
               >
                 View Details
               </button>
               <button
                 type="button"
                 onClick={onRestore}
-                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs shadow-sm transition-colors cursor-pointer"
+                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-[9px] text-xs shadow-sm transition-colors cursor-pointer"
               >
                 Restore
               </button>

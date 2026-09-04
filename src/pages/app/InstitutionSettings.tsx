@@ -290,7 +290,7 @@ export default function InstitutionSettings() {
         <div className="space-y-6">
           
           {/* Language Switcher Card */}
-          <LanguageSwitcher prefix="settings" />
+          <LanguageSwitcher prefix="settings" variant="compact-row" />
 
           {/* Card A: Institution Profile Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">

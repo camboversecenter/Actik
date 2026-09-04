@@ -8,7 +8,7 @@ import { useLanguage } from '../../lib/i18n'
 import { readDisclosures } from '../../lib/sdjwt'
 import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { Briefcase, Lock, ShieldAlert } from 'lucide-react'
+import { Briefcase, ShieldAlert } from 'lucide-react'
 
 // Institution/major/issuer_did are meant to come from plain DB columns
 // (fast, no decrypt needed) — but those columns went unpopulated for every
@@ -70,6 +70,7 @@ export default function Wallet() {
     unlockWithPasskey,
     lock,
     decryptPayload,
+    getAutoLockDeadline,
   } = useZkVault()
   const { t, language } = useLanguage()
 
@@ -389,15 +390,39 @@ export default function Wallet() {
     }
   }, [isUnlocked, pendingNavCredId, navigate])
 
+  // Live "auto-locks in mm:ss" readout. getAutoLockDeadline() is a plain
+  // getter (see VaultContext) so this ticks locally once a second instead of
+  // re-rendering every vault consumer in the app on each activity reset.
+  const [autoLockMsLeft, setAutoLockMsLeft] = useState<number | null>(null)
+  useEffect(() => {
+    if (!isUnlocked) {
+      setAutoLockMsLeft(null)
+      return
+    }
+    const tick = () => {
+      const deadline = getAutoLockDeadline()
+      setAutoLockMsLeft(deadline === null ? null : Math.max(0, deadline - Date.now()))
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [isUnlocked, getAutoLockDeadline])
 
-
+  const autoLockCountdown = (() => {
+    if (autoLockMsLeft === null) return null
+    const totalSec = Math.floor(autoLockMsLeft / 1000)
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  })()
 
   return (
     <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
-      {/* Header */}
-      <div className="mb-4">
-        <h2 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">{t('wallet.title')}</h2>
-        <p className="text-sm text-stone-500 mt-1">
+      {/* Header — a full-width app-bar strip (border-bottom only, no card
+          radius), not a card like the rest of the page, per spec. */}
+      <div className="bg-white border-b border-stone-200 pt-2.5 px-5 pb-4 -mx-4 md:mx-0">
+        <h2 className="font-khmer text-[22px] font-bold tracking-[-0.01em] text-stone-900">{t('wallet.title')}</h2>
+        <p className="text-[11.5px] text-stone-500 mt-0.5">
           {t('wallet.subtitle_count', { count: claimedCredentials.length })}
         </p>
       </div>
@@ -406,32 +431,46 @@ export default function Wallet() {
       {!vaultStatusLoading && (
         <div className="mb-6">
           {vaultExists === false && (
-            <button
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-11 px-4 rounded-lg text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer flex items-center justify-center gap-2"
-              onClick={() => navigate('/app/vault-setup')}
-            >
-              <ShieldAlert size={16} />
-              {t('wallet.vault_not_setup')}
-            </button>
+            <div className="-mx-4 md:mx-0 px-5 md:px-0 py-3 md:py-0">
+              <button
+                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-11 px-4 rounded-lg text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer flex items-center justify-center gap-2"
+                onClick={() => navigate('/app/vault-setup')}
+              >
+                <ShieldAlert size={16} />
+                {t('wallet.vault_not_setup')}
+              </button>
+            </div>
           )}
           {vaultExists === true && !isUnlocked && (
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-stone-100 border border-stone-200 rounded-xl">
-              <span className="w-2 h-2 rounded-full bg-stone-400 shrink-0" />
-              <Lock size={14} className="text-stone-500 shrink-0" />
-              <span className="text-sm font-semibold text-stone-700">{t('wallet.vault_locked')}</span>
+            <div className="flex items-center gap-2.5 py-3 px-5 bg-white border-b border-stone-200 -mx-4 md:mx-0">
+              <span className="w-[7px] h-[7px] rounded-full bg-stone-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-khmer text-[12.5px] font-semibold text-stone-900">{t('wallet.vault_locked')}</div>
+                <div className="font-mono text-[10px] text-stone-500 mt-0.5">
+                  Vault locked · tap to unlock
+                </div>
+              </div>
+              <button
+                onClick={() => setShowUnlockModal(true)}
+                className="shrink-0 bg-indigo-600 hover:bg-indigo-650 text-white font-semibold h-[30px] px-[11px] rounded-lg text-[11px] transition-colors cursor-pointer"
+              >
+                {t('wallet.unlock_btn')}
+              </button>
             </div>
           )}
           {vaultExists === true && isUnlocked && (
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-stone-200 rounded-xl">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_0_3px_rgba(5,150,105,0.14)]" />
+            <div className="flex items-center gap-2.5 py-3 px-5 bg-white border-b border-stone-200 -mx-4 md:mx-0">
+              <span className="w-[7px] h-[7px] rounded-full bg-emerald-600 shrink-0 shadow-[0_0_0_3px_rgba(5,150,105,0.14)]" />
               <div className="flex-1 min-w-0">
-                <div className="font-khmer text-sm font-semibold text-stone-900">{t('wallet.vault_unlocked')}</div>
+                <div className="font-khmer text-[12.5px] font-semibold text-stone-900">{t('wallet.vault_unlocked')}</div>
+                <div className="font-mono text-[10px] text-stone-500 mt-0.5">
+                  Vault unlocked{autoLockCountdown !== null ? ` · auto-locks in ${autoLockCountdown}` : ''}
+                </div>
               </div>
               <button
                 onClick={lock}
-                className="shrink-0 inline-flex items-center gap-1.5 border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer"
+                className="shrink-0 border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold h-[30px] px-[11px] rounded-lg text-[11px] transition-colors cursor-pointer"
               >
-                <Lock size={13} />
                 {t('wallet.lock_now')}
               </button>
             </div>

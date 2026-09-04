@@ -111,29 +111,6 @@ export async function logRejection(
   }
 }
 
-export async function logRegistryExport(
-  format: string
-): Promise<void> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const currentAdminId = session?.user?.id
-
-    const entry: AuditLogEntry = {
-      action: 'EXPORT_REGISTRY',
-      admin_id: currentAdminId,
-      timestamp: new Date().toISOString(),
-      ip_address: getClientIp(),
-      user_agent: navigator.userAgent,
-      details: { format }
-    }
-
-    const { error } = await supabase.from('audit_logs').insert([entry])
-    if (error) throw error
-  } catch (error) {
-    console.error('Failed to log registry export action:', error)
-  }
-}
-
 export async function logInstitutionRestore(
   institutionId: string,
   institutionName: string

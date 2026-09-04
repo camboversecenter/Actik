@@ -2,6 +2,25 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 export type Language = 'en' | 'km';
 
+// Degree type is picked from a fixed dropdown at issuance (see
+// IssueCredential.tsx), so unlike free-text fields it can always be mapped
+// to Khmer automatically — the issuer never has to type a Khmer version.
+// Kept outside the `t()`/translations table since both languages should
+// show together on the credential, not switch with the active language.
+const DEGREE_TITLE_KM: Record<string, string> = {
+  Bachelor: 'បរិញ្ញាបត្រ',
+  Master: 'អនុបណ្ឌិត',
+  'Doctorate (PhD)': 'បណ្ឌិត',
+  Associate: 'សញ្ញាបត្រកម្រិតអនុវិទ្យាល័យ',
+};
+
+/** "Bachelor" -> "បរិញ្ញាបត្រ (Bachelor)"; unrecognized values pass through unchanged. */
+export function formatDegreeTitle(value?: string | null): string {
+  if (!value) return '';
+  const km = DEGREE_TITLE_KM[value];
+  return km ? `${km} (${value})` : value;
+}
+
 const translations = {
   en: {
     nav: {
@@ -27,6 +46,7 @@ const translations = {
       vault_locked: 'Vault locked',
       vault_unlocked: 'Vault unlocked',
       lock_now: 'Lock',
+      unlock_btn: 'Unlock',
       loading: 'Loading credentials...',
       encrypted_title: 'My Encrypted Credentials',
       encrypted_desc: 'Click Share on any credential to generate a unique share link.',
@@ -91,8 +111,10 @@ const translations = {
       detail_issued_by: 'Issued by:',
       issuer_did: 'Issuer DID:',
       encrypted_badge: 'Encrypted in your vault',
-      hide_raw_token: 'Hide raw token',
-      show_raw_token: 'Show raw token',
+      raw_token_trigger: 'Advanced: export full credential',
+      raw_token_modal_title: 'Full credential export',
+      raw_token_modal_subtitle: 'For developer or audit use',
+      raw_token_modal_warning: 'This includes every field with no selective disclosure. To control what you share, use Share instead.',
       trust_accredited_institution: 'Accredited institution',
       trust_encrypted_vault: 'Encrypted in vault',
       share_count_label: 'Shared {count}×',
@@ -312,6 +334,28 @@ const translations = {
       see_all: 'See all',
       status_claimed: 'Claimed',
       status_pending: 'Pending',
+      stat_total_issued: 'Total issued',
+      stat_claimed: 'Claimed',
+      stat_pending: 'Awaiting claim',
+      stat_verifications: 'Verifications',
+      stat_verifications_sub: 'by employers',
+      accredited_pill: 'Accredited',
+      pending_approval_pill: 'Pending Approval',
+      recent_issuances: 'Recent issuances',
+      table_holder: 'Holder',
+      table_credential: 'Credential',
+      table_issued: 'Issued',
+      table_status: 'Status',
+      issuance_volume: 'Issuance, 6 months',
+      signing_key_active: 'Signing key active',
+      save_as_draft_btn: 'Save as draft',
+      draft_found_title: 'You have an unsaved draft',
+      draft_found_desc: 'Saved',
+      resume_draft_btn: 'Resume draft',
+      discard_draft_btn: 'Discard',
+      draft_saved_toast: 'Draft saved — resume it anytime from Issue a credential.',
+      draft_card_title: 'Draft credential in progress',
+      continue_editing_btn: 'Continue editing',
       back_to_issued: 'Back to Issued',
       no_creds_in_category: 'No credentials found in this category.',
       checking_auth: 'Checking authorization...',
@@ -336,8 +380,10 @@ const translations = {
       issue_success_pending: 'The credential is saved in the pending registry. The student can claim it as soon as they sign up for an Actik account using this email address.',
       issue_another: 'Issue another credential',
       issue_credential_title: 'Issue a credential',
+      step_type: 'Type',
       live_preview: 'Live preview',
       degree_preview_placeholder: 'Select a degree type…',
+      credential_preview_placeholder: 'Credential title',
       issue_credential_desc_form: 'Sign and send a digital certificate to a student.',
       signing_as: 'Signing as:',
       type_academic: 'Academic Degree',
@@ -486,7 +532,9 @@ const translations = {
       setup_title: 'Set up your vault',
       checking_vault: 'Checking vault status...',
       pin_method: '6-digit PIN',
-      bio_method: 'Biometric'
+      bio_method: 'Biometric',
+      sec_recs: 'Security recommendations',
+      sec_recs_desc: "Never share your PIN with anyone, even Actik support."
     },
     landing: {
       nav_signin: 'Sign in',
@@ -530,7 +578,7 @@ const translations = {
       invalid_link_desc: 'This does not appear to be a valid Actik verification link',
       invalid_link_hint: 'Check that you have the full URL',
       loading_title: 'Verifying credential…',
-      loading_subtitle: 'Running security checks…',
+      no_account_needed: 'no account needed · nothing is stored about you',
       check_1: 'Loading credential…',
       check_2: 'Checking link validity…',
       check_3: 'Verifying issuer signature…',
@@ -544,6 +592,7 @@ const translations = {
       credential_details_heading: 'Credential details',
       hidden_fields_notice: 'Some fields are hidden by the holder (selective disclosure).',
       hidden_label: 'Hidden:',
+      hidden_count_label: '{count} hidden by the credential holder',
       link_valid_until: 'Link valid until:',
       link_expiring_soon: 'This link expires soon',
       technical_details_toggle: 'Technical verification details',
@@ -556,6 +605,7 @@ const translations = {
       verification_steps_heading: 'Verification steps',
       what_to_do_label: 'What to do:',
       reason_label: 'Reason:',
+      search_registry_btn: 'Search the trust registry',
       footer_heading: 'How does Actik verification work?',
       trust_signature_title: 'Cryptographic signature',
       trust_signature_desc: "The issuer's digital seal proves authenticity",
@@ -593,6 +643,7 @@ const translations = {
       vault_locked: 'កាបូបបានចាក់សោ',
       vault_unlocked: 'កាបូបបានបើកសោ',
       lock_now: 'ចាក់សោ', // TODO(km-review)
+      unlock_btn: 'បើកសោ', // TODO(km-review)
       loading: 'កំពុងផ្ទុកវិញ្ញាបនបត្រ...',
       encrypted_title: 'វិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបរបស់ខ្ញុំ',
       encrypted_desc: 'ចុច ចែករំលែក នៅលើវិញ្ញាបនបត្រណាមួយដើម្បីបង្កើតតំណចែករំលែកតែមួយគត់។',
@@ -657,8 +708,10 @@ const translations = {
       detail_issued_by: 'ចេញដោយ៖',
       issuer_did: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
       encrypted_badge: 'ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
-      hide_raw_token: 'លាក់កូដដើម',
-      show_raw_token: 'បង្ហាញកូដដើម',
+      raw_token_trigger: 'កម្រិតខ្ពស់៖ នាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
+      raw_token_modal_title: 'ការនាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
+      raw_token_modal_subtitle: 'សម្រាប់អ្នកអភិវឌ្ឍ ឬការត្រួតពិនិត្យ', // TODO(km-review)
+      raw_token_modal_warning: 'វារួមបញ្ចូលគ្រប់វាល័យទាំងអស់ដោយគ្មានការបង្ហាញជ្រើសរើស។ ដើម្បីគ្រប់គ្រងអ្វីដែលអ្នកចែករំលែក សូមប្រើមុខងារ ចែករំលែក។', // TODO(km-review)
       trust_accredited_institution: 'ស្ថាប័នទទួលស្គាល់', // TODO(km-review)
       trust_encrypted_vault: 'អ៊ិនគ្រីបក្នុងកាបូប', // TODO(km-review)
       share_count_label: 'បានចែករំលែក {count} ដង', // TODO(km-review)
@@ -878,6 +931,28 @@ const translations = {
       see_all: 'មើលទាំងអស់',
       status_claimed: 'បានទទួល',
       status_pending: 'រង់ចាំ',
+      stat_total_issued: 'ចេញសរុប', // TODO(km-review)
+      stat_claimed: 'បានទទួល', // TODO(km-review)
+      stat_pending: 'រង់ចាំទទួល', // TODO(km-review)
+      stat_verifications: 'ការផ្ទៀងផ្ទាត់', // TODO(km-review)
+      stat_verifications_sub: 'ដោយនិយោជក', // TODO(km-review)
+      accredited_pill: 'ទទួលស្គាល់', // TODO(km-review)
+      pending_approval_pill: 'រង់ចាំការយល់ព្រម', // TODO(km-review)
+      recent_issuances: 'លិខិតចេញថ្មីៗ', // TODO(km-review)
+      table_holder: 'អ្នកទទួល', // TODO(km-review)
+      table_credential: 'លិខិត', // TODO(km-review)
+      table_issued: 'ចេញនៅ', // TODO(km-review)
+      table_status: 'ស្ថានភាព', // TODO(km-review)
+      issuance_volume: 'ការចេញលិខិត ៦ខែ', // TODO(km-review)
+      signing_key_active: 'កូនសោសកម្ម', // TODO(km-review)
+      save_as_draft_btn: 'រក្សាទុកជាព្រាង', // TODO(km-review)
+      draft_found_title: 'អ្នកមានព្រាងមិនទាន់រក្សាទុក', // TODO(km-review)
+      draft_found_desc: 'បានរក្សាទុកនៅ', // TODO(km-review)
+      resume_draft_btn: 'បន្តព្រាង', // TODO(km-review)
+      discard_draft_btn: 'បោះបង់', // TODO(km-review)
+      draft_saved_toast: 'បានរក្សាទុកព្រាង — អាចបន្តនៅពេលណាក៏បានពី ចេញលិខិត។', // TODO(km-review)
+      draft_card_title: 'វិញ្ញាបនបត្រព្រាងកំពុងដំណើរការ', // TODO(km-review)
+      continue_editing_btn: 'បន្តកែសម្រួល', // TODO(km-review)
       back_to_issued: 'ត្រឡប់ទៅវិញ្ញាបនបត្រដែលបានចេញ',
       no_creds_in_category: 'រកមិនឃើញវិញ្ញាបនបត្រក្នុងប្រភេទនេះទេ។',
       checking_auth: 'កំពុងត្រួតពិនិត្យការអនុញ្ញាត...',
@@ -902,8 +977,10 @@ const translations = {
       issue_success_pending: 'វិញ្ញាបនបត្រត្រូវបានរក្សាទុកក្នុងបញ្ជីរង់ចាំ។ និស្សិតអាចទទួលវាបាននៅពេលពួកគេចុះឈ្មោះគណនី Actik ដោយប្រើអ៊ីមែលនេះ។',
       issue_another: 'ចេញវិញ្ញាបនបត្រមួយទៀត',
       issue_credential_title: 'ចេញវិញ្ញាបនបត្រ',
+      step_type: 'ប្រភេទ', // TODO(km-review)
       live_preview: 'មើលជាមុន', // TODO(km-review)
       degree_preview_placeholder: 'ជ្រើសរើសប្រភេទសញ្ញាបត្រ…', // TODO(km-review)
+      credential_preview_placeholder: 'ចំណងជើងវិញ្ញាបនបត្រ', // TODO(km-review)
       issue_credential_desc_form: 'ចុះហត្ថលេខានិងផ្ញើវិញ្ញាបនបត្រឌីជីថលទៅនិស្សិត។',
       signing_as: 'ចុះហត្ថលេខាជា៖',
       type_academic: 'សញ្ញាបត្រសិក្សា',
@@ -1052,7 +1129,9 @@ const translations = {
       setup_title: 'រៀបចំកាបូបសុវត្ថិភាពរបស់អ្នក',
       checking_vault: 'កំពុងពិនិត្យមើលស្ថានភាពកាបូប...',
       pin_method: 'លេខកូដសម្ងាត់ ៦ ខ្ទង់',
-      bio_method: 'ជីវមាត្រ'
+      bio_method: 'ជីវមាត្រ',
+      sec_recs: 'ការណែនាំសុវត្ថិភាព', // TODO(km-review)
+      sec_recs_desc: 'កុំចែករំលែកកូដសម្ងាត់របស់អ្នកជាមួយអ្នកណាម្នាក់ ទោះជាអ្នកគាំទ្រ Actik ក៏ដោយ' // TODO(km-review)
     },
     // TODO(km-review): landing page copy below is a first-pass translation, not yet reviewed by a native speaker
     landing: {
@@ -1097,7 +1176,7 @@ const translations = {
       invalid_link_desc: 'នេះមិនមែនជាតំណផ្ទៀងផ្ទាត់ Actik ត្រឹមត្រូវទេ', // TODO(km-review)
       invalid_link_hint: 'សូមពិនិត្យមើលថាអ្នកមាន URL ពេញលេញ', // TODO(km-review)
       loading_title: 'កំពុងផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រ…',
-      loading_subtitle: 'កំពុងដំណើរការត្រួតពិនិត្យសុវត្ថិភាព…', // TODO(km-review)
+      no_account_needed: 'no account needed · nothing is stored about you',
       check_1: 'ទាញយកវិញ្ញាបនបត្រ…', // TODO(km-review)
       check_2: 'ពិនិត្យសុពលភាពតំណ…',
       check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
@@ -1111,6 +1190,7 @@ const translations = {
       credential_details_heading: 'ព័ត៌មានវិញ្ញាបនបត្រ',
       hidden_fields_notice: 'ព័ត៌មានមួយចំនួនត្រូវបានលាក់ដោយម្ចាស់ (ការបង្ហាញដោយជ្រើសរើស)។', // TODO(km-review)
       hidden_label: 'បានលាក់៖', // TODO(km-review)
+      hidden_count_label: '{count} ត្រូវបានលាក់ដោយម្ចាស់វិញ្ញាបនបត្រ', // TODO(km-review)
       link_valid_until: 'តំណមានសុពលភាពដល់៖',
       link_expiring_soon: 'តំណនេះជិតផុតកំណត់ហើយ', // TODO(km-review)
       technical_details_toggle: 'ព័ត៌មានលម្អិតបច្ចេកទេស', // TODO(km-review)
@@ -1123,6 +1203,7 @@ const translations = {
       verification_steps_heading: 'ជំហានផ្ទៀងផ្ទាត់', // TODO(km-review)
       what_to_do_label: 'គួរធ្វើអ្វី៖',
       reason_label: 'មូលហេតុ៖', // TODO(km-review)
+      search_registry_btn: 'ស្វែងរកក្នុងបញ្ជីទុកចិត្ត', // TODO(km-review)
       footer_heading: 'តើ Actik ផ្ទៀងផ្ទាត់ដោយរបៀបណា?',
       trust_signature_title: 'ហត្ថលេខាគ្រីបតូ',
       trust_signature_desc: 'ត្រាឌីជីថលរបស់ស្ថាប័នបញ្ជាក់ភាពត្រឹមត្រូវ',

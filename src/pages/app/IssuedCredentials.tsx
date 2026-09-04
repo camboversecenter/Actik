@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { useLanguage } from '../../lib/i18n'
+import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import { Loader2, IdCard } from 'lucide-react'
 import StatusPill from '../../components/ui/StatusPill'
 
@@ -11,6 +11,12 @@ interface IssuedRecord {
   date: string
   status: 'pending' | 'claimed'
   credential_type: string
+  // Holder email — the only holder-identifying field actually persisted in
+  // plaintext by IssueCredential.tsx (holder_email / recipient_email
+  // depending on which insert path landed). The holder's real name only
+  // ever lives inside the encrypted credential, never as a plain column, so
+  // there's nothing honest to show for a "name" field here.
+  email: string | null
 }
 
 export default function IssuedCredentials() {
@@ -62,7 +68,8 @@ export default function IssuedCredentials() {
             title: p.label || 'Pending Credential',
             date: p.created_at || new Date().toISOString(),
             status: 'pending',
-            credential_type: 'academic_degree' // Hardcoded default for pending
+            credential_type: 'academic_degree', // Hardcoded default for pending
+            email: p.recipient_email || p.student_email || null
           })
         })
       }
@@ -74,7 +81,8 @@ export default function IssuedCredentials() {
             title: c.degree_title || 'Issued Credential',
             date: c.created_at || new Date().toISOString(),
             status: 'claimed',
-            credential_type: c.credential_type || 'academic_degree'
+            credential_type: c.credential_type || 'academic_degree',
+            email: c.holder_email || c.student_email || null
           })
         })
       }
@@ -130,17 +138,17 @@ export default function IssuedCredentials() {
   return (
     <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
       <div className="mb-8 pt-4">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{t('dashboard.issued_creds')}</h1>
-        <p className="text-sm text-gray-500 mt-1">{t('dashboard.issued_creds_desc')}</p>
+        <h1 className="font-khmer text-3xl font-extrabold text-stone-900 tracking-tight">{t('dashboard.issued_creds')}</h1>
+        <p className="text-sm text-stone-500 mt-1">{t('dashboard.issued_creds_desc')}</p>
       </div>
 
       {records.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center shadow-sm">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
             <IdCard size={26} className="text-indigo-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.no_creds_issued')}</h3>
-          <p className="text-gray-500 text-sm max-w-sm mx-auto">
+          <h3 className="text-lg font-semibold text-stone-900 mb-2">{t('dashboard.no_creds_issued')}</h3>
+          <p className="text-stone-500 text-sm max-w-sm mx-auto">
             {t('dashboard.no_creds_issued_desc')}
           </p>
         </div>
@@ -155,37 +163,42 @@ export default function IssuedCredentials() {
 
             return (
               <div key={group.key} className="flex flex-col gap-3">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                  <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase">
+                <div className="flex items-center justify-between pb-2 border-b border-stone-200">
+                  <h2 className="font-mono text-xs font-bold tracking-widest text-stone-400 uppercase">
                     {group.label}
                   </h2>
                   {hasMore && (
                     <Link
                       to={`/app/issued/type/${group.key}`}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-650 transition-colors"
                     >
                       {t('dashboard.see_all')} ({displayCreds.length})
                     </Link>
                   )}
                 </div>
-                
+
                 {/* Horizontal scrollable row */}
                 <div className="flex flex-row gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
                   {previewCreds.map((c) => {
                     const isClaimed = c.status === 'claimed'
                     return (
-                      <div 
+                      <div
                         key={c.id}
-                        className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start border-l-4 border-indigo-600 overflow-hidden shadow-sm bg-white rounded-xl border border-gray-200"
+                        className="min-w-[85vw] sm:min-w-[400px] shrink-0 snap-start border-l-4 border-indigo-600 overflow-hidden shadow-sm bg-white rounded-xl border border-stone-200"
                       >
                         <div className="p-4 md:p-6 flex justify-between items-center">
                           <div className="w-full">
-                            {/* Top row */}
+                            {/* Top row: title + holder email stacked, status pill */}
                             <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-4">
-                              <div>
-                                <strong className="text-base text-gray-900 block font-bold leading-snug">
-                                  {c.title}
+                              <div className="min-w-0">
+                                <strong className="font-khmer text-[15px] text-stone-900 block font-semibold leading-snug">
+                                  {formatDegreeTitle(c.title)}
                                 </strong>
+                                {c.email && (
+                                  <span className="font-mono text-[9.5px] text-stone-400 block mt-0.5 truncate">
+                                    {c.email}
+                                  </span>
+                                )}
                               </div>
                               <StatusPill
                                 status={isClaimed ? 'verified' : 'pending'}
@@ -195,11 +208,11 @@ export default function IssuedCredentials() {
                             </div>
 
                             {/* Bottom row */}
-                            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-xs text-gray-500">
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-6 text-xs text-stone-500">
                               <div className="flex gap-4">
                                 <div>
                                   <span>{t('wallet.issued_on')} </span>
-                                  <strong className="text-gray-950">{new Date(c.date).toLocaleDateString()}</strong>
+                                  <strong className="font-mono text-stone-700">{new Date(c.date).toLocaleDateString()}</strong>
                                 </div>
                               </div>
                             </div>

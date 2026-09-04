@@ -1,5 +1,5 @@
 import { Check, ShieldCheck, Share2, Landmark } from 'lucide-react'
-import { useLanguage } from '../lib/i18n'
+import { useLanguage, formatDegreeTitle } from '../lib/i18n'
 
 interface CredentialCardProps {
   degreeTitle: string
@@ -44,10 +44,13 @@ function crestCode(did?: string | null): string | null {
 // "Banded" treatment: a colored institution header (an icon stands in for a
 // real crest — Actik has no institution-logo column yet, so there's nothing
 // honest to abbreviate into initials), the degree title as the primary line,
-// and a dashed circular "verified in vault" seal. Institution name and
-// degree title render exactly as stored (whatever script the issuer used) —
-// no fabricated second-language line; only static labels get Khmer-primary
-// styling elsewhere in the app.
+// and a dashed circular "verified in vault" seal. Institution name renders
+// exactly as stored (whatever script the issuer used) — no fabricated
+// second-language line there. Degree title is the one exception: it's
+// picked from a fixed dropdown at issuance (see IssueCredential.tsx), so
+// formatDegreeTitle() can reliably append the Khmer term for recognized
+// values ("Bachelor" -> "បរិញ្ញាបត្រ (Bachelor)"); anything else passes
+// through unchanged.
 export default function CredentialCard({
   degreeTitle,
   institutionName,
@@ -86,7 +89,7 @@ export default function CredentialCard({
       {/* Body */}
       <div className="flex items-start gap-3.5 p-4">
         <div className="min-w-0 flex-1">
-          <h4 className="font-khmer font-bold text-stone-900 text-[17px] leading-snug">{degreeTitle}</h4>
+          <h4 className="font-khmer font-bold text-stone-900 text-[17px] leading-snug">{formatDegreeTitle(degreeTitle)}</h4>
           {major && <p className="text-sm text-stone-500 mt-0.5 truncate">{major}</p>}
           <div className="flex items-center gap-4 mt-3">
             <div>

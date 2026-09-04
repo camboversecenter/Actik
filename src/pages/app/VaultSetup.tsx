@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
-import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle, Check, AlertTriangle, KeyRound, ShieldCheck, Ban, Settings2, Building2 } from 'lucide-react'
+import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle, Check, AlertTriangle, KeyRound, ShieldCheck, Ban, Settings2, Building2, User, Info } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PinDotsInput from '../../components/PinDotsInput'
@@ -313,6 +313,20 @@ export default function VaultSetup() {
     }
   }
 
+  // A stacked label/value field row — same convention as CredentialDetail's
+  // renderField: English is a small technical caption under the Khmer
+  // label, and the value renders right-aligned (mono for anything
+  // identifier-shaped, like an email address).
+  const renderField = (label: string, sublabel: string, value: any, mono = false) => (
+    <div className="flex justify-between items-center gap-3 py-2.5 border-b border-stone-100 last:border-b-0">
+      <span className="font-khmer text-[11.5px] text-stone-500 shrink-0">
+        {label}
+        <span className="block font-sans text-[9px] text-stone-400 mt-0.5">{sublabel}</span>
+      </span>
+      <span className={`font-semibold text-stone-900 text-right break-all ${mono ? 'font-mono text-xs' : 'text-sm'}`}>{value}</span>
+    </div>
+  )
+
   // Main Loader
   if (checking) {
     return (
@@ -346,102 +360,87 @@ export default function VaultSetup() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-3">
               <CheckCircle size={24} />
             </div>
-            <h2 className="text-lg font-bold text-stone-900">{t('account.title')}</h2>
-            <p className="text-xs text-stone-500 mt-1 leading-relaxed max-w-md mx-auto">
+            <h2 className="font-khmer text-lg font-bold text-stone-900">{t('account.title')}</h2>
+            <p className="font-khmer text-xs text-stone-500 mt-1 leading-relaxed max-w-md mx-auto">
               {t('account.subtitle')}
             </p>
           </div>
 
           {/* Card 1: Account Information */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-sm font-bold text-stone-900 tracking-tight mb-4 flex items-center gap-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
+            <h3 className="font-khmer text-[12.5px] font-bold text-stone-900 tracking-tight mb-3 flex items-center gap-2">
+              <User size={15} strokeWidth={1.85} className="text-indigo-600" />
               {t('account.account_info')}
             </h3>
-            
-            <div className="space-y-3.5 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-gray-500">{t('account.email')}</span>
-                <strong className="text-stone-900 font-semibold">{currentUser?.email}</strong>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-gray-500">{t('account.role')}</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                  userRole === 'admin' 
-                    ? 'bg-gray-100 text-gray-800 border border-gray-200' 
-                    : userRole === 'issuer' 
-                      ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                      : 'bg-teal-100 text-teal-800 border border-teal-200'
-                }`}>
+
+            <div>
+              {renderField(t('account.email'), 'Email', currentUser?.email, true)}
+              <div className="flex justify-between items-center gap-3 py-2.5 border-b border-stone-100">
+                <span className="font-khmer text-[11.5px] text-stone-500 shrink-0">
+                  {t('account.role')}
+                  <span className="block font-sans text-[9px] text-stone-400 mt-0.5">Role</span>
+                </span>
+                <span className="font-khmer inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-650 border border-indigo-200">
                   {userRole ? t(`role.${userRole.toLowerCase()}`) : t('role.student')}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-gray-500">{t('account.created')}</span>
-                <strong className="text-stone-900 font-medium">
-                  {currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : '—'}
-                </strong>
-              </div>
+              {renderField(
+                t('account.created'),
+                'Created',
+                currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : '—'
+              )}
             </div>
           </div>
 
           {/* Card 2: Vault Security */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative overflow-hidden">
-            <h3 className="text-sm font-bold text-stone-900 tracking-tight mb-4 flex items-center gap-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 relative overflow-hidden">
+            <h3 className="font-khmer text-[12.5px] font-bold text-stone-900 tracking-tight mb-3 flex items-center gap-2">
+              <Lock size={15} strokeWidth={1.85} className="text-indigo-600" />
               {t('account.vault_security')}
             </h3>
 
-            <div className="space-y-3.5 text-sm mb-6">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-gray-500">{t('account.unlock_method')}</span>
-                <strong className="text-stone-900 font-semibold capitalize flex items-center gap-1.5">
-                  {existingVault.unlock_method === 'pin' ? t('account.pin_method') : t('account.bio_method')}
-                </strong>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-gray-500">{t('account.vault_configured')}</span>
-                <strong className="text-stone-900 font-medium">
-                  {new Date(existingVault.created_at || '').toLocaleDateString()}
-                </strong>
-              </div>
+            <div className="mb-5">
+              {renderField(
+                t('account.unlock_method'),
+                'Unlock method',
+                existingVault.unlock_method === 'pin' ? t('account.pin_method') : t('account.bio_method')
+              )}
+              {renderField(
+                t('account.vault_configured'),
+                'Configured',
+                new Date(existingVault.created_at || '').toLocaleDateString()
+              )}
             </div>
 
-            <button 
+            <button
               onClick={() => setShowReconfigureModal(true)}
-              className="w-full border border-indigo-600 bg-transparent hover:bg-indigo-50 active:bg-indigo-100 text-indigo-600 font-semibold h-11 px-4 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+              className="font-khmer w-full border border-indigo-600 bg-transparent hover:bg-indigo-50 active:bg-indigo-100 text-indigo-600 font-semibold h-11 px-4 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
             >
               {t('account.change_unlock')}
             </button>
           </div>
 
           {/* Language Switcher Card */}
-          <LanguageSwitcher prefix="account" />
+          <LanguageSwitcher prefix="account" variant="compact-row" />
 
           {/* Card 3: Action Options */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col gap-3">
-            <button 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 flex flex-col gap-3">
+            <button
+              className="font-khmer w-full bg-indigo-600 hover:bg-indigo-650 active:bg-indigo-700 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/wallet')}>
               {t('account.go_wallet')}
             </button>
-            <button 
-              className="w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
+            <button
+              className="font-khmer w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => setShowResetModal(true)}>
               {t('account.reset_vault')}
             </button>
           </div>
 
           {/* Security tips / Info banner */}
-          <div className="flex gap-3 items-start p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-indigo-800 leading-relaxed shadow-sm">
-            <svg className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
+          <div className="flex gap-3 items-start p-4 bg-indigo-50 rounded-xl border border-indigo-200 text-xs text-indigo-800 leading-relaxed shadow-sm">
+            <Info size={17} strokeWidth={1.9} className="text-indigo-650 shrink-0 mt-0.5" />
+            <div className="font-khmer">
               <strong className="font-bold block mb-0.5">{t('account.sec_recs')}</strong>
               {t('account.sec_recs_desc')}
             </div>

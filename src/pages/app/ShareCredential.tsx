@@ -338,13 +338,25 @@ export default function ShareCredential() {
       // Try extraction fallback from headers if disclosures are salt-only
       try {
         const payload = JSON.parse(atob(sdjwtString.split('~')[0].split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-        const fieldsToExtract = ['name', 'year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'degree_type', 'major', 'graduation_date', 'certificate_id', 'photo']
+        const fieldsToExtract = ['name', 'year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'degree_type', 'degree', 'major', 'graduation_date', 'certificate_id', 'photo']
         fieldsToExtract.forEach(f => {
           if (claims[f] === undefined && payload[f] !== undefined) {
             claims[f] = payload[f]
           }
         })
       } catch {}
+
+      // Pre-6502ec7 credentials disclose degree type under the legacy claim
+      // name "degree" instead of "degree_type" (see CredentialDetail.tsx for
+      // the full history — SD-JWT disclosures are fixed forever at signing
+      // time, so old credentials keep the old name). Normalize once here so
+      // the toggle UI, counters, and labels below only ever deal with
+      // "degree_type" — the actual reveal still asks for "degree" too (see
+      // revealNames in handleCreateShare) since that's the real disclosure
+      // name on-token for those credentials.
+      if (claims.degree_type === undefined && claims.degree !== undefined) {
+        claims.degree_type = claims.degree
+      }
 
       setAvailableClaims(claims)
       // Only the student's name defaults on, and only if it's actually
@@ -368,12 +380,37 @@ export default function ShareCredential() {
     }
   }
 
+  // Toggles a group of field names together as one on/off unit (e.g. the
+  // "degree type" toggle also needs to flip the legacy "degree" disclosure
+  // name for pre-6502ec7 credentials). Checked state is "any of them
+  // selected"; toggling off clears all of them, toggling on adds whichever
+  // are missing — calling toggleSelectableField per-key in a loop would
+  // desync when only some of the keys start selected.
+  const toggleSelectableFields = (fields: string[]) => {
+    const anySelected = fields.some(f => selectedFields.includes(f))
+    setSelectedFields(prev =>
+      anySelected
+        ? prev.filter(f => !fields.includes(f))
+        : [...prev, ...fields.filter(f => !prev.includes(f))]
+    )
+  }
+
   // Count fields
-  // Always visible: Degree, Institution, Issuer DID, Issue date (4 fields)
-  // Selectable: Name, Year, GPA, National ID, Notes, Email, Student ID, Graduation Date, Certificate ID, Photo
-  const selectableKeys = ['name', 'year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'graduation_date', 'certificate_id', 'photo']
+  // Always visible: Degree title (DB-column display name, not the SD-JWT
+  // "degree_type"/"degree" claim), Institution, Issuer DID, Issue date (4
+  // fields). Degree *type* and Major are genuine per-share opt-ins despite
+  // sounding similar to "Degree title" — counted below like every other
+  // selectable field.
+  // Selectable: Name, Year, GPA, National ID, Notes, Email, Student ID,
+  // Degree Type, Major, Graduation Date, Certificate ID, Photo
+  const selectableKeys = ['name', 'year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'degree_type', 'major', 'graduation_date', 'certificate_id', 'photo']
   const totalFields = 4 + Object.keys(availableClaims).filter(k => selectableKeys.includes(k) && availableClaims[k] !== undefined && availableClaims[k] !== '').length
-  const disclosedFieldsCount = 4 + selectedFields.filter(f => availableClaims[f] !== undefined && availableClaims[f] !== '').length
+  // "degree" is excluded here even though it can end up in selectedFields —
+  // it's the internal legacy alias toggleSelectableFields adds alongside
+  // "degree_type" (see renderToggleField's aliasKey), not a distinct
+  // user-facing field, so counting it too would double-count degree type
+  // for credentials that actually carry the legacy claim name.
+  const disclosedFieldsCount = 4 + selectedFields.filter(f => f !== 'degree' && availableClaims[f] !== undefined && availableClaims[f] !== '').length
   
   const hiddenFields = selectableKeys
     .filter(f => availableClaims[f] !== undefined && availableClaims[f] !== '' && !selectedFields.includes(f))
@@ -385,6 +422,8 @@ export default function ShareCredential() {
       if (f === 'notes') return 'Additional notes'
       if (f === 'email') return 'Email address'
       if (f === 'student_id') return 'Student ID'
+      if (f === 'degree_type') return 'Degree type'
+      if (f === 'major') return 'Major'
       if (f === 'graduation_date') return 'Graduation date'
       if (f === 'certificate_id') return 'Certificate ID'
       if (f === 'photo') return 'Student photo'
@@ -406,9 +445,18 @@ export default function ShareCredential() {
         return
       }
 
-      // Step A: Build the presentation
-      // The degree and institution claims must always be visible in addition to selection
-      const revealNames = ['degree', 'institution', 'degree_type', 'major', 'iss', 'iat', 'exp', ...selectedFields]
+      // Step A: Build the presentation.
+      // Institution/iss/iat/exp are always visible in addition to selection
+      // (they back the read-only "always shown" rows above). Degree *type*
+      // and Major are NOT forced in here — they're real per-share opt-ins
+      // now, so they only get revealed via ...selectedFields like every
+      // other toggleable field. The one exception: if the student opted in
+      // to degree_type, also reveal the legacy "degree" disclosure name,
+      // since that's the actual on-token name for credentials issued before
+      // 6502ec7 (present() filters by literal disclosure name, so it has no
+      // way to know "degree" and "degree_type" mean the same thing).
+      const revealNames = ['institution', 'iss', 'iat', 'exp', ...selectedFields,
+        ...(selectedFields.includes('degree_type') ? ['degree'] : [])]
       const presentationStr = present(decryptedSDJwt, revealNames)
 
       // Step B: Generate UUID token
@@ -583,18 +631,22 @@ export default function ShareCredential() {
 
   // A selectable field — real toggle switch driven by the same
   // selectedFields/toggleSelectableField state as before, just restyled.
+  // opts.aliasKey toggles a second field name in lockstep with fieldKey —
+  // used for degree_type, whose legacy disclosure name ("degree") needs to
+  // move with it as one unit rather than being a separate row.
   const renderToggleField = (
     fieldKey: string,
     label: string,
     value: React.ReactNode,
-    opts?: { mono?: boolean; badge?: { label: string; tone: 'warning' | 'danger' } }
+    opts?: { mono?: boolean; badge?: { label: string; tone: 'warning' | 'danger' }; aliasKey?: string }
   ) => {
-    const checked = selectedFields.includes(fieldKey)
+    const groupKeys = opts?.aliasKey ? [fieldKey, opts.aliasKey] : [fieldKey]
+    const checked = groupKeys.some(k => selectedFields.includes(k))
     return (
       <div className={`flex items-center gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 text-sm ${checked ? '' : 'bg-stone-50'}`}>
         <button
           type="button"
-          onClick={() => toggleSelectableField(fieldKey)}
+          onClick={() => toggleSelectableFields(groupKeys)}
           aria-pressed={checked}
           aria-label={label}
           className={`w-9 h-5 rounded-full transition-colors relative shrink-0 cursor-pointer ${checked ? 'bg-indigo-600' : 'bg-stone-300'}`}
@@ -812,6 +864,16 @@ export default function ShareCredential() {
 
                   {availableClaims.student_id !== undefined && availableClaims.student_id !== '' &&
                     renderToggleField('student_id', t('wallet.student_id').replace(':', ''), availableClaims.student_id, { mono: true })}
+
+                  {/* degree_type was normalized in decryptCredential from the
+                      legacy "degree" disclosure name if that's what this
+                      credential actually has — aliasKey keeps the toggle
+                      revealing the right on-token name either way. */}
+                  {availableClaims.degree_type !== undefined && availableClaims.degree_type !== '' &&
+                    renderToggleField('degree_type', t('wallet.degree_type').replace(':', ''), availableClaims.degree_type, { aliasKey: 'degree' })}
+
+                  {availableClaims.major !== undefined && availableClaims.major !== '' &&
+                    renderToggleField('major', t('wallet.major').replace(':', ''), availableClaims.major)}
 
                   {availableClaims.year !== undefined && availableClaims.year !== '' &&
                     renderToggleField('year', t('wallet.field_year'), availableClaims.year)}
@@ -1079,7 +1141,13 @@ export default function ShareCredential() {
               <div style={{ backgroundColor: 'var(--paper)', borderRadius: '8px', padding: '1rem', border: '1px solid var(--line)', fontSize: '0.8rem', lineHeight: '1.4' }}>
                 <div style={{ margin: '0 0 0.4rem' }}>
                   <span className="muted">{t('wallet.disclosed_fields')} </span>
-                  <strong>{['Issuer DID', 'Institution', 'Degree title', 'Issue date', ...selectedFields.map(f => {
+                  <strong>{['Issuer DID', 'Institution', 'Degree title', 'Issue date', ...selectedFields
+                    // "degree" is the internal legacy alias toggled together
+                    // with "degree_type" (see renderToggleField's aliasKey)
+                    // — drop it here so it doesn't show up as a second,
+                    // unlabeled "degree" entry alongside "Degree type".
+                    .filter(f => f !== 'degree')
+                    .map(f => {
                     if (f === 'name') return 'Full name'
                     if (f === 'year') return 'Graduation year'
                     if (f === 'gpa') return 'GPA'
@@ -1087,6 +1155,8 @@ export default function ShareCredential() {
                     if (f === 'notes') return 'Additional notes'
                     if (f === 'email') return 'Email address'
                     if (f === 'student_id') return 'Student ID'
+                    if (f === 'degree_type') return 'Degree type'
+                    if (f === 'major') return 'Major'
                     if (f === 'graduation_date') return 'Graduation date'
                     if (f === 'certificate_id') return 'Certificate ID'
                     if (f === 'photo') return 'Student photo'
