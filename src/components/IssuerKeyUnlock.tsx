@@ -264,7 +264,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
     return (
       <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-6 md:p-8 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="text-3xl mt-0.5">🔑</div>
+          <Key size={26} className="text-amber-600 mt-0.5 shrink-0" />
           <div className="w-full">
             <h2 className="text-lg font-bold text-amber-800">Set up your signing PIN</h2>
             <p className="text-sm text-stone-600 mt-2 leading-relaxed">

@@ -2,6 +2,25 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 export type Language = 'en' | 'km';
 
+// Degree type is picked from a fixed dropdown at issuance (see
+// IssueCredential.tsx), so unlike free-text fields it can always be mapped
+// to Khmer automatically — the issuer never has to type a Khmer version.
+// Kept outside the `t()`/translations table since both languages should
+// show together on the credential, not switch with the active language.
+const DEGREE_TITLE_KM: Record<string, string> = {
+  Bachelor: 'បរិញ្ញាបត្រ',
+  Master: 'អនុបណ្ឌិត',
+  'Doctorate (PhD)': 'បណ្ឌិត',
+  Associate: 'សញ្ញាបត្រកម្រិតអនុវិទ្យាល័យ',
+};
+
+/** "Bachelor" -> "បរិញ្ញាបត្រ (Bachelor)"; unrecognized values pass through unchanged. */
+export function formatDegreeTitle(value?: string | null): string {
+  if (!value) return '';
+  const km = DEGREE_TITLE_KM[value];
+  return km ? `${km} (${value})` : value;
+}
+
 const translations = {
   en: {
     nav: {
@@ -16,14 +35,18 @@ const translations = {
       loading: 'Loading Actik...',
       tagline: 'Proof of ownership',
       institution_dashboard: 'Institution Dashboard',
-      sign_out: 'Sign out'
+      sign_out: 'Sign out',
+      install_app: 'Install app'
     },
     wallet: {
-      title: 'My wallet',
+      title: 'My credential wallet',
       subtitle: 'Your digital credentials, encrypted and controlled by you',
+      subtitle_count: 'My credentials · {count} held',
       vault_not_setup: 'Vault not set up (Setup)',
       vault_locked: 'Vault locked',
       vault_unlocked: 'Vault unlocked',
+      lock_now: 'Lock',
+      unlock_btn: 'Unlock',
       loading: 'Loading credentials...',
       encrypted_title: 'My Encrypted Credentials',
       encrypted_desc: 'Click Share on any credential to generate a unique share link.',
@@ -34,12 +57,18 @@ const translations = {
       category_academic_degree: 'Academic Degrees',
       category_other: 'Other',
       see_all: 'See all ({count})',
+      all_count: 'All {count}',
       verified: '✓ Verified',
       verified_label: 'Verified',
       encrypted_certificate_fallback: 'Encrypted certificate',
+      institution_unknown: 'Institution',
       issued_by: 'Issued by: ',
       year: 'Year: ',
       issued_on: 'Issued on: ',
+      issued_on_label: 'Issued',
+      year_label: 'Year',
+      share_label: 'Shared',
+      seal_label: 'SEAL',
       unlock_vault_title: 'Unlock Your Vault',
       unlock_vault_desc: 'Your encryption keys are derived locally. Please unlock your vault to process this credential.',
       enter_pin: 'Enter Vault PIN',
@@ -49,7 +78,7 @@ const translations = {
       biometric_prompt: 'Complete the biometric prompt on your device',
       biometric_failed: 'Biometric prompt did not appear.',
       try_again: 'Try again',
-      unlock_with_passkey: '🔑 Unlock with Passkey',
+      unlock_with_passkey: 'Unlock with Passkey',
       setup_required_title: 'Encryption Vault Required',
       setup_required_desc: 'To claim credentials, you must first create an encrypted browser vault. This derives keys locally to secure your data so that Supabase only stores ciphertext.',
       setup_vault_btn: 'Set up vault',
@@ -81,9 +110,16 @@ const translations = {
       certificate_id: 'Certificate ID:',
       detail_issued_by: 'Issued by:',
       issuer_did: 'Issuer DID:',
-      encrypted_badge: '✓ Encrypted in your vault',
-      hide_raw_token: 'Hide raw token',
-      show_raw_token: 'Show raw token',
+      encrypted_badge: 'Encrypted in your vault',
+      raw_token_trigger: 'Advanced: export full credential',
+      raw_token_modal_title: 'Full credential export',
+      raw_token_modal_subtitle: 'For developer or audit use',
+      raw_token_modal_warning: 'This includes every field with no selective disclosure. To control what you share, use Share instead.',
+      trust_accredited_institution: 'Accredited institution',
+      trust_encrypted_vault: 'Encrypted in vault',
+      share_count_label: 'Shared {count}×',
+      not_specified: 'Not specified',
+      issue_date_label: 'Issue date',
       no_decrypted_claims: 'No decrypted claims found.',
       cancel_and_go_back: 'Cancel & Go Back',
       decryption_failed: 'Decryption failed',
@@ -101,6 +137,7 @@ const translations = {
       private: 'Private',
       sharing_fields: 'Sharing {disclosed} of {total} fields',
       hidden_fields: 'Hidden: {fields}',
+      will_be_hidden: 'will be hidden',
       who_is_this_for: 'Who is this for? (optional)',
       recipient_placeholder: 'e.g. Acme Corp · HR',
       how_long_active: 'How long should this link work?',
@@ -116,14 +153,16 @@ const translations = {
       create_share_link: 'Create share link',
       share_link_created: 'Share link created',
       copy_link: 'Copy link',
+      copy: 'Copy',
       copied: 'Copied!',
+      copy_failed: 'Failed to copy.',
       open: 'Open',
       download_qr_png: 'Download QR PNG',
       email_employer: 'Email employer',
       disclosed_fields: 'Disclosed fields:',
       expires: 'Expires:',
       token: 'Token:',
-      share_warning: '⚠ Anyone with this link can verify your credential until it expires. Do not share it publicly.',
+      share_warning: 'Anyone with this link can verify your credential until it expires. Do not share it publicly.',
       no_active_share_link: 'No active share link has been created during this session.',
       go_to_configure_step: 'Go to Configure step',
       view_past_share_links: 'View all your past share links in ',
@@ -134,8 +173,6 @@ const translations = {
       unlock_vault_btn: 'Unlock vault',
       unlock_vault_modal_desc: 'Your encryption keys are derived locally. Please unlock your vault to process this credential.',
       enter_vault_pin: 'Enter Vault PIN',
-      complete_biometric: 'Complete the biometric prompt on your device',
-      device_ask_biometric: 'Your device will ask for biometric confirmation.',
       share_revoked_success: 'Share link revoked successfully',
       share_revoke_failed: 'Failed to revoke share link',
       cannot_extend_inactive: 'Cannot extend: Share link is no longer active',
@@ -197,7 +234,7 @@ const translations = {
       unlock_and_claim_btn: 'Unlock & Claim',
       auth_biometric_desc: 'Authenticate using your secure local biometrics.',
       auth_passkey_desc: 'Authenticate using your secure device passkey.',
-      unlock_with_biometric: '👤 Unlock with Biometric',
+      unlock_with_biometric: 'Unlock with Biometric',
       vault_setup_required_title: 'Vault setup required',
       vault_setup_required_desc: 'Your digital credentials are encrypted locally for zero-knowledge privacy. You must set up your vault to store this certificate.',
       setup_my_vault_btn: 'Set up my vault',
@@ -295,8 +332,30 @@ const translations = {
       academic_degrees: 'ACADEMIC DEGREES',
       other_credentials: 'OTHER CREDENTIALS',
       see_all: 'See all',
-      status_claimed: '✓ Claimed',
-      status_pending: '⏳ Pending',
+      status_claimed: 'Claimed',
+      status_pending: 'Pending',
+      stat_total_issued: 'Total issued',
+      stat_claimed: 'Claimed',
+      stat_pending: 'Awaiting claim',
+      stat_verifications: 'Verifications',
+      stat_verifications_sub: 'by employers',
+      accredited_pill: 'Accredited',
+      pending_approval_pill: 'Pending Approval',
+      recent_issuances: 'Recent issuances',
+      table_holder: 'Holder',
+      table_credential: 'Credential',
+      table_issued: 'Issued',
+      table_status: 'Status',
+      issuance_volume: 'Issuance, 6 months',
+      signing_key_active: 'Signing key active',
+      save_as_draft_btn: 'Save as draft',
+      draft_found_title: 'You have an unsaved draft',
+      draft_found_desc: 'Saved',
+      resume_draft_btn: 'Resume draft',
+      discard_draft_btn: 'Discard',
+      draft_saved_toast: 'Draft saved — resume it anytime from Issue a credential.',
+      draft_card_title: 'Draft credential in progress',
+      continue_editing_btn: 'Continue editing',
       back_to_issued: 'Back to Issued',
       no_creds_in_category: 'No credentials found in this category.',
       checking_auth: 'Checking authorization...',
@@ -321,6 +380,10 @@ const translations = {
       issue_success_pending: 'The credential is saved in the pending registry. The student can claim it as soon as they sign up for an Actik account using this email address.',
       issue_another: 'Issue another credential',
       issue_credential_title: 'Issue a credential',
+      step_type: 'Type',
+      live_preview: 'Live preview',
+      degree_preview_placeholder: 'Select a degree type…',
+      credential_preview_placeholder: 'Credential title',
       issue_credential_desc_form: 'Sign and send a digital certificate to a student.',
       signing_as: 'Signing as:',
       type_academic: 'Academic Degree',
@@ -468,8 +531,10 @@ const translations = {
       language_desc: 'Choose your preferred language for the wallet interface.',
       setup_title: 'Set up your vault',
       checking_vault: 'Checking vault status...',
-      pin_method: '🔢 6-digit PIN',
-      bio_method: '👤 Biometric'
+      pin_method: '6-digit PIN',
+      bio_method: 'Biometric',
+      sec_recs: 'Security recommendations',
+      sec_recs_desc: "Never share your PIN with anyone, even Actik support."
     },
     landing: {
       nav_signin: 'Sign in',
@@ -499,10 +564,59 @@ const translations = {
       for_students_desc: 'Collect your credentials in one place and share them instantly when applying for jobs or further study.',
       for_institutions_title: 'Institutions',
       for_institutions_desc: 'Issue verifiable certificates once accredited by an admin — no more manual authentication letters.',
+      for_employers_title: 'Employers',
+      for_employers_desc: 'Verify a certificate in seconds, no account needed — just open the link.',
       final_cta_title: 'Ready to get started?',
       final_cta_desc: 'Sign in with Google — takes less than a minute.',
       final_cta_button: 'Sign in',
       footer_rights: '© 2026 Actik. All rights reserved.'
+    },
+    verify: {
+      tagline: 'Proof of ownership',
+      result_label: 'Verification result',
+      invalid_link_title: 'Invalid verification link',
+      invalid_link_desc: 'This does not appear to be a valid Actik verification link',
+      invalid_link_hint: 'Check that you have the full URL',
+      loading_title: 'Verifying credential…',
+      no_account_needed: 'no account needed · nothing is stored about you',
+      check_1: 'Loading credential…',
+      check_2: 'Checking link validity…',
+      check_3: 'Verifying issuer signature…',
+      check_4: 'Checking issuer trust registry…',
+      check_rate_limit: 'Security check',
+      rate_limit_error: 'Verification service temporarily unavailable due to too many requests. Please try again later.',
+      success_title: 'Credential verified',
+      success_desc: 'This credential is authentic and was issued by an accredited institution',
+      issued_by_label: 'Issued by:',
+      accredited_badge: 'Accredited',
+      credential_details_heading: 'Credential details',
+      hidden_fields_notice: 'Some fields are hidden by the holder (selective disclosure).',
+      hidden_label: 'Hidden:',
+      hidden_count_label: '{count} hidden by the credential holder',
+      link_valid_until: 'Link valid until:',
+      link_expiring_soon: 'This link expires soon',
+      technical_details_toggle: 'Technical verification details',
+      issuer_did_label: 'Issuer DID:',
+      share_token_label: 'Share token:',
+      verified_at_label: 'Verified at:',
+      format_label: 'Format:',
+      algorithm_label: 'Algorithm:',
+      failed_title: 'Verification failed',
+      verification_steps_heading: 'Verification steps',
+      what_to_do_label: 'What to do:',
+      reason_label: 'Reason:',
+      search_registry_btn: 'Search the trust registry',
+      footer_heading: 'How does Actik verification work?',
+      trust_signature_title: 'Cryptographic signature',
+      trust_signature_desc: "The issuer's digital seal proves authenticity",
+      trust_registry_title: 'Trust registry',
+      trust_registry_desc: 'MoEYS confirms the institution is legitimate',
+      trust_disclosure_title: 'Selective disclosure',
+      trust_disclosure_desc: 'Holder controls what you see',
+      powered_by: 'Powered by Actik — Proof of ownership',
+      learn_more: 'Learn more at actik.app',
+      close: 'Close',
+      pdf_not_supported: 'PDF preview not supported in this browser.',
     }
   },
   km: {
@@ -518,14 +632,18 @@ const translations = {
       loading: 'កំពុងផ្ទុក Actik...',
       tagline: 'ភស្តុតាងកម្មសិទ្ធិ',
       institution_dashboard: 'ផ្ទាំងគ្រប់គ្រងស្ថាប័ន',
-      sign_out: 'ចាកចេញ'
+      sign_out: 'ចាកចេញ',
+      install_app: 'ដំឡើងកម្មវិធី' // TODO(km-review)
     },
     wallet: {
-      title: 'កាបូបរបស់ខ្ញុំ',
+      title: 'កាបូបលិខិតរបស់ខ្ញុំ',
       subtitle: 'វិញ្ញាបនបត្រឌីជីថលរបស់អ្នក ដែលត្រូវបានអ៊ិនគ្រីប និងគ្រប់គ្រងដោយអ្នកផ្ទាល់',
+      subtitle_count: 'លិខិតរបស់ខ្ញុំ · កាន់កាប់ {count}', // TODO(km-review)
       vault_not_setup: 'មិនទាន់បានរៀបចំកាបូប (រៀបចំ)',
       vault_locked: 'កាបូបបានចាក់សោ',
       vault_unlocked: 'កាបូបបានបើកសោ',
+      lock_now: 'ចាក់សោ', // TODO(km-review)
+      unlock_btn: 'បើកសោ', // TODO(km-review)
       loading: 'កំពុងផ្ទុកវិញ្ញាបនបត្រ...',
       encrypted_title: 'វិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបរបស់ខ្ញុំ',
       encrypted_desc: 'ចុច ចែករំលែក នៅលើវិញ្ញាបនបត្រណាមួយដើម្បីបង្កើតតំណចែករំលែកតែមួយគត់។',
@@ -536,12 +654,18 @@ const translations = {
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
+      all_count: 'ទាំងអស់ {count}',
       verified: '✓ បានផ្ទៀងផ្ទាត់',
       verified_label: 'បានផ្ទៀងផ្ទាត់', // TODO(km-review)
       encrypted_certificate_fallback: 'លិខិតបញ្ជាក់ដែលបានគ្រីប', // TODO(km-review)
+      institution_unknown: 'ស្ថាប័ន', // TODO(km-review)
       issued_by: 'ចេញដោយ៖ ',
       year: 'ឆ្នាំ៖ ',
       issued_on: 'ថ្ងៃចេញ៖ ',
+      issued_on_label: 'ថ្ងៃចេញ', // TODO(km-review)
+      year_label: 'ឆ្នាំ',
+      share_label: 'បានចែករំលែក', // TODO(km-review)
+      seal_label: 'SEAL', // intentionally not translated — mono technical mark, same as the mockup
       unlock_vault_title: 'បើកសោកាបូបរបស់អ្នក',
       unlock_vault_desc: 'សោអ៊ិនគ្រីបរបស់អ្នកត្រូវបានបង្កើតក្នុងឧបករណ៍នេះ។ សូមបើកសោកាបូបរបស់អ្នកដើម្បីដំណើរការវិញ្ញាបនបត្រនេះ។',
       enter_pin: 'បញ្ចូលលេខកូដសម្ងាត់កាបូប',
@@ -551,7 +675,7 @@ const translations = {
       biometric_prompt: 'សូមបញ្ជាក់អត្តសញ្ញាណជីវមាត្រនៅលើឧបករណ៍របស់អ្នក',
       biometric_failed: 'មិនមានការស្នើសុំអត្តសញ្ញាណជីវមាត្រទេ។',
       try_again: 'ព្យាយាមម្តងទៀត',
-      unlock_with_passkey: '🔑 បើកសោដោយប្រើ Passkey',
+      unlock_with_passkey: 'បើកសោដោយប្រើ Passkey',
       setup_required_title: 'ទាមទារកាបូបសុវត្ថិភាព',
       setup_required_desc: 'ដើម្បីទទួលយកវិញ្ញាបនបត្រ អ្នកត្រូវបង្កើតកាបូបសុវត្ថិភាពលើកម្មវិធីរុករករបស់អ្នកជាមុនសិន។ វាបង្កើតសោក្នុងឧបករណ៍នេះដើម្បីការពារទិន្នន័យរបស់អ្នក ដូច្នេះ Supabase រក្សាទុកតែអត្ថបទអ៊ិនគ្រីបប៉ុណ្ណោះ។',
       setup_vault_btn: 'រៀបចំកាបូបសុវត្ថិភាព',
@@ -583,9 +707,16 @@ const translations = {
       certificate_id: 'លេខសម្គាល់វិញ្ញាបនបត្រ៖',
       detail_issued_by: 'ចេញដោយ៖',
       issuer_did: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
-      encrypted_badge: '✓ ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
-      hide_raw_token: 'លាក់កូដដើម',
-      show_raw_token: 'បង្ហាញកូដដើម',
+      encrypted_badge: 'ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
+      raw_token_trigger: 'កម្រិតខ្ពស់៖ នាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
+      raw_token_modal_title: 'ការនាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
+      raw_token_modal_subtitle: 'សម្រាប់អ្នកអភិវឌ្ឍ ឬការត្រួតពិនិត្យ', // TODO(km-review)
+      raw_token_modal_warning: 'វារួមបញ្ចូលគ្រប់វាល័យទាំងអស់ដោយគ្មានការបង្ហាញជ្រើសរើស។ ដើម្បីគ្រប់គ្រងអ្វីដែលអ្នកចែករំលែក សូមប្រើមុខងារ ចែករំលែក។', // TODO(km-review)
+      trust_accredited_institution: 'ស្ថាប័នទទួលស្គាល់', // TODO(km-review)
+      trust_encrypted_vault: 'អ៊ិនគ្រីបក្នុងកាបូប', // TODO(km-review)
+      share_count_label: 'បានចែករំលែក {count} ដង', // TODO(km-review)
+      not_specified: 'មិនបានបញ្ជាក់',
+      issue_date_label: 'ថ្ងៃចេញ',
       no_decrypted_claims: 'រកមិនឃើញព័ត៌មានដែលបានបកប្រែទេ។',
       cancel_and_go_back: 'បោះបង់ និងត្រឡប់ក្រោយ',
       decryption_failed: 'ការបកប្រែទិន្នន័យបរាជ័យ',
@@ -603,6 +734,7 @@ const translations = {
       private: 'ឯកជន',
       sharing_fields: 'កំពុងចែករំលែក {disclosed} នៃ {total} ព័ត៌មាន',
       hidden_fields: 'បានលាក់៖ {fields}',
+      will_be_hidden: 'នឹងត្រូវលាក់',
       who_is_this_for: 'តើនេះសម្រាប់នរណា? (ស្រេចចិត្ត)',
       recipient_placeholder: 'ឧ. ក្រុមហ៊ុន Acme ផ្នែកធនធានមនុស្ស',
       how_long_active: 'តើតំណនេះគួរដំណើរការរយៈពេលប៉ុន្មាន?',
@@ -618,14 +750,16 @@ const translations = {
       create_share_link: 'បង្កើតតំណចែករំលែក',
       share_link_created: 'តំណចែករំលែកត្រូវបានបង្កើត',
       copy_link: 'ចម្លងតំណ',
+      copy: 'ចម្លង',
       copied: 'បានចម្លង!',
+      copy_failed: 'បរាជ័យក្នុងការចម្លង។',
       open: 'បើក',
       download_qr_png: 'ទាញយករូបភាព QR',
       email_employer: 'អ៊ីមែលទៅនិយោជក',
       disclosed_fields: 'ព័ត៌មានដែលបានបង្ហាញ៖',
       expires: 'ផុតកំណត់៖',
       token: 'កូដសម្ងាត់៖',
-      share_warning: '⚠ អ្នកដែលមានតំណនេះអាចផ្ទៀងផ្ទាត់វិញ្ញាបនបត្ររបស់អ្នករហូតដល់វាផុតកំណត់។ សូមកុំចែករំលែកវាជាសាធារណៈ។',
+      share_warning: 'អ្នកដែលមានតំណនេះអាចផ្ទៀងផ្ទាត់វិញ្ញាបនបត្ររបស់អ្នករហូតដល់វាផុតកំណត់។ សូមកុំចែករំលែកវាជាសាធារណៈ។',
       no_active_share_link: 'មិនមានតំណចែករំលែកដែលសកម្មត្រូវបានបង្កើតក្នុងអំឡុងពេលនេះទេ។',
       go_to_configure_step: 'ទៅកាន់ការរៀបចំ',
       view_past_share_links: 'មើលតំណចែករំលែកពីមុនរបស់អ្នកទាំងអស់នៅក្នុង ',
@@ -636,8 +770,6 @@ const translations = {
       unlock_vault_btn: 'បើកសោកាបូប',
       unlock_vault_modal_desc: 'សោអ៊ិនគ្រីបរបស់អ្នកត្រូវបានបង្កើតក្នុងឧបករណ៍នេះ។ សូមបើកសោកាបូបដើម្បីបន្តដំណើរការ។',
       enter_vault_pin: 'បញ្ចូលលេខកូដកាបូប',
-      complete_biometric: 'សូមបញ្ចប់ការបញ្ជាក់អត្តសញ្ញាណជីវមាត្រលើឧបករណ៍របស់អ្នក',
-      device_ask_biometric: 'ឧបករណ៍របស់អ្នកនឹងស្នើសុំការបញ្ជាក់អត្តសញ្ញាណជីវមាត្រ។',
       share_revoked_success: 'តំណចែករំលែកត្រូវបានដកហូតដោយជោគជ័យ',
       share_revoke_failed: 'បរាជ័យក្នុងការដកហូតតំណចែករំលែក',
       cannot_extend_inactive: 'មិនអាចបន្តបានទេ៖ តំណចែករំលែកនេះមិនសកម្មទៀតទេ',
@@ -699,7 +831,7 @@ const translations = {
       unlock_and_claim_btn: 'បើកសោ និងទទួល',
       auth_biometric_desc: 'បញ្ជាក់អត្តសញ្ញាណដោយប្រើជីវមាត្រក្នុងឧបករណ៍របស់អ្នក។',
       auth_passkey_desc: 'បញ្ជាក់អត្តសញ្ញាណដោយប្រើ Passkey ក្នុងឧបករណ៍របស់អ្នក។',
-      unlock_with_biometric: '👤 បើកសោដោយជីវមាត្រ',
+      unlock_with_biometric: 'បើកសោដោយជីវមាត្រ',
       vault_setup_required_title: 'តម្រូវឲ្យរៀបចំកាបូប',
       vault_setup_required_desc: 'វិញ្ញាបនបត្រឌីជីថលរបស់អ្នកត្រូវបានអ៊ិនគ្រីបក្នុងឧបករណ៍ដើម្បីរក្សាភាពឯកជន។ អ្នកត្រូវតែរៀបចំកាបូបរបស់អ្នកដើម្បីរក្សាទុកវា។',
       setup_my_vault_btn: 'រៀបចំកាបូបរបស់ខ្ញុំ',
@@ -797,8 +929,30 @@ const translations = {
       academic_degrees: 'សញ្ញាបត្រសិក្សា',
       other_credentials: 'វិញ្ញាបនបត្រផ្សេងៗ',
       see_all: 'មើលទាំងអស់',
-      status_claimed: '✓ បានទទួល',
-      status_pending: '⏳ រង់ចាំ',
+      status_claimed: 'បានទទួល',
+      status_pending: 'រង់ចាំ',
+      stat_total_issued: 'ចេញសរុប', // TODO(km-review)
+      stat_claimed: 'បានទទួល', // TODO(km-review)
+      stat_pending: 'រង់ចាំទទួល', // TODO(km-review)
+      stat_verifications: 'ការផ្ទៀងផ្ទាត់', // TODO(km-review)
+      stat_verifications_sub: 'ដោយនិយោជក', // TODO(km-review)
+      accredited_pill: 'ទទួលស្គាល់', // TODO(km-review)
+      pending_approval_pill: 'រង់ចាំការយល់ព្រម', // TODO(km-review)
+      recent_issuances: 'លិខិតចេញថ្មីៗ', // TODO(km-review)
+      table_holder: 'អ្នកទទួល', // TODO(km-review)
+      table_credential: 'លិខិត', // TODO(km-review)
+      table_issued: 'ចេញនៅ', // TODO(km-review)
+      table_status: 'ស្ថានភាព', // TODO(km-review)
+      issuance_volume: 'ការចេញលិខិត ៦ខែ', // TODO(km-review)
+      signing_key_active: 'កូនសោសកម្ម', // TODO(km-review)
+      save_as_draft_btn: 'រក្សាទុកជាព្រាង', // TODO(km-review)
+      draft_found_title: 'អ្នកមានព្រាងមិនទាន់រក្សាទុក', // TODO(km-review)
+      draft_found_desc: 'បានរក្សាទុកនៅ', // TODO(km-review)
+      resume_draft_btn: 'បន្តព្រាង', // TODO(km-review)
+      discard_draft_btn: 'បោះបង់', // TODO(km-review)
+      draft_saved_toast: 'បានរក្សាទុកព្រាង — អាចបន្តនៅពេលណាក៏បានពី ចេញលិខិត។', // TODO(km-review)
+      draft_card_title: 'វិញ្ញាបនបត្រព្រាងកំពុងដំណើរការ', // TODO(km-review)
+      continue_editing_btn: 'បន្តកែសម្រួល', // TODO(km-review)
       back_to_issued: 'ត្រឡប់ទៅវិញ្ញាបនបត្រដែលបានចេញ',
       no_creds_in_category: 'រកមិនឃើញវិញ្ញាបនបត្រក្នុងប្រភេទនេះទេ។',
       checking_auth: 'កំពុងត្រួតពិនិត្យការអនុញ្ញាត...',
@@ -823,6 +977,10 @@ const translations = {
       issue_success_pending: 'វិញ្ញាបនបត្រត្រូវបានរក្សាទុកក្នុងបញ្ជីរង់ចាំ។ និស្សិតអាចទទួលវាបាននៅពេលពួកគេចុះឈ្មោះគណនី Actik ដោយប្រើអ៊ីមែលនេះ។',
       issue_another: 'ចេញវិញ្ញាបនបត្រមួយទៀត',
       issue_credential_title: 'ចេញវិញ្ញាបនបត្រ',
+      step_type: 'ប្រភេទ', // TODO(km-review)
+      live_preview: 'មើលជាមុន', // TODO(km-review)
+      degree_preview_placeholder: 'ជ្រើសរើសប្រភេទសញ្ញាបត្រ…', // TODO(km-review)
+      credential_preview_placeholder: 'ចំណងជើងវិញ្ញាបនបត្រ', // TODO(km-review)
       issue_credential_desc_form: 'ចុះហត្ថលេខានិងផ្ញើវិញ្ញាបនបត្រឌីជីថលទៅនិស្សិត។',
       signing_as: 'ចុះហត្ថលេខាជា៖',
       type_academic: 'សញ្ញាបត្រសិក្សា',
@@ -970,8 +1128,10 @@ const translations = {
       language_desc: 'ជ្រើសរើសភាសាដែលអ្នកចង់ប្រើសម្រាប់កាបូបរបស់អ្នក។',
       setup_title: 'រៀបចំកាបូបសុវត្ថិភាពរបស់អ្នក',
       checking_vault: 'កំពុងពិនិត្យមើលស្ថានភាពកាបូប...',
-      pin_method: '🔢 លេខកូដសម្ងាត់ ៦ ខ្ទង់',
-      bio_method: '👤 ជីវមាត្រ'
+      pin_method: 'លេខកូដសម្ងាត់ ៦ ខ្ទង់',
+      bio_method: 'ជីវមាត្រ',
+      sec_recs: 'ការណែនាំសុវត្ថិភាព', // TODO(km-review)
+      sec_recs_desc: 'កុំចែករំលែកកូដសម្ងាត់របស់អ្នកជាមួយអ្នកណាម្នាក់ ទោះជាអ្នកគាំទ្រ Actik ក៏ដោយ' // TODO(km-review)
     },
     // TODO(km-review): landing page copy below is a first-pass translation, not yet reviewed by a native speaker
     landing: {
@@ -1002,10 +1162,59 @@ const translations = {
       for_students_desc: 'ប្រមូលលិខិតបញ្ជាក់របស់អ្នកនៅកន្លែងតែមួយ ហើយចែករំលែកភ្លាមៗនៅពេលដាក់ពាក្យសុំការងារ ឬការសិក្សាបន្ថែម។',
       for_institutions_title: 'ស្ថាប័ន',
       for_institutions_desc: 'ចេញវិញ្ញាបនបត្រដែលអាចផ្ទៀងផ្ទាត់បាន នៅពេលទទួលបានការទទួលស្គាល់ពីអ្នកគ្រប់គ្រង — លែងត្រូវការលិខិតបញ្ជាក់ដោយដៃទៀតហើយ។',
+      for_employers_title: 'និយោជក', // TODO(km-review)
+      for_employers_desc: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រក្នុងរយៈពេលប៉ុន្មានវិនាទី មិនចាំបាច់មានគណនី — គ្រាន់តែបើកតំណ។', // TODO(km-review)
       final_cta_title: 'ត្រៀមចាប់ផ្តើមហើយឬនៅ?',
       final_cta_desc: 'ចូលគណនីជាមួយ Google — ចំណាយពេលតិចជាងមួយនាទី។',
       final_cta_button: 'ចូលគណនី',
       footer_rights: '© 2026 Actik។ រក្សាសិទ្ធិគ្រប់យ៉ាង។'
+    },
+    verify: {
+      tagline: 'ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)
+      result_label: 'លទ្ធផលការផ្ទៀងផ្ទាត់',
+      invalid_link_title: 'តំណផ្ទៀងផ្ទាត់មិនត្រឹមត្រូវ', // TODO(km-review)
+      invalid_link_desc: 'នេះមិនមែនជាតំណផ្ទៀងផ្ទាត់ Actik ត្រឹមត្រូវទេ', // TODO(km-review)
+      invalid_link_hint: 'សូមពិនិត្យមើលថាអ្នកមាន URL ពេញលេញ', // TODO(km-review)
+      loading_title: 'កំពុងផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រ…',
+      no_account_needed: 'no account needed · nothing is stored about you',
+      check_1: 'ទាញយកវិញ្ញាបនបត្រ…', // TODO(km-review)
+      check_2: 'ពិនិត្យសុពលភាពតំណ…',
+      check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
+      check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្ត…',
+      check_rate_limit: 'ត្រួតពិនិត្យសុវត្ថិភាព', // TODO(km-review)
+      rate_limit_error: 'សេវាផ្ទៀងផ្ទាត់មិនអាចប្រើបានជាបណ្តោះអាសន្នដោយសារមានសំណើច្រើនពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។', // TODO(km-review)
+      success_title: 'វិញ្ញាបនបត្រមានសុពលភាព',
+      success_desc: 'វិញ្ញាបនបត្រនេះពិតប្រាកដ និងបានចេញដោយស្ថាប័នទទួលស្គាល់', // TODO(km-review)
+      issued_by_label: 'ចេញដោយ៖',
+      accredited_badge: 'ទទួលស្គាល់',
+      credential_details_heading: 'ព័ត៌មានវិញ្ញាបនបត្រ',
+      hidden_fields_notice: 'ព័ត៌មានមួយចំនួនត្រូវបានលាក់ដោយម្ចាស់ (ការបង្ហាញដោយជ្រើសរើស)។', // TODO(km-review)
+      hidden_label: 'បានលាក់៖', // TODO(km-review)
+      hidden_count_label: '{count} ត្រូវបានលាក់ដោយម្ចាស់វិញ្ញាបនបត្រ', // TODO(km-review)
+      link_valid_until: 'តំណមានសុពលភាពដល់៖',
+      link_expiring_soon: 'តំណនេះជិតផុតកំណត់ហើយ', // TODO(km-review)
+      technical_details_toggle: 'ព័ត៌មានលម្អិតបច្ចេកទេស', // TODO(km-review)
+      issuer_did_label: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
+      share_token_label: 'កូដតំណចែករំលែក៖', // TODO(km-review)
+      verified_at_label: 'ផ្ទៀងផ្ទាត់នៅ៖', // TODO(km-review)
+      format_label: 'ទម្រង់៖', // TODO(km-review)
+      algorithm_label: 'ក្បួនដោះស្រាយ៖', // TODO(km-review)
+      failed_title: 'ការផ្ទៀងផ្ទាត់បរាជ័យ',
+      verification_steps_heading: 'ជំហានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      what_to_do_label: 'គួរធ្វើអ្វី៖',
+      reason_label: 'មូលហេតុ៖', // TODO(km-review)
+      search_registry_btn: 'ស្វែងរកក្នុងបញ្ជីទុកចិត្ត', // TODO(km-review)
+      footer_heading: 'តើ Actik ផ្ទៀងផ្ទាត់ដោយរបៀបណា?',
+      trust_signature_title: 'ហត្ថលេខាគ្រីបតូ',
+      trust_signature_desc: 'ត្រាឌីជីថលរបស់ស្ថាប័នបញ្ជាក់ភាពត្រឹមត្រូវ',
+      trust_registry_title: 'បញ្ជីទុកចិត្ត',
+      trust_registry_desc: 'ក្រសួងអប់រំបញ្ជាក់ថាស្ថាប័ននេះស្របច្បាប់',
+      trust_disclosure_title: 'ការបង្ហាញដោយជ្រើសរើស',
+      trust_disclosure_desc: 'ម្ចាស់វិញ្ញាបនបត្រគ្រប់គ្រងអ្វីដែលអ្នកឃើញ',
+      powered_by: 'ដំណើរការដោយ Actik — ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)
+      learn_more: 'ស្វែងយល់បន្ថែមនៅ actik.app', // TODO(km-review)
+      close: 'បិទ',
+      pdf_not_supported: 'កម្មវិធីរុករកនេះមិនអាចមើល PDF ជាមុនបានទេ។', // TODO(km-review)
     }
   }
 };

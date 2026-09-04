@@ -4,11 +4,25 @@ import { useLanguage } from '../lib/i18n'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import NotificationsBell from './NotificationsBell'
+import InstallPwaButton from './InstallPwaButton'
+import {
+  Wallet, Activity, Fingerprint, LayoutDashboard, FileSignature, Settings,
+  ShieldCheck, LogOut, Building2, Lock,
+} from 'lucide-react'
 
 export default function Layout() {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // Sidebar institution card (issuer role only) — name + accreditation
+  // status, purely for the sidebar chip; not used anywhere else in this
+  // component, so kept separate from the role-fetch effect above rather
+  // than folding it into that shared, more heavily-relied-on state.
+  const [issuerCard, setIssuerCard] = useState<{ name: string; accredited: boolean } | null>(null)
+  // Signing-key chip — sessionStorage only (no expiry is tracked anywhere in
+  // this app today, so this is a static "present/absent" indicator, not a
+  // countdown). Re-checked whenever role/session changes, same as issuerCard.
+  const [hasSigningKey, setHasSigningKey] = useState(false)
   const navigate = useNavigate()
   const { t } = useLanguage()
 
@@ -39,11 +53,19 @@ export default function Layout() {
       }
     }
 
+    // onAuthStateChange fires far more often than real sign-in/sign-out
+    // (token refreshes, and in practice this project has been observed
+    // re-firing SIGNED_IN every couple seconds with no real change) — this
+    // guard skips the role refetch unless the signed-in user actually
+    // changed, instead of re-querying on every firing.
+    let lastUserId: string | null = null
+
     // Get initial session & role
     supabase.auth.getSession().then(({ data }) => {
       if (active) {
         setSession(data.session)
         if (data.session?.user) {
+          lastUserId = data.session.user.id
           fetchRole(data.session.user.id)
         } else {
           setLoading(false)
@@ -53,15 +75,17 @@ export default function Layout() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (active) {
-        setSession(currentSession)
-        if (currentSession?.user) {
-          // Do not set loading=true here to prevent remounting Outlet
-          fetchRole(currentSession.user.id)
-        } else {
-          setRole(null)
-          setLoading(false)
-        }
+      if (!active) return
+      // Do not set loading=true here to prevent remounting Outlet
+      setSession(currentSession)
+      const nextUserId = currentSession?.user?.id ?? null
+      if (nextUserId === lastUserId) return
+      lastUserId = nextUserId
+      if (currentSession?.user) {
+        fetchRole(currentSession.user.id)
+      } else {
+        setRole(null)
+        setLoading(false)
       }
     })
 
@@ -70,6 +94,33 @@ export default function Layout() {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Sidebar institution card — only fetched for the issuer role, only once
+  // per session/user (a name+accredited flag doesn't need the live-refresh
+  // treatment the role check above has to defend against).
+  useEffect(() => {
+    let active = true
+    if (role !== 'issuer' || !session?.user) {
+      setIssuerCard(null)
+      setHasSigningKey(false)
+      return
+    }
+
+    setHasSigningKey(!!sessionStorage.getItem('issuer_private_key'))
+
+    supabase
+      .from('issuers')
+      .select('name, accredited')
+      .eq('owner', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active && data) {
+          setIssuerCard({ name: data.name, accredited: !!data.accredited })
+        }
+      })
+
+    return () => { active = false }
+  }, [role, session?.user?.id])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -105,9 +156,7 @@ export default function Layout() {
     if (role === 'admin') {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
-          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-          </svg>
+          <ShieldCheck size={12} className="text-gray-500" />
           Admin
         </span>
       )
@@ -151,21 +200,15 @@ export default function Layout() {
       {role === 'student' && (
         <>
           <NavLink to="/app/wallet" end className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <Wallet size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.wallet')}
           </NavLink>
           <NavLink to="/app/activity" className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
+            <Activity size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.activity')}
           </NavLink>
           <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Fingerprint size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.account')}
           </NavLink>
         </>
@@ -173,31 +216,22 @@ export default function Layout() {
       {role === 'issuer' && (
         <>
           <NavLink to="/app/dashboard" end className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011-1v5m-4 0h4" />
-            </svg>
+            <LayoutDashboard size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.dashboard')}
           </NavLink>
           <NavLink to="/app/issued" className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <FileSignature size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.issued')}
           </NavLink>
           <NavLink to="/app/institution-settings" className={sidebarLinkClass}>
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <Settings size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.settings')}
           </NavLink>
         </>
       )}
       {role === 'admin' && (
         <NavLink to="/admin" end className={sidebarLinkClass}>
-          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
+          <ShieldCheck size={20} strokeWidth={1.9} className="shrink-0" />
           Manage issuers
         </NavLink>
       )}
@@ -215,8 +249,34 @@ export default function Layout() {
           <img src="/logo.png" alt="Actik" className="h-9 w-auto" />
         </div>
         <nav className="flex-1 flex flex-col gap-1 px-3 py-4 overflow-y-auto">
+          {role === 'issuer' && issuerCard && (
+            <div className="mb-3 bg-white border border-stone-200 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                  <Building2 size={14} className="text-indigo-600" strokeWidth={1.9} />
+                </div>
+                <span className="font-khmer text-[13px] font-semibold text-stone-900 truncate">{issuerCard.name}</span>
+              </div>
+              {issuerCard.accredited ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {t('dashboard.accredited_pill')}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  {t('dashboard.pending_approval_pill')}
+                </span>
+              )}
+            </div>
+          )}
           {sidebarNav}
+          <InstallPwaButton variant="sidebar" />
         </nav>
+        {role === 'issuer' && hasSigningKey && (
+          <div className="mx-3 mb-3 flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-3 py-2.5">
+            <Lock size={13} className="text-teal-600 shrink-0" strokeWidth={2} />
+            <span className="font-mono text-[10px] font-bold tracking-wide text-teal-700 uppercase">{t('dashboard.signing_key_active')}</span>
+          </div>
+        )}
         {session?.user && (
           <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
@@ -224,7 +284,7 @@ export default function Layout() {
                 <p className="text-xs text-gray-700 font-medium truncate">{session.user.email}</p>
                 <div className="mt-1">{renderRoleBadge()}</div>
               </div>
-              {role === 'student' && <NotificationsBell email={session.user.email} dropDirection="up" align="left" />}
+              {role === 'student' && <NotificationsBell email={session.user.email} />}
             </div>
             <button
               onClick={handleSignOut}
@@ -245,18 +305,25 @@ export default function Layout() {
               <img src="/logo.png" alt="Actik" className="h-10 w-auto" />
               <div className="flex items-center space-x-4">
                 {session?.user && renderRoleBadge()}
+                <InstallPwaButton variant="icon" />
                 {session?.user && role === 'student' && (
-                  <NotificationsBell email={session.user.email} variant="modal" />
+                  <NotificationsBell email={session.user.email} />
                 )}
                 <button
                   onClick={handleSignOut}
                   className="inline-flex items-center text-sm font-semibold text-indigo-600 p-2"
                   aria-label="Sign out"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013-3v1" />
-                  </svg>
+                  <LogOut size={20} strokeWidth={1.9} />
                 </button>
+                {session?.user?.email && (
+                  <div
+                    className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-semibold shrink-0"
+                    title={session.user.email}
+                  >
+                    {session.user.email.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -282,21 +349,15 @@ export default function Layout() {
         {role === 'student' && (
           <>
             <NavLink to="/app/wallet" end className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+              <Wallet size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.wallet')}</span>
             </NavLink>
             <NavLink to="/app/activity" className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
+              <Activity size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.activity')}</span>
             </NavLink>
             <NavLink to="/app/vault-setup" className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Fingerprint size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.account')}</span>
             </NavLink>
           </>
@@ -304,22 +365,15 @@ export default function Layout() {
         {role === 'issuer' && (
           <>
             <NavLink to="/app/dashboard" end className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011-1v5m-4 0h4" />
-              </svg>
+              <LayoutDashboard size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.dashboard')}</span>
             </NavLink>
             <NavLink to="/app/issued" className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <FileSignature size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.issued')}</span>
             </NavLink>
             <NavLink to="/app/institution-settings" className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <Settings size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.settings')}</span>
             </NavLink>
           </>
@@ -327,9 +381,7 @@ export default function Layout() {
         {role === 'admin' && (
           <>
             <NavLink to="/admin" end className={bottomNavLinkClass}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
+              <ShieldCheck size={20} strokeWidth={1.9} />
               <span className="mt-1">Registry</span>
             </NavLink>
           </>

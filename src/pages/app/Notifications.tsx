@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
-import { Bell, ArrowLeft, Inbox } from 'lucide-react'
-import PinDotsInput from '../../components/PinDotsInput'
+import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
+import VaultUnlockModal from '../../components/VaultUnlockModal'
 
 interface PendingCredential {
   id: string
@@ -14,6 +14,7 @@ interface PendingCredential {
   issuer_did: string
   institution_name: string
   degree_title: string
+  degree_type?: string
   sd_jwt: string
   claimed: boolean
   claimed_at: string | null
@@ -140,6 +141,7 @@ export default function Notifications() {
         issuer_did: p.issuer_did,
         institution_name: p.institution_name || '',
         degree_title: p.label || p.degree_type || 'Degree Certificate',
+        degree_type: p.degree_type,
         sd_jwt: p.sdjwt,
         claimed: false,
         claimed_at: null,
@@ -273,10 +275,13 @@ export default function Notifications() {
           iv: encryptedPayload.iv,
           credential_type: cred.credential_type,
           type_metadata: cred.type_metadata,
+          degree_type: cred.degree_type,
           student_id: cred.student_id,
           major: cred.major,
           graduation_date: cred.graduation_date,
-          certificate_id: cred.certificate_id
+          certificate_id: cred.certificate_id,
+          issuer_did: cred.issuer_did,
+          institution_name: cred.institution_name
         })
 
         if (!updateRes.error) {
@@ -299,6 +304,14 @@ export default function Notifications() {
 
       setPendingList(prev => prev.filter(c => c.id !== cred.id))
       showToast(t('wallet.cred_claim_success'))
+      // NotificationsBell (in Layout.tsx, a sibling of this page — not a
+      // parent) has no other way to hear about this claim: it relies on a
+      // Postgres realtime subscription that only fires if this table was
+      // explicitly added to the supabase_realtime publication, which isn't
+      // guaranteed on every environment. This fires regardless, so the bell
+      // updates immediately instead of only on its next poll (see the
+      // fallback interval in NotificationsBell.tsx) or a full page reload.
+      window.dispatchEvent(new Event('actik:pending-credentials-changed'))
     } catch (err: any) {
       setClaimErrors(prev => ({ ...prev, [cred.id]: err.message || 'Claim failed' }))
     } finally {
@@ -405,166 +418,22 @@ export default function Notifications() {
         </div>
       )}
 
-      {/* =======================================================
-          MODAL 1: UNLOCK VAULT DIALOG
-         ======================================================= */}
+      {/* MODAL 1: UNLOCK VAULT DIALOG — submit both unlocks and claims the
+          pending credential in one action. */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
-              <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
-              <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-                {t('wallet.unlock_vault_modal_desc')}
-              </p>
-            </div>
-
-            {unlockMethod === 'pin' && (
-              <form onSubmit={handleUnlockAndClaimSubmit} className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5 mb-2">
-                  <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_vault_pin')}</label>
-                  <PinDotsInput
-                    value={pinInput}
-                    onChange={setPinInput}
-                    name="vault-pin"
-                    autoComplete="current-password"
-                    autoFocus
-                    required
-                  />
-                </div>
-
-                {unlockError && (
-                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
-                    {unlockError}
-                  </p>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="submit"
-                    disabled={isUnlocking}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {isUnlocking && (
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-indigo-200 border-t-white" />
-                    )}
-                    <span>{t('wallet.unlock_and_claim_btn')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUnlockModal(false)
-                      setUnlockTargetCred(null)
-                    }}
-                    disabled={isUnlocking}
-                    className="w-full text-gray-500 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
-                  >
-                    {t('wallet.cancel')}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
-              <div className="flex flex-col gap-3">
-                <div className="text-center py-4 text-sm text-stone-600">
-                  {unlockMethod === 'biometric'
-                    ? t('wallet.auth_biometric_desc')
-                    : t('wallet.auth_passkey_desc')}
-                </div>
-
-                {unlockError && (
-                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
-                    {unlockError}
-                  </p>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={handleUnlockWithPasskeyClick}
-                    disabled={isUnlocking}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {isUnlocking && (
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-indigo-200 border-t-white" />
-                    )}
-                    <span>{unlockMethod === 'biometric' ? t('wallet.unlock_with_biometric') : t('wallet.unlock_with_passkey')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUnlockModal(false)
-                      setUnlockTargetCred(null)
-                    }}
-                    disabled={isUnlocking}
-                    className="w-full text-gray-500 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
-                  >
-                    {t('wallet.cancel')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(unlockMethod === 'both' || unlockMethod === null) && (
-              <form onSubmit={handleUnlockAndClaimSubmit} className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5 mb-2">
-                  <label className="text-xs font-semibold text-stone-700">{t('wallet.enter_vault_pin')}</label>
-                  <PinDotsInput
-                    value={pinInput}
-                    onChange={setPinInput}
-                    name="vault-pin"
-                    autoComplete="current-password"
-                    autoFocus
-                    required
-                  />
-                </div>
-
-                {unlockError && (
-                  <p className="text-rose-600 text-xs text-center font-semibold mb-2">
-                    {unlockError}
-                  </p>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="submit"
-                    disabled={isUnlocking}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {isUnlocking && (
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-indigo-200 border-t-white" />
-                    )}
-                    <span>{t('wallet.unlock_and_claim_btn')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleUnlockWithPasskeyClick}
-                    disabled={isUnlocking}
-                    className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>{t('wallet.unlock_with_passkey')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUnlockModal(false)
-                      setUnlockTargetCred(null)
-                    }}
-                    disabled={isUnlocking}
-                    className="w-full text-gray-500 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
-                  >
-                    {t('wallet.cancel')}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+        <VaultUnlockModal
+          unlockMethod={unlockMethod}
+          pinInput={pinInput}
+          onPinChange={setPinInput}
+          onSubmitPin={handleUnlockAndClaimSubmit}
+          onPasskeyClick={handleUnlockWithPasskeyClick}
+          isUnlocking={isUnlocking}
+          unlockError={unlockError}
+          onCancel={() => { setShowUnlockModal(false); setUnlockTargetCred(null) }}
+          desc={unlockMethod === 'biometric' ? t('wallet.auth_biometric_desc') : unlockMethod === 'passkey' ? t('wallet.auth_passkey_desc') : t('wallet.unlock_vault_modal_desc')}
+          submitLabel={t('wallet.unlock_and_claim_btn')}
+          passkeyLabel={unlockMethod === 'biometric' ? t('wallet.unlock_with_biometric') : t('wallet.unlock_with_passkey')}
+        />
       )}
 
       {/* =======================================================
@@ -573,7 +442,9 @@ export default function Notifications() {
       {showSetupNeededModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in text-center">
-            <div className="text-4xl mb-2">⚙️</div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+              <ShieldAlert size={22} className="text-indigo-600" />
+            </div>
             <h3 className="text-lg font-bold text-stone-900">{t('wallet.vault_setup_required_title')}</h3>
             <p className="text-xs text-stone-500 mt-2 mb-6 leading-relaxed">
               {t('wallet.vault_setup_required_desc')}

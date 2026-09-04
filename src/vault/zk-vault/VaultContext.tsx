@@ -36,6 +36,12 @@ interface VaultContextType {
   encryptPayload: (data: unknown) => Promise<EncryptedPayload>;
   decryptPayload: (payload: EncryptedPayload) => Promise<unknown>;
   lock: () => void;
+  /** Epoch ms the idle auto-lock timer will fire at, or null when unlocked
+   *  with no timeout configured / not yet unlocked. A plain getter (not
+   *  reactive state) so UI that wants a live countdown polls it on its own
+   *  interval instead of forcing every vault consumer to re-render each
+   *  second the activity listeners reset it. */
+  getAutoLockDeadline: () => number | null;
 }
 
 export const VaultContext = createContext<VaultContextType | undefined>(
@@ -65,6 +71,12 @@ export function VaultProvider({
   const sessionKeyRef = useRef<CryptoKey | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Epoch ms the idle timer will fire at. A ref, not state — it's rewritten
+  // on every mousemove/keydown/scroll/touchstart, and turning that into a
+  // state update would re-render every VaultContext consumer in the app
+  // (the Provider wraps the whole /app tree) on every mouse jiggle. UI that
+  // wants a live countdown reads it via getAutoLockDeadline() on its own tick.
+  const autoLockAtRef = useRef<number | null>(null);
 
   const handleError = useCallback(
     (err: unknown) => {
@@ -78,7 +90,10 @@ export function VaultProvider({
   const lock = useCallback(() => {
     sessionKeyRef.current = null;
     setIsUnlocked(false);
+    autoLockAtRef.current = null;
   }, []);
+
+  const getAutoLockDeadline = useCallback(() => autoLockAtRef.current, []);
 
   // --- Auto-locking ---
   useEffect(() => {
@@ -93,6 +108,7 @@ export function VaultProvider({
       const activityEvents = ['mousemove', 'keydown', 'scroll', 'touchstart'];
       const resetTimer = () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        autoLockAtRef.current = Date.now() + autoLockTimeoutMs;
         timeoutRef.current = setTimeout(lock, autoLockTimeoutMs);
       };
 
@@ -101,6 +117,7 @@ export function VaultProvider({
 
       return () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        autoLockAtRef.current = null;
         activityEvents.forEach((e) =>
           window.removeEventListener(e, resetTimer)
         );
@@ -352,6 +369,7 @@ export function VaultProvider({
         encryptPayload,
         decryptPayload,
         lock,
+        getAutoLockDeadline,
       }}
     >
       {children}

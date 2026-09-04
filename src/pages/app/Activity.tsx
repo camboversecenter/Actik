@@ -1,14 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useLanguage } from '../../lib/i18n'
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
+import { Loader2, Link2 } from 'lucide-react'
 
 interface ShareRecord {
   id: string
@@ -71,9 +64,16 @@ export default function Activity() {
 
   useEffect(() => {
     let active = true
+    // onAuthStateChange fires far more often than real sign-in/sign-out
+    // (token refreshes, and in practice this project has been observed
+    // re-firing SIGNED_IN every couple seconds with no real change) — this
+    // guard skips the shares refetch unless the signed-in user actually
+    // changed, instead of re-running the (slow) shares query on every firing.
+    let lastUserId: string | null = null
 
     supabase.auth.getSession().then(({ data }) => {
       if (active && data.session?.user) {
+        lastUserId = data.session.user.id
         setCurrentUser(data.session.user)
         loadShares(data.session.user.id)
       } else if (active) {
@@ -82,14 +82,16 @@ export default function Activity() {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (active) {
-        if (currentSession?.user) {
-          setCurrentUser(currentSession.user)
-          loadShares(currentSession.user.id)
-        } else {
-          setCurrentUser(null)
-          setShares([])
-        }
+      if (!active) return
+      const nextUserId = currentSession?.user?.id ?? null
+      if (nextUserId === lastUserId) return
+      lastUserId = nextUserId
+      if (currentSession?.user) {
+        setCurrentUser(currentSession.user)
+        loadShares(currentSession.user.id)
+      } else {
+        setCurrentUser(null)
+        setShares([])
       }
     })
 
@@ -210,34 +212,34 @@ export default function Activity() {
   // Main Page Layout
   return (
     <div className="w-full max-w-2xl mx-auto mb-16 md:mb-0 relative">
-      <style>{spinStyles}</style>
-      
       <div className="mb-8 text-center md:text-left">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('wallet.share_activity_title')}</h1>
-        <p className="text-gray-500">{t('wallet.share_activity_desc')}</p>
+        <h1 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 mb-2">{t('wallet.share_activity_title')}</h1>
+        <p className="font-khmer text-stone-500">{t('wallet.share_activity_desc')}</p>
       </div>
 
       {/* Main Content Area */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <div style={{ animation: 'spin 1s linear infinite', width: 40, height: 40, border: '3px solid #e0e7ff', borderTop: '3px solid #4f46e5', borderRadius: '50%' }}></div>
-          <p className="mt-4 text-gray-500 font-medium">{t('wallet.loading_activity')}</p>
+          <Loader2 size={36} className="animate-spin text-indigo-600" />
+          <p className="mt-4 font-khmer text-stone-500 font-medium">{t('wallet.loading_activity')}</p>
         </div>
       ) : loadError ? (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-center">
-          <p className="text-rose-600 font-medium mb-2">{t('wallet.failed_load_activity')}</p>
-          <button 
+          <p className="font-khmer text-rose-600 font-medium mb-2">{t('wallet.failed_load_activity')}</p>
+          <button
             onClick={() => currentUser && loadShares(currentUser.id)}
-            className="text-sm bg-white text-rose-600 px-4 py-2 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors"
+            className="font-khmer text-sm bg-white text-rose-600 px-4 py-2 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
           >
             {t('wallet.try_again')}
           </button>
         </div>
       ) : shares.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-          <div className="text-4xl mb-4">🔗</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('wallet.no_share_links_yet')}</h3>
-          <p className="text-gray-500 text-sm max-w-sm mx-auto">
+        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center shadow-sm">
+          <div className="w-[52px] h-[52px] rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+            <Link2 size={22} strokeWidth={1.8} className="text-stone-400" />
+          </div>
+          <h3 className="font-khmer text-sm font-bold text-stone-900 mb-1.5">{t('wallet.no_share_links_yet')}</h3>
+          <p className="font-khmer text-[11.5px] leading-[1.7] text-stone-500 max-w-[260px] mx-auto">
             {t('wallet.no_share_links_desc')}
           </p>
         </div>
@@ -256,49 +258,56 @@ export default function Activity() {
             const isExpired = status === 'Expired'
             const isActive = status === 'Active'
 
-            // Title
-            const title = share.recipient_label || t('wallet.share_link_default_title')
-            
+            // Title — always leads with the generic "share link" label, with
+            // the recipient (when set) appended as context, e.g.
+            // "Share link — Employer" rather than just "Employer".
+            const title = share.recipient_label
+              ? `${t('wallet.share_link_default_title')} — ${share.recipient_label}`
+              : t('wallet.share_link_default_title')
+
             // Chips
             const fieldsToDisplay = share.revealed || []
-            
+
             return (
-              <div key={share.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm transition-all">
+              <div
+                key={share.id}
+                className={`bg-white border border-stone-200 rounded-2xl p-5 shadow-sm transition-all ${(isExpired || isRevoked) ? 'opacity-70' : ''}`}
+              >
                 <div className="flex justify-between items-start gap-4">
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-gray-900 mb-1">{title}</h3>
-                    <div className="text-xs text-gray-400 font-mono mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-khmer text-base font-bold text-stone-900 mb-1">{title}</h3>
+                    <div className="text-[11px] text-stone-400 font-mono mb-3">
                       /v/{share.id.slice(0, 8)}
                     </div>
-                    
+
                     {/* Chips */}
                     <div className="flex flex-wrap gap-1.5 mb-4">
                       {fieldsToDisplay.length > 0 ? fieldsToDisplay.map(f => (
-                        <span key={f} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        <span key={f} className="font-khmer inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-650 border border-indigo-200">
                           {getFieldLabel(f)}
                         </span>
                       )) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        <span className="font-khmer inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-stone-100 text-stone-600 border border-stone-200">
                           {t('wallet.no_extra_fields')}
                         </span>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Status Badge */}
                   <div>
                     {isActive && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="font-khmer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         {t('wallet.status_active')}
                       </span>
                     )}
                     {isExpired && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                      <span className="font-khmer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-100 text-stone-600 border border-stone-200">
                         {t('wallet.status_expired')}
                       </span>
                     )}
                     {isRevoked && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                      <span className="font-khmer inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
                         {t('wallet.status_revoked')}
                       </span>
                     )}
@@ -306,21 +315,21 @@ export default function Activity() {
                 </div>
 
                 {/* Footer Line: Date & Action */}
-                <div className="border-t border-gray-100 mt-2 pt-3 flex justify-between items-center text-xs">
-                  <div className="text-gray-500">
+                <div className="border-t border-stone-100 mt-2 pt-3 flex justify-between items-center text-xs">
+                  <div className="font-khmer text-stone-500">
                     {isActive && `${t('wallet.expires_on')} ${formatDate(share.expires_at)}`}
                     {isExpired && `${t('wallet.expired_on')} ${formatDate(share.expires_at)}`}
                     {isRevoked && `${t('wallet.revoked_on')} ${formatDate(share.revoked_at as string)}`}
                   </div>
-                  
+
                   {isActive && (
-                    <div className="flex gap-4">
+                    <div className="font-khmer flex gap-4">
                       <button
                         onClick={() => {
                           setShowExtendId(share.id)
                           setShowRevokeConfirmId(null)
                         }}
-                        className="text-indigo-600 font-medium hover:text-indigo-800 hover:underline transition-colors focus:outline-none"
+                        className="text-indigo-600 font-semibold hover:text-indigo-650 transition-colors focus:outline-none cursor-pointer"
                       >
                         {t('wallet.extend_btn')}
                       </button>
@@ -329,7 +338,7 @@ export default function Activity() {
                           setShowRevokeConfirmId(share.id)
                           setShowExtendId(null)
                         }}
-                        className="text-rose-600 font-medium hover:text-rose-800 hover:underline transition-colors focus:outline-none"
+                        className="text-rose-600 font-semibold hover:text-rose-700 transition-colors focus:outline-none cursor-pointer"
                       >
                         {t('wallet.revoke_btn')}
                       </button>
@@ -339,23 +348,23 @@ export default function Activity() {
                 
                 {/* Inline Confirmation for Revoke */}
                 {showRevokeConfirmId === share.id && (
-                  <div className="mt-3 p-3 bg-rose-50 border border-rose-100 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
-                    <span className="text-rose-800 font-medium">{t('wallet.revoke_confirm_msg')}</span>
-                    <div className="flex items-center gap-2">
+                  <div className="font-khmer mt-3 p-3.5 bg-rose-50 border border-rose-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+                    <span className="text-rose-800 font-semibold">{t('wallet.revoke_confirm_msg')}</span>
+                    <div className="flex items-center gap-4">
                       <button
                         onClick={() => setShowRevokeConfirmId(null)}
                         disabled={revokingShareId === share.id}
-                        className="px-3 py-1.5 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors focus:outline-none"
+                        className="text-stone-600 font-semibold hover:text-stone-800 transition-colors focus:outline-none cursor-pointer disabled:opacity-50"
                       >
                         {t('wallet.cancel')}
                       </button>
                       <button
                         onClick={() => handleRevokeShare(share.id)}
                         disabled={revokingShareId === share.id}
-                        className="flex items-center justify-center min-w-[70px] px-3 py-1.5 bg-rose-600 text-white font-medium rounded hover:bg-rose-700 transition-colors focus:outline-none disabled:opacity-50"
+                        className="flex items-center justify-center min-w-[70px] px-3 py-1.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors focus:outline-none disabled:opacity-50 cursor-pointer"
                       >
                         {revokingShareId === share.id ? (
-                          <div style={{ animation: 'spin 1s linear infinite', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>
+                          <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/30 border-t-white" />
                         ) : (
                           t('wallet.revoke_btn')
                         )}
@@ -366,36 +375,36 @@ export default function Activity() {
 
                 {/* Inline Control for Extend */}
                 {showExtendId === share.id && (
-                  <div className="mt-3 p-4 bg-indigo-50 border border-indigo-100 rounded-lg flex flex-col gap-3 text-sm">
-                    <span className="text-indigo-900 font-medium">{t('wallet.extend_link_expiry')}</span>
+                  <div className="font-khmer mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-lg flex flex-col gap-3 text-sm">
+                    <span className="text-indigo-900 font-bold">{t('wallet.extend_link_expiry')}</span>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setExtendOption('1day')}
-                        className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${extendOption === '1day' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        className={`font-mono px-3 py-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${extendOption === '1day' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-stone-700 border-indigo-200 hover:bg-white/60'}`}
                       >
                         {t('wallet.plus_1_day')}
                       </button>
                       <button
                         onClick={() => setExtendOption('7days')}
-                        className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${extendOption === '7days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        className={`font-mono px-3 py-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${extendOption === '7days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-stone-700 border-indigo-200 hover:bg-white/60'}`}
                       >
                         {t('wallet.plus_7_days')}
                       </button>
                       <button
                         onClick={() => setExtendOption('30days')}
-                        className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${extendOption === '30days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        className={`font-mono px-3 py-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${extendOption === '30days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-stone-700 border-indigo-200 hover:bg-white/60'}`}
                       >
                         {t('wallet.plus_30_days')}
                       </button>
                       <button
                         onClick={() => setExtendOption('90days')}
-                        className={`px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${extendOption === '90days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        className={`font-mono px-3 py-1.5 rounded-md border text-sm font-medium transition-colors cursor-pointer ${extendOption === '90days' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-stone-700 border-indigo-200 hover:bg-white/60'}`}
                       >
                         {t('wallet.plus_90_days')}
                       </button>
                     </div>
-                    
-                    <div className="mt-2 text-xs text-indigo-700">
+
+                    <div className="mt-2 text-xs text-indigo-650">
                       {t('wallet.new_expiry')} {(() => {
                         const cur = new Date(share.expires_at)
                         let d = 7
@@ -406,21 +415,21 @@ export default function Activity() {
                       })()}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-1">
+                    <div className="flex justify-end items-center gap-4 mt-1">
                       <button
                         onClick={() => setShowExtendId(null)}
                         disabled={extendingShareId === share.id}
-                        className="px-3 py-1.5 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition-colors focus:outline-none"
+                        className="text-stone-600 font-semibold hover:text-stone-800 transition-colors focus:outline-none cursor-pointer disabled:opacity-50"
                       >
                         {t('wallet.cancel')}
                       </button>
                       <button
                         onClick={() => handleExtendShare(share)}
                         disabled={extendingShareId === share.id}
-                        className="flex items-center justify-center min-w-[70px] px-3 py-1.5 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700 transition-colors focus:outline-none disabled:opacity-50"
+                        className="flex items-center justify-center min-w-[70px] px-3.5 py-1.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-650 transition-colors focus:outline-none disabled:opacity-50 cursor-pointer"
                       >
                         {extendingShareId === share.id ? (
-                          <div style={{ animation: 'spin 1s linear infinite', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%' }}></div>
+                          <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/30 border-t-white" />
                         ) : (
                           t('wallet.confirm_btn')
                         )}

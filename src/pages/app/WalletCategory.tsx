@@ -4,7 +4,27 @@ import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
-import PinDotsInput from '../../components/PinDotsInput'
+import VaultUnlockModal from '../../components/VaultUnlockModal'
+import { readDisclosures } from '../../lib/sdjwt'
+
+// Best-effort decrypted fallback for credentials claimed before institution_name
+// (and friends) were threaded through at issuance/claim time — see Wallet.tsx.
+// No degree_type here: it's the exact same string as the card's title
+// (degree_title/label below), not a distinct field.
+interface DecryptedPreview {
+  institution_name?: string
+  major?: string
+  issuer_did?: string
+}
+
+function parseJwtPayload(jwt: string): any {
+  try {
+    const base64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    return JSON.parse(atob(base64))
+  } catch {
+    return {}
+  }
+}
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -21,19 +41,11 @@ interface Credential {
   created_at: string
   graduation_date?: string | null
   credential_type?: string
+  major?: string | null
 
   cipher?: string
   iv?: string
 }
-
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
-
 
 export default function WalletCategory() {
   const navigate = useNavigate()
@@ -43,12 +55,15 @@ export default function WalletCategory() {
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  // credential_id -> number of shares created for it (best-effort, see Wallet.tsx)
+  const [shareCounts, setShareCounts] = useState<Record<string, number>>({})
 
   // Modals & Action States
   
   // Vault state
-  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus } = useZkVault()
+  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, decryptPayload } = useZkVault()
   const { t } = useLanguage()
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, DecryptedPreview>>({})
   const [vaultExists, setVaultExists] = useState<boolean | null>(null)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
   
@@ -150,17 +165,83 @@ export default function WalletCategory() {
         created_at: c.created_at,
         graduation_date: c.graduation_date || null,
         credential_type: c.credential_type || null,
+        major: c.major || null,
         cipher: c.cipher,
         iv: c.iv
       }))
 
       setCredentials(claimedList)
       setLoading(false)
+
+      if (claimedList.length > 0) {
+        try {
+          const { data: shareRows } = await supabase
+            .from('shares')
+            .select('credential_id')
+            .eq('owner', user.id)
+            .in('credential_id', claimedList.map(c => c.id))
+
+          const counts: Record<string, number> = {}
+          ;(shareRows || []).forEach((r: any) => {
+            if (!r.credential_id) return
+            counts[r.credential_id] = (counts[r.credential_id] || 0) + 1
+          })
+          setShareCounts(counts)
+        } catch {
+          // non-fatal — cards just render without a share count
+        }
+      }
     } catch (err) {
       setLoadError(true)
       setLoading(false)
     }
   }, [credentialType, isOther])
+
+  // Once the vault is unlocked, decrypt whatever credentials are still
+  // missing institution_name and fill in the real values from inside the
+  // credential itself (mirrors Wallet.tsx). Best-effort per credential.
+  useEffect(() => {
+    if (!isUnlocked) return
+    const toDecrypt = credentials.filter(
+      (c) => !c.institution_name && !decryptedPreviews[c.id] && (c.cipher || c.sd_jwt)
+    )
+    if (toDecrypt.length === 0) return
+
+    let active = true
+    ;(async () => {
+      const results: Record<string, DecryptedPreview> = {}
+      for (const cred of toDecrypt) {
+        try {
+          let sdjwtString: string
+          if (cred.cipher && cred.iv) {
+            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          } else {
+            const parsedPayload = JSON.parse(cred.sd_jwt)
+            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
+            sdjwtString = decrypted.sdjwt
+          }
+
+          const claims: Record<string, any> = {}
+          readDisclosures(sdjwtString).forEach((d) => { claims[d.name] = d.value })
+          const payload = parseJwtPayload(sdjwtString.split('~')[0])
+
+          results[cred.id] = {
+            institution_name: claims.institution || undefined,
+            major: claims.major || undefined,
+            issuer_did: payload.iss || undefined,
+          }
+        } catch {
+          // non-fatal — this card just keeps showing whatever it already had
+        }
+      }
+      if (active && Object.keys(results).length > 0) {
+        setDecryptedPreviews((prev) => ({ ...prev, ...results }))
+      }
+    })()
+
+    return () => { active = false }
+  }, [isUnlocked, credentials, decryptPayload, decryptedPreviews])
 
   // Mount logic
   useEffect(() => {
@@ -271,8 +352,6 @@ export default function WalletCategory() {
 
   return (
     <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
-      <style>{spinStyles}</style>
-
       {/* Header with back button */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex flex-col gap-2">
@@ -315,17 +394,22 @@ export default function WalletCategory() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {credentials.map((c) => (
-                <CredentialCard
-                  key={c.id}
-                  degreeTitle={c.degree_title}
-                  institutionName={c.institution_name}
-                  issuerDid={c.issuer_did}
-                  graduationDate={c.graduation_date}
-                  createdAt={c.created_at}
-                  onClick={() => handleViewDetailsClick(c.id)}
-                />
-              ))}
+              {credentials.map((c) => {
+                const preview = decryptedPreviews[c.id]
+                return (
+                  <CredentialCard
+                    key={c.id}
+                    degreeTitle={c.degree_title}
+                    institutionName={c.institution_name || preview?.institution_name}
+                    issuerDid={c.issuer_did || preview?.issuer_did}
+                    graduationDate={c.graduation_date}
+                    createdAt={c.created_at}
+                    onClick={() => handleViewDetailsClick(c.id)}
+                    shareCount={shareCounts[c.id]}
+                    major={c.major || preview?.major}
+                  />
+                )
+              })}
             </div>
           )}
         </div>
@@ -333,50 +417,16 @@ export default function WalletCategory() {
 
       {/* UNLOCK MODAL */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
-              <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
-            </div>
-            {/* Logic based on unlock method */}
-            {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
-              <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
-                <PinDotsInput
-                  value={pinInput}
-                  onChange={setPinInput}
-                  name="vault-pin"
-                  autoComplete="current-password"
-                  autoFocus
-                  required
-                />
-                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="submit" disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
-                </button>
-                {(unlockMethod === 'both' || !unlockMethod) && (
-                  <button type="button" onClick={handleUnlockWithPasskeyClick} className="w-full border border-gray-300 text-gray-700 font-semibold h-11 rounded-lg">
-                    {t('wallet.unlock_with_passkey')}
-                  </button>
-                )}
-                <button type="button" onClick={() => setShowUnlockModal(false)} className="w-full text-gray-500 font-semibold h-11 rounded-lg">
-                  {t('wallet.cancel')}
-                </button>
-              </form>
-            )}
-            {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
-              <div className="flex flex-col gap-3 items-center text-center">
-                {unlockError && <p className="text-rose-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="button" onClick={handleUnlockWithPasskeyClick} disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_passkey')}
-                </button>
-                <button type="button" onClick={() => setShowUnlockModal(false)} className="w-full text-gray-400 font-semibold h-11 rounded-lg">
-                  {t('wallet.cancel')}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <VaultUnlockModal
+          unlockMethod={unlockMethod}
+          pinInput={pinInput}
+          onPinChange={setPinInput}
+          onSubmitPin={handleUnlockSubmit}
+          onPasskeyClick={handleUnlockWithPasskeyClick}
+          isUnlocking={isUnlocking}
+          unlockError={unlockError}
+          onCancel={() => setShowUnlockModal(false)}
+        />
       )}
 
     </div>
