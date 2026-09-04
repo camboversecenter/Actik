@@ -14,6 +14,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import Notifications from './pages/app/Notifications'
 import InstitutionSettings from './pages/app/InstitutionSettings'
 import VerifyRegistry from './pages/public/VerifyRegistry'
+import Landing from './pages/public/Landing'
 import Activity from './pages/app/Activity'
 import WalletCategory from './pages/app/WalletCategory'
 import CredentialDetail from './pages/app/CredentialDetail'
@@ -96,11 +97,22 @@ export function PrivateRoute({ children }: RouteProps) {
       }
     }
 
+    // Tracks the last user id we actually fetched a role for — a plain
+    // closure variable, not state, since it only needs to be read inside
+    // this effect's own callbacks. onAuthStateChange fires on far more than
+    // just real sign-in/sign-out (token refreshes, and in practice this
+    // project has been observed re-firing SIGNED_IN every couple seconds
+    // with no real change), and every one of those was triggering a fresh
+    // profiles query — this guard makes that a no-op unless the signed-in
+    // user actually changed.
+    let lastUserId: string | null = null
+
     // Fetch initial session
     supabase.auth.getSession().then(({ data }) => {
       if (active) {
         setSession(data.session)
         if (data.session?.user) {
+          lastUserId = data.session.user.id
           fetchRole(data.session.user.id)
         } else {
           setLoading(false)
@@ -110,18 +122,20 @@ export function PrivateRoute({ children }: RouteProps) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (active) {
-        setSession(currentSession)
-        if (currentSession?.user) {
-          // Do NOT set loading=true here — that unmounts VaultProvider and all
-          // descendant state (decryptedSDJwt, form inputs, etc.) on every token
-          // refresh (which fires when the user switches back to this tab).
-          // Silently refresh role without showing the loading screen.
-          fetchRole(currentSession.user.id)
-        } else {
-          setRole(null)
-          setLoading(false)
-        }
+      if (!active) return
+      // Do NOT set loading=true here — that unmounts VaultProvider and all
+      // descendant state (decryptedSDJwt, form inputs, etc.) on every token
+      // refresh (which fires when the user switches back to this tab).
+      // Silently refresh role without showing the loading screen.
+      setSession(currentSession)
+      const nextUserId = currentSession?.user?.id ?? null
+      if (nextUserId === lastUserId) return
+      lastUserId = nextUserId
+      if (currentSession?.user) {
+        fetchRole(currentSession.user.id)
+      } else {
+        setRole(null)
+        setLoading(false)
       }
     })
 
@@ -182,11 +196,17 @@ export function AdminRoute({ children }: RouteProps) {
       }
     }
 
+    // See PrivateRoute above for why this guard exists — onAuthStateChange
+    // fires far more often than real sign-in/sign-out, and without this
+    // every one of those firings re-ran the profiles query.
+    let lastUserId: string | null = null
+
     // Fetch initial session & role
     supabase.auth.getSession().then(({ data }) => {
       if (active) {
         setSession(data.session)
         if (data.session?.user) {
+          lastUserId = data.session.user.id
           fetchRole(data.session.user.id)
         } else {
           setLoading(false)
@@ -196,14 +216,16 @@ export function AdminRoute({ children }: RouteProps) {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (active) {
-        setSession(currentSession)
-        if (currentSession?.user) {
-          fetchRole(currentSession.user.id)
-        } else {
-          setRole(null)
-          setLoading(false)
-        }
+      if (!active) return
+      setSession(currentSession)
+      const nextUserId = currentSession?.user?.id ?? null
+      if (nextUserId === lastUserId) return
+      lastUserId = nextUserId
+      if (currentSession?.user) {
+        fetchRole(currentSession.user.id)
+      } else {
+        setRole(null)
+        setLoading(false)
       }
     })
 
@@ -264,11 +286,17 @@ export function RootRedirect() {
       }
     }
 
+    // See PrivateRoute above for why this guard exists — onAuthStateChange
+    // fires far more often than real sign-in/sign-out, and without this
+    // every one of those firings re-ran the profiles query.
+    let lastUserId: string | null = null
+
     // Fetch initial session & role
     supabase.auth.getSession().then(({ data }) => {
       if (active) {
         setSession(data.session)
         if (data.session?.user) {
+          lastUserId = data.session.user.id
           fetchRole(data.session.user.id)
         } else {
           setLoading(false)
@@ -278,14 +306,16 @@ export function RootRedirect() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (active) {
-        setSession(currentSession)
-        if (currentSession?.user) {
-          fetchRole(currentSession.user.id)
-        } else {
-          setRole(null)
-          setLoading(false)
-        }
+      if (!active) return
+      setSession(currentSession)
+      const nextUserId = currentSession?.user?.id ?? null
+      if (nextUserId === lastUserId) return
+      lastUserId = nextUserId
+      if (currentSession?.user) {
+        fetchRole(currentSession.user.id)
+      } else {
+        setRole(null)
+        setLoading(false)
       }
     })
 
@@ -300,7 +330,7 @@ export function RootRedirect() {
   }
 
   if (!session) {
-    return <Navigate to="/auth/login" replace />
+    return <Landing />
   }
 
   // Redirect based on user role

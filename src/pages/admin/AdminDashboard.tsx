@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import InstitutionDetailModal from '../../components/admin/InstitutionDetailModal'
-import MoEYSIdentityCard from '../../components/admin/MoEYSIdentityCard'
-import PublicRegistryManager from '../../components/admin/PublicRegistryManager'
 import AuditLogView from '../../components/admin/AuditLogView'
 import { logApproval, logRevocation, logRejection, logInstitutionRestore } from '../../lib/auditLog'
+import {
+  ScrollText, Building2, AlertTriangle, Search, Copy, Inbox,
+} from 'lucide-react'
+import StatusPill from '../../components/ui/StatusPill'
 
 // --- TypeScript Types ---
 interface Issuer {
@@ -124,8 +126,6 @@ export default function AdminDashboard() {
   // State arrays
   const [issuers, setIssuers] = useState<Issuer[]>([])
   const [emailMap, setEmailMap] = useState<Record<string, string>>({})
-  const [totalCredentials, setTotalCredentials] = useState(0)
-  const [totalStudents, setTotalStudents] = useState<number>(0)
 
   // Search and tabs filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -164,10 +164,8 @@ export default function AdminDashboard() {
         })
       }
 
-      const [issuersRes, credentialsRes, studentsRes, profilesRes] = await Promise.all([
+      const [issuersRes, profilesRes] = await Promise.all([
         supabase.from('issuers').select('*').order('created_at', { ascending: false }),
-        supabase.from('credentials').select('id', { count: 'exact' }),
-        supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('profiles').select('id, email'),
       ])
 
@@ -186,8 +184,6 @@ export default function AdminDashboard() {
       }
       setEmailMap(emails)
 
-      setTotalCredentials(credentialsRes.count || 0)
-      setTotalStudents(studentsRes.count || 0)
       setActiveTab(filter)
       setLoading(false)
     } catch (err: any) {
@@ -463,26 +459,15 @@ export default function AdminDashboard() {
     (confirmModal?.type === 'reject' && isRejectConfirmInvalid) ||
     (confirmModal?.type === 'restore' && isRestoreConfirmInvalid)
 
-  // Status Badge Rendering Helper
+  // Status Badge Rendering Helper — same 4-state vocabulary as StatusPill
+  // (verified/pending/failed here; "locked" doesn't apply to an issuer).
   const renderStatusBadge = (issuer: Issuer) => {
     if (issuer.accredited) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span>✓</span> ACCREDITED
-        </span>
-      )
+      return <StatusPill status="verified" label="ACCREDITED" />
     } else if (issuer.revoked_at !== null) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-          <span>✕</span> REVOKED
-        </span>
-      )
+      return <StatusPill status="failed" label="REVOKED" />
     } else {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <span>⏳</span> PENDING
-        </span>
-      )
+      return <StatusPill status="pending" label="PENDING" />
     }
   }
 
@@ -496,8 +481,8 @@ export default function AdminDashboard() {
         </div>
         
         {/* Stats Grid Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+          {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white border border-stone-200 rounded-xl p-6 space-y-3">
               <div className="h-8 bg-stone-200 rounded w-1/4" />
               <div className="h-3 bg-stone-200 rounded w-3/4" />
@@ -506,7 +491,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Filter and Search Bar Skeleton */}
-        <div className="h-16 bg-stone-250 rounded-xl" />
+        <div className="h-16 bg-stone-200 rounded-xl" />
 
         {/* Table Skeleton */}
         <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-4">
@@ -550,11 +535,11 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 pb-20 relative font-sans antialiased">
       {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
+      <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 space-y-2 pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`px-4 py-3 rounded-lg border shadow-lg text-sm font-semibold pointer-events-auto flex items-center gap-2 max-w-md animate-scale-in ${
+            className={`px-4 py-3 rounded-full border shadow-lg text-sm font-semibold pointer-events-auto flex items-center gap-2 w-full sm:w-auto sm:max-w-md animate-scale-in ${
               t.type === 'success'
                 ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
                 : t.type === 'warning'
@@ -590,86 +575,46 @@ export default function AdminDashboard() {
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-stone-900 tracking-tight">Trust Registry Management</h1>
-            <p className="text-sm text-stone-500 mt-1 font-medium">
-              Manage accredited institutions and verify trust settings on behalf of MoEYS
-            </p>
-          </div>
-          <button
-            onClick={() => setIsAuditLogOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            System Audit Log
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Trust Registry Management</h1>
+          <p className="text-sm text-stone-500 mt-1">Manage accredited institutions and verify trust settings on behalf of MoEYS</p>
         </div>
 
-        {/* MoEYS Identity Section */}
-        <MoEYSIdentityCard />
-
-        {/* Public Registry Manager Section */}
-        <PublicRegistryManager 
-          countTotal={countTotal} 
-          countAccredited={countAccredited} 
-        />
-
-        {/* 📊 TRUST REGISTRY OVERVIEW */}
+        {/* TRUST REGISTRY OVERVIEW */}
         <section className="space-y-4">
-          <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>📊</span> Trust Registry Overview
-          </h2>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-indigo-600">{countTotal}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Total institutions
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl border border-stone-200 p-4 md:p-5">
+              <div className="font-mono text-[26px] md:text-[28px] font-bold text-stone-900 leading-none">{countTotal}</div>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 font-semibold mt-2">Total institutions</div>
             </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-emerald-600">{countAccredited}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Accredited
-              </div>
+            <div className="bg-white rounded-xl border border-stone-200 p-4 md:p-5">
+              <div className="font-mono text-[26px] md:text-[28px] font-bold text-emerald-700 leading-none">{countAccredited}</div>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 font-semibold mt-2">Accredited</div>
             </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-amber-500">{countPending}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Pending Approval
-              </div>
-            </div>
-            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-4 sm:p-6">
-              <div className="text-2xl sm:text-3xl font-bold text-purple-600">{totalCredentials}</div>
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1.5 font-semibold">
-                Credentials Issued {totalStudents > 0 && `(${totalStudents} wallets)`}
-              </div>
+            <div className="bg-white rounded-xl border border-stone-200 p-4 md:p-5">
+              <div className="font-mono text-[26px] md:text-[28px] font-bold text-amber-700 leading-none">{countPending}</div>
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 font-semibold mt-2">Pending approval</div>
             </div>
           </div>
         </section>
 
-        {/* 🏛️ INSTITUTIONS MANAGEMENT */}
+        {/* INSTITUTIONS MANAGEMENT */}
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5">
-            <span>🏛️</span> Institutions Management
+            <Building2 size={14} /> Institutions Management
           </h2>
 
           {/* Filter and Search Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-stone-200/80 p-4 rounded-xl shadow-sm">
             {/* Search Box */}
             <div className="relative flex-1 w-full md:max-w-md">
-              <svg className="absolute left-3 top-3.5 h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-stone-400" strokeWidth={2} />
               <input
                 type="text"
                 placeholder="Search by institution name or domain..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 h-11 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-stone-50/50"
+                className="w-full pl-9 pr-4 py-2 h-11 text-sm border border-stone-200 rounded-[9px] focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-stone-50/50"
               />
             </div>
 
@@ -677,9 +622,9 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-auto">
               <div className="flex border-b border-stone-200 overflow-x-auto whitespace-nowrap scrollbar-none w-full">
                 {([
-                  { key: 'all', label: `All Institutions (${countTotal})` },
+                  { key: 'all', label: `All (${countTotal})` },
                   { key: 'accredited', label: `Accredited (${countAccredited})` },
-                  { key: 'pending', label: `Pending Approval (${countPending})` },
+                  { key: 'pending', label: `Pending (${countPending})` },
                   { key: 'revoked', label: `Revoked (${countRevoked})` }
                 ] as { key: FilterTab; label: string }[]).map((tab) => (
                   <button
@@ -698,35 +643,36 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="bg-white border border-stone-200 shadow-sm rounded-xl overflow-hidden">
-            {filteredIssuers.length === 0 ? (
-              <div className="text-center py-16 px-4">
-                <span className="text-3xl block mb-3">📋</span>
-                {issuers.length === 0 ? (
-                  <>
-                    <h3 className="text-base font-bold text-stone-850">
-                      No institutions yet
-                    </h3>
-                    <p className="text-sm text-stone-500 mt-1 mb-4">
-                      Institutions will appear here once they register and are approved.
-                    </p>
-                    <button onClick={() => showToast("Registration is available via the public landing page.", "warning")} className="px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-md hover:bg-indigo-100 transition-colors">
-                      View Registration Page
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-base font-bold text-stone-800 font-sans">No matching institutions found</h3>
-                    <p className="text-sm text-stone-500 mt-1">Try adjusting your search query or select another filter tab.</p>
-                  </>
-                )}
+          {/* Table / Card List */}
+          {filteredIssuers.length === 0 ? (
+            <div className="bg-white border border-stone-200 rounded-xl text-center py-16 px-4">
+              <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center mx-auto mb-3">
+                <Inbox size={22} className="text-stone-400" strokeWidth={1.9} />
               </div>
-            ) : (
-              <>
-                {/* Desktop Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+              {issuers.length === 0 ? (
+                <>
+                  <h3 className="text-base font-bold text-stone-900">
+                    No institutions yet
+                  </h3>
+                  <p className="text-sm text-stone-500 mt-1 mb-4">
+                    Institutions will appear here once they register and are approved.
+                  </p>
+                  <button onClick={() => showToast("Registration is available via the public landing page.", "warning")} className="px-4 py-2 bg-indigo-50 text-indigo-700 font-medium rounded-[9px] hover:bg-indigo-100 transition-colors">
+                    View Registration Page
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-base font-bold text-stone-800 font-sans">No matching institutions found</h3>
+                  <p className="text-sm text-stone-500 mt-1">Try adjusting your search query or select another filter tab.</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block bg-white border border-stone-200 shadow-sm rounded-xl overflow-hidden overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-stone-50 border-b border-stone-200 text-stone-400 text-[10px] font-bold uppercase tracking-widest">
                         <th className="py-3.5 px-6">Name</th>
@@ -759,9 +705,7 @@ export default function AdminDashboard() {
                                 title="Click to copy"
                               >
                                 {issuer.domain}
-                                <svg className="w-3.5 h-3.5 text-stone-300 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                </svg>
+                                <Copy size={14} className="text-stone-300 group-hover:text-indigo-500 transition-colors" />
                               </button>
                             </td>
                             <td className="py-4 px-4 text-xs font-medium text-stone-500">
@@ -777,7 +721,7 @@ export default function AdminDashboard() {
                               <div className="flex items-center justify-end gap-2">
                                 <button
                                   onClick={() => handleSelectIssuer(issuer)}
-                                  className="px-2.5 py-1.5 text-xs font-bold border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-lg shadow-sm transition-colors cursor-pointer"
+                                  className="px-2.5 h-[34px] flex items-center justify-center text-xs font-bold border border-stone-200 hover:bg-stone-50 text-stone-600 rounded-[9px] shadow-sm transition-colors cursor-pointer"
                                 >
                                   View
                                 </button>
@@ -786,7 +730,7 @@ export default function AdminDashboard() {
                                   <button
                                     onClick={() => handleOpenRevokeModal(issuer)}
                                     disabled={isGlobalActionLoading}
-                                    className="px-2.5 py-1.5 text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-lg shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+                                    className="px-2.5 h-[34px] flex items-center justify-center text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all cursor-pointer"
                                   >
                                     Revoke
                                   </button>
@@ -794,7 +738,7 @@ export default function AdminDashboard() {
                                   <button
                                     onClick={() => handleOpenRestoreModal(issuer)}
                                     disabled={isGlobalActionLoading}
-                                    className="px-2.5 py-1.5 text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-lg shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+                                    className="px-2.5 h-[34px] flex items-center justify-center text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all cursor-pointer"
                                   >
                                     Restore
                                   </button>
@@ -803,14 +747,14 @@ export default function AdminDashboard() {
                                     <button
                                       onClick={() => handleOpenRejectModal(issuer)}
                                       disabled={isGlobalActionLoading}
-                                      className="px-2.5 py-1.5 text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-lg shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+                                      className="px-2.5 h-[34px] flex items-center justify-center text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all cursor-pointer"
                                     >
                                       Reject
                                     </button>
                                     <button
                                       onClick={() => handleOpenApproveModal(issuer)}
                                       disabled={isGlobalActionLoading}
-                                      className="px-2.5 py-1.5 text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-lg shadow-sm disabled:opacity-50 transition-all cursor-pointer"
+                                      className="px-2.5 h-[34px] flex items-center justify-center text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all cursor-pointer"
                                     >
                                       Approve
                                     </button>
@@ -826,15 +770,15 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Mobile Card List */}
-                <div className="md:hidden divide-y divide-stone-150">
+                <div className="md:hidden flex flex-col gap-3">
                   {filteredIssuers.map((issuer) => {
                     const email = emailMap[issuer.user_id] || 'unknown-user@actik.kh'
 
                     return (
-                      <div key={issuer.id} className="p-4 flex flex-col gap-3">
+                      <div key={issuer.id} className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                           <div>
-                            <div className="font-semibold text-stone-905 text-sm">{issuer.name}</div>
+                            <div className="font-semibold text-stone-900 text-sm">{issuer.name}</div>
                             <div className="text-xs text-stone-400 font-medium mt-0.5">{email}</div>
                             <div className="text-xs text-stone-500 font-semibold mt-1">{issuer.domain}</div>
                           </div>
@@ -859,7 +803,7 @@ export default function AdminDashboard() {
                         <div className="flex gap-2.5 mt-1">
                           <button
                             onClick={() => handleSelectIssuer(issuer)}
-                            className="flex-1 py-2 text-xs font-bold border border-stone-200 text-stone-600 bg-white hover:bg-stone-50 rounded-lg shadow-sm transition-all h-10 cursor-pointer"
+                            className="flex-1 py-2 text-xs font-bold border border-stone-200 text-stone-600 bg-white hover:bg-stone-50 rounded-[9px] shadow-sm transition-all h-10 cursor-pointer"
                           >
                             View Details
                           </button>
@@ -868,7 +812,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => handleOpenRevokeModal(issuer)}
                               disabled={isGlobalActionLoading}
-                              className="flex-1 py-2 text-xs font-bold border border-rose-205 text-rose-600 bg-white hover:bg-rose-50 rounded-lg shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
+                              className="flex-1 py-2 text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
                             >
                               Revoke
                             </button>
@@ -876,7 +820,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() => handleOpenRestoreModal(issuer)}
                               disabled={isGlobalActionLoading}
-                              className="flex-1 py-2 text-xs font-bold border border-emerald-205 text-emerald-600 bg-white hover:bg-emerald-50 rounded-lg shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
+                              className="flex-1 py-2 text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
                             >
                               Restore
                             </button>
@@ -885,14 +829,14 @@ export default function AdminDashboard() {
                               <button
                                 onClick={() => handleOpenRejectModal(issuer)}
                                 disabled={isGlobalActionLoading}
-                                className="flex-1 py-2 text-xs font-bold border border-rose-205 text-rose-600 bg-white hover:bg-rose-50 rounded-lg shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
+                                className="flex-1 py-2 text-xs font-bold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
                               >
                                 Reject
                               </button>
                               <button
                                 onClick={() => handleOpenApproveModal(issuer)}
                                 disabled={isGlobalActionLoading}
-                                className="flex-1 py-2 text-xs font-bold border border-emerald-205 text-emerald-600 bg-white hover:bg-emerald-50 rounded-lg shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
+                                className="flex-1 py-2 text-xs font-bold border border-emerald-200 text-emerald-600 bg-white hover:bg-emerald-50 rounded-[9px] shadow-sm disabled:opacity-50 transition-all h-10 cursor-pointer"
                               >
                                 Approve
                               </button>
@@ -905,8 +849,19 @@ export default function AdminDashboard() {
                 </div>
               </>
             )}
-          </div>
         </section>
+
+        {/* Secondary — audit trail isn't the primary workflow here, so it's a
+            plain link rather than a prominent header CTA. */}
+        <div className="pt-2 text-center">
+          <button
+            onClick={() => setIsAuditLogOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-400 hover:text-stone-600 transition-colors cursor-pointer"
+          >
+            <ScrollText size={13} />
+            View system audit log
+          </button>
+        </div>
       </div>
 
       {/* Audit Log Modal */}
@@ -945,14 +900,14 @@ export default function AdminDashboard() {
       {/* Confirmation Modal */}
       {confirmModal && (
         <div className="fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border border-stone-200 rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in text-left">
+          <div className="bg-white border border-stone-200 rounded-[14px] shadow-2xl max-w-[420px] w-full overflow-hidden animate-scale-in text-left">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-stone-100">
               <h3
                 className={`text-lg font-bold ${
                   confirmModal.type === 'approve' || confirmModal.type === 'restore'
                     ? 'text-stone-900'
-                    : 'text-rose-705'
+                    : 'text-rose-700'
                 }`}
               >
                 {confirmModal.type === 'approve' && 'Approve this institution?'}
@@ -995,8 +950,9 @@ export default function AdminDashboard() {
                   ) : confirmModal.error ? (
                     <p className="text-xs text-rose-500 font-semibold">{confirmModal.error}</p>
                   ) : (
-                    <p className="text-rose-700 font-bold bg-rose-50 border border-rose-100 rounded px-2.5 py-1.5 text-xs">
-                      ⚠️ This affects {confirmModal.credentialCount ?? 0} credentials already issued by this institution.
+                    <p className="text-rose-700 font-bold bg-rose-50 border border-rose-100 rounded px-2.5 py-1.5 text-xs flex items-center gap-1.5">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      This affects {confirmModal.credentialCount ?? 0} credentials already issued by this institution.
                     </p>
                   )}
                 </div>
@@ -1021,7 +977,7 @@ export default function AdminDashboard() {
                     setConfirmModal({ ...confirmModal, confirmInput: e.target.value })
                   }
                   disabled={confirmModal.loading}
-                  className="w-full px-3 h-11 border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-stone-50"
+                  className="w-full px-3 h-11 border border-stone-200 rounded-[9px] font-mono text-sm placeholder:font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-stone-50"
                 />
               </div>
             </div>
@@ -1032,7 +988,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={() => setConfirmModal(null)}
                 disabled={confirmModal.loading}
-                className="h-11 px-4 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 font-semibold rounded-lg text-sm transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
+                className="h-11 px-4 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 font-semibold rounded-[9px] text-sm transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
               >
                 Cancel
               </button>
@@ -1041,7 +997,7 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={handleConfirmAction}
                 disabled={isConfirmButtonDisabled}
-                className={`h-11 px-4 text-white font-bold rounded-lg text-sm shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`h-11 px-4 text-white font-bold rounded-[9px] text-sm shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 cursor-pointer ${
                   confirmModal.type === 'approve' || confirmModal.type === 'restore'
                     ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
                     : 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800'

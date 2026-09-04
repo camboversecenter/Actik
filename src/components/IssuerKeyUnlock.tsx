@@ -50,7 +50,7 @@ function scorePasscode(pc: string): { label: string; pct: number; tone: string }
   if (/\d/.test(pc)) score++
   if (/[^A-Za-z0-9]/.test(pc)) score++
   const pct = Math.min(100, (score / 5) * 100)
-  if (score <= 1) return { label: 'Weak', pct, tone: 'bg-red-400' }
+  if (score <= 1) return { label: 'Weak', pct, tone: 'bg-rose-400' }
   if (score <= 3) return { label: 'Fair', pct, tone: 'bg-amber-400' }
   return { label: 'Strong', pct, tone: 'bg-green-500' }
 }
@@ -245,8 +245,8 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
   if (phase === 'status_error') {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-red-300 border-l-4 p-6 md:p-8">
-        <h2 className="text-lg font-bold text-red-700 mb-2">Couldn&apos;t check your signing key</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-rose-300 border-l-4 p-6 md:p-8">
+        <h2 className="text-lg font-bold text-rose-700 mb-2">Couldn&apos;t check your signing key</h2>
         <p className="text-sm text-stone-500 mb-4 leading-relaxed">
           Something went wrong reaching your account. Please try again.
         </p>
@@ -264,7 +264,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
     return (
       <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-6 md:p-8 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="text-3xl mt-0.5">🔑</div>
+          <Key size={26} className="text-amber-600 mt-0.5 shrink-0" />
           <div className="w-full">
             <h2 className="text-lg font-bold text-amber-800">Set up your signing PIN</h2>
             <p className="text-sm text-stone-600 mt-2 leading-relaxed">
@@ -301,7 +301,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
               )}
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-3 font-semibold">
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg p-3 font-semibold">
                   {error}
                 </div>
               )}
@@ -350,7 +350,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
             </div>
 
             {error && (
-              <div className="flex items-center gap-1.5 text-red-600">
+              <div className="flex items-center gap-1.5 text-rose-600">
                 <AlertCircle size={14} />
                 <p className="text-xs font-semibold">{error}</p>
               </div>

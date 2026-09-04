@@ -3,7 +3,9 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures } from '../../lib/sdjwt'
-import { useLanguage } from '../../lib/i18n'
+import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
+import VaultUnlockModal from '../../components/VaultUnlockModal'
+import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2 } from 'lucide-react'
 
 // Reusing same Credential interface
 interface Credential {
@@ -25,13 +27,6 @@ interface Credential {
   iv?: string
 }
 
-// Shared keyframe spinner animation
-const spinStyles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '—'
@@ -53,6 +48,7 @@ export default function CredentialDetail() {
   
   const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [credential, setCredential] = useState<Credential | null>(null)
+  const [shareCount, setShareCount] = useState<number | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
@@ -73,7 +69,7 @@ export default function CredentialDetail() {
   // Decryption state
   const [detail, setDetail] = useState<Record<string, any> | null>(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
-  const [expandedRawJwt, setExpandedRawJwt] = useState(false)
+  const [showRawTokenModal, setShowRawTokenModal] = useState(false)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -165,6 +161,19 @@ export default function CredentialDetail() {
         iv: data.iv
       })
       setLoading(false)
+
+      // Best-effort — errors here (e.g. migration not yet applied) just
+      // leave the share count unshown, they don't affect the credential itself.
+      try {
+        const { count } = await supabase
+          .from('shares')
+          .select('id', { count: 'exact', head: true })
+          .eq('owner', user.id)
+          .eq('credential_id', data.id)
+        setShareCount(count ?? 0)
+      } catch {
+        // non-fatal
+      }
     } catch (err) {
       setLoadError(true)
       setLoading(false)
@@ -274,7 +283,7 @@ export default function CredentialDetail() {
             try {
               const payload = JSON.parse(atob(sdjwtString.split('~')[0].split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
               fields.name = payload.name || ''
-              fields.degree = payload.degree || ''
+              fields.degree_type = payload.degree_type || payload.degree || ''
               fields.institution = payload.institution || ''
               fields.year = payload.year || ''
             } catch {}
@@ -294,7 +303,6 @@ export default function CredentialDetail() {
   if (loading) {
     return (
       <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 py-20 flex flex-col items-center justify-center">
-        <style>{spinStyles}</style>
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600" />
         <p className="text-stone-500 mt-4 font-medium">{t('wallet.loading_single')}</p>
       </div>
@@ -314,53 +322,78 @@ export default function CredentialDetail() {
     )
   }
 
+  // A stacked label/value field row — English is a small technical caption
+  // under the Khmer label, the value renders exactly as stored (no
+  // translation), and a genuinely-absent value gets an explicit "not
+  // specified" instead of an em dash so it can't be mistaken for hidden data.
+  const renderField = (label: string, sublabel: string, value: any, mono = false) => {
+    const has = value !== undefined && value !== null && value !== ''
+    return (
+      <div className={`flex justify-between items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-b-0 ${has ? '' : 'bg-amber-50/60'}`}>
+        <span className="font-khmer text-[13px] text-stone-500 shrink-0">
+          {label}
+          <span className="block font-sans text-[10px] text-stone-400 mt-0.5">{sublabel}</span>
+        </span>
+        {has ? (
+          <span className={`font-semibold text-stone-900 text-right break-words ${mono ? 'font-mono text-xs' : 'text-sm'}`}>{value}</span>
+        ) : (
+          <span className="font-khmer text-amber-700 italic text-xs text-right shrink-0">{t('wallet.not_specified')}</span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
-      <style>{spinStyles}</style>
+      {/* Back link */}
+      <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors mb-4">
+        <ArrowLeft size={16} />
+        {t('wallet.back_to_wallet')}
+      </Link>
 
-      {/* Header with back button */}
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            {t('wallet.back_to_wallet')}
-          </Link>
-          <h2 className="text-2xl font-bold text-stone-900 tracking-tight">
-            {credential.institution_name ? `${credential.institution_name} — ` : ''}{credential.degree_title}
-          </h2>
+      {/* Hero — institution, degree title, trust chips. Uses the DB row
+          (available pre-unlock) rather than the decrypted claims, so it
+          renders immediately even before the vault is unlocked. */}
+      <div className="bg-indigo-600 rounded-2xl p-5 text-white mb-4">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+            <Landmark size={16} strokeWidth={2} />
+          </div>
+          <div className="min-w-0">
+            <div className="font-khmer text-[13px] font-semibold truncate">
+              {credential.institution_name || t('wallet.institution_unknown')}
+            </div>
+            {credential.issuer_did && (
+              <div className="font-mono text-[10px] text-white/70 truncate">{credential.issuer_did}</div>
+            )}
+          </div>
         </div>
-        <div>
-          {vaultExists === true && !isUnlocked && (
-            <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg">
-              {t('wallet.vault_locked')}
-            </span>
-          )}
-          {vaultExists === true && isUnlocked && (
-            <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-semibold rounded-lg">
-              {t('wallet.vault_unlocked')}
-            </span>
-          )}
+        <div className="font-khmer text-2xl font-bold leading-snug">{formatDegreeTitle(credential.degree_title)}</div>
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/20">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
+            <CheckCircle2 size={12} className="text-teal-300" />
+            {t('wallet.trust_accredited_institution')}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
+            <ShieldCheck size={12} className="text-teal-300" />
+            {t('wallet.trust_encrypted_vault')}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-teal-100">
+            <Share2 size={12} className="text-teal-300" />
+            {t('wallet.share_count_label', { count: shareCount ?? 0 })}
+          </span>
         </div>
       </div>
 
+      <button
+        onClick={() => navigate(`/app/share/${credential.id}`)}
+        className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-12 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer mb-4"
+      >
+        {t('wallet.share_credential')}
+      </button>
+
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Full Page Action Bar */}
-        <div className="bg-stone-50 border-b border-gray-200 p-4 flex justify-end">
-           <button 
-             onClick={() => navigate(`/app/share/${credential.id}`)}
-             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
-           >
-             {t('wallet.share_credential')}
-           </button>
-        </div>
-
         <div className="p-5 md:p-8 text-sm text-left">
-          <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-6">
-            {t('wallet.metadata_view')}
-          </p>
-
           {!isUnlocked ? (
             <div className="text-center py-12">
               <p className="text-sm text-stone-500 mb-4">
@@ -400,7 +433,7 @@ export default function CredentialDetail() {
                           className="w-full aspect-[1.414/1] rounded"
                         >
                           <div className="p-8 text-center text-stone-500 text-sm flex flex-col items-center justify-center h-full bg-stone-50">
-                            <span className="text-3xl mb-3">📄</span>
+                            <FileText size={28} className="mb-3 text-stone-400" />
                             <p>{t('wallet.pdf_not_supported')}</p>
                             <a 
                               href={detail.photo} 
@@ -424,7 +457,7 @@ export default function CredentialDetail() {
                               const fallback = document.createElement('div');
                               fallback.className = 'p-6 text-center text-stone-500 text-xs';
                               fallback.innerHTML = `
-                                <span class="text-2xl mb-2 block">⚠️</span>
+                                <svg class="mx-auto mb-2" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f59e0b"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                                 ${t('wallet.failed_document_preview')}
                                 <br/><a href="${detail.photo}" download="document" class="text-indigo-600 font-bold hover:underline mt-2 inline-block">${t('wallet.download_file')}</a>
                               `;
@@ -458,118 +491,73 @@ export default function CredentialDetail() {
                         }}
                         className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-semibold border border-stone-200 transition-colors shadow-sm cursor-pointer"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        </svg>
+                        <Maximize2 size={14} />
                         {t('wallet.view_full_screen')}
                       </button>
                     </div>
                   </>
                 ) : (
                   <div className="w-24 h-36 bg-stone-150 border border-dashed border-stone-300 rounded flex flex-col items-center justify-center text-stone-400 font-medium text-[10px]">
-                    <span className="text-xl mb-1">📄</span>
+                    <FileText size={20} className="mb-1" />
                     <span>{t('wallet.no_document')}</span>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex flex-col gap-6">
                 {/* Student Information */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest border-b border-stone-250 pb-1">
+                <div>
+                  <div className="font-mono text-[9px] tracking-widest text-stone-400 uppercase mb-2">
                     {t('wallet.student_info')}
-                  </h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.student_name')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left">
-                        {detail.name || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.student_email')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left break-all">
-                        {detail.email || credential.holder_email || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.student_id')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left font-mono">
-                        {detail.student_id || '—'}
-                      </span>
-                    </div>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+                    {renderField(t('wallet.student_name'), 'Full name', detail.name)}
+                    {renderField(t('wallet.student_email'), 'Email', detail.email || credential.holder_email)}
+                    {renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
                   </div>
                 </div>
 
                 {/* Credential Information */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest border-b border-stone-250 pb-1">
+                <div>
+                  <div className="font-mono text-[9px] tracking-widest text-stone-400 uppercase mb-2">
                     {t('wallet.credential_info')}
-                  </h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.degree_type')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left">
-                        {detail.degree_type || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.major')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left">
-                        {detail.major || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.graduation_date')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left">
-                        {formatDate(detail.graduation_date)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.certificate_id')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left font-mono">
-                        {detail.certificate_id || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.detail_issued_by')}</span>
-                      <span className="font-semibold text-stone-900 md:col-span-2 text-right md:text-left">
-                        {detail.institution || credential.institution_name || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between md:grid md:grid-cols-3 gap-2">
-                      <span className="text-stone-500">{t('wallet.issuer_did')}</span>
-                      <span className="font-mono text-stone-600 text-xs md:col-span-2 text-right md:text-left break-all select-all">
-                        {detail.iss || credential.issuer_did || '—'}
-                      </span>
-                    </div>
+                  </div>
+                  <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+                    {/* `degree` is the pre-6502ec7 claim name (see git history) —
+                        credentials signed before that fix disclose it under
+                        "degree" instead of "degree_type", and since an SD-JWT's
+                        disclosures are fixed forever at signing time, a code
+                        fix alone can't correct already-issued ones. Falling
+                        back to it here is the only way those still render. */}
+                    {renderField(t('wallet.degree_type'), 'Degree type', formatDegreeTitle(detail.degree_type || detail.degree) || undefined)}
+                    {renderField(t('wallet.major'), 'Major', detail.major)}
+                    {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
+                    {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
+                    {renderField(t('wallet.detail_issued_by'), 'Issued by', detail.institution || credential.institution_name)}
+                    {renderField(t('wallet.issuer_did'), 'Institution DID', detail.iss || credential.issuer_did, true)}
+                    {renderField(t('wallet.issue_date_label'), 'Issue date', credential.created_at ? formatDate(credential.created_at) : null)}
                   </div>
                 </div>
               </div>
 
               {/* Encryption Status Badge */}
               <div className="pt-6 border-t border-stone-200 flex flex-wrap justify-between items-center gap-4">
-                <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-250 px-3 py-1.5 rounded text-xs uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded text-xs uppercase tracking-wider">
+                  <CheckCircle2 size={13} />
                   {t('wallet.encrypted_badge')}
                 </span>
-                
-                {/* Raw Collapsible */}
+
+                {/* De-emphasized on purpose: this exports every field with no
+                    selective disclosure, unlike Share — not a primary action. */}
                 <button
                   type="button"
-                  onClick={() => setExpandedRawJwt(!expandedRawJwt)}
-                  className="text-sm font-semibold text-indigo-650 hover:underline cursor-pointer"
+                  onClick={() => setShowRawTokenModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-stone-700 cursor-pointer"
                 >
-                  {expandedRawJwt ? t('wallet.hide_raw_token') : t('wallet.show_raw_token')}
+                  <Code size={13} />
+                  {t('wallet.raw_token_trigger')}
                 </button>
               </div>
-
-              {expandedRawJwt && (
-                <div className="p-4 bg-stone-50 border border-stone-200 rounded-lg">
-                  <code className="font-mono text-xs block overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-stone-600">
-                    {detail.rawJwt}
-                  </code>
-                </div>
-              )}
 
             </div>
           ) : (
@@ -578,55 +566,74 @@ export default function CredentialDetail() {
         </div>
       </div>
 
-      {/* UNLOCK MODAL */}
-      {showUnlockModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[100] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🔒</div>
-              <h3 className="text-lg font-bold text-stone-900">{t('wallet.unlock_vault_title')}</h3>
-            </div>
-            {/* Logic based on unlock method */}
-            {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
-              <form onSubmit={handleUnlockSubmit} className="flex flex-col gap-3">
-                <input
-                  type="password"
-                  autoComplete="current-password"
-                  name="vault-pin"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  placeholder="••••"
-                  required
-                  className="w-full text-center text-lg tracking-widest font-semibold h-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="submit" disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg cursor-pointer">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_pin')}
-                </button>
-                {(unlockMethod === 'both' || !unlockMethod) && (
-                  <button type="button" onClick={handleUnlockWithPasskeyClick} className="w-full border border-gray-300 text-gray-700 font-semibold h-11 rounded-lg cursor-pointer">
-                    {t('wallet.unlock_with_passkey')}
-                  </button>
-                )}
-                {/* Hide cancel button since this page is useless without unlock, but let them go back */}
-                <Link to="/app/wallet" className="w-full text-gray-500 font-semibold h-11 rounded-lg flex items-center justify-center cursor-pointer hover:bg-stone-50">
-                  {t('wallet.cancel_and_go_back')}
-                </Link>
-              </form>
-            )}
-            {(unlockMethod === 'passkey' || unlockMethod === 'biometric') && (
-              <div className="flex flex-col gap-3 items-center text-center">
-                {unlockError && <p className="text-red-600 text-xs text-center font-semibold">{unlockError}</p>}
-                <button type="button" onClick={handleUnlockWithPasskeyClick} disabled={isUnlocking} className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg cursor-pointer">
-                  {isUnlocking ? t('wallet.unlocking') : t('wallet.unlock_with_passkey')}
-                </button>
-                <Link to="/app/wallet" className="w-full text-gray-400 font-semibold h-11 rounded-lg flex items-center justify-center cursor-pointer hover:bg-stone-50">
-                  {t('wallet.cancel_and_go_back')}
-                </Link>
+      {/* RAW TOKEN MODAL — overlay, not an inline expand, so opening it doesn't
+          shove the rest of the page down. Code box scrolls internally and is
+          capped in height so one very long credential can't blow out the modal. */}
+      {showRawTokenModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            <div className="px-5 py-4 border-b border-stone-200 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-stone-900">{t('wallet.raw_token_modal_title')}</h3>
+                <p className="text-xs text-stone-400 mt-0.5">{t('wallet.raw_token_modal_subtitle')}</p>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setShowRawTokenModal(false)}
+                className="p-1.5 -m-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-5 pt-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed rounded-lg px-3.5 py-3">
+                {t('wallet.raw_token_modal_warning')}
+              </div>
+            </div>
+
+            <div className="p-5">
+              <code className="block max-h-64 overflow-y-auto font-mono text-[11px] whitespace-pre-wrap break-all leading-relaxed text-stone-600 bg-stone-50 border border-stone-200 rounded-lg p-4">
+                {detail?.rawJwt}
+              </code>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-stone-200 bg-stone-50">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(detail?.rawJwt || '')
+                    showToast(t('wallet.copied'))
+                  } catch {
+                    showToast(t('wallet.copy_failed'))
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-650 hover:underline cursor-pointer"
+              >
+                <Copy size={12} />
+                {t('wallet.copy')}
+              </button>
+              <span className="font-mono text-[10px] text-stone-400">ES256 · dc+sd-jwt</span>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* UNLOCK MODAL — cancel navigates back to the wallet rather than just
+          closing, since this page has nothing to show without unlocking. */}
+      {showUnlockModal && (
+        <VaultUnlockModal
+          unlockMethod={unlockMethod}
+          pinInput={pinInput}
+          onPinChange={setPinInput}
+          onSubmitPin={handleUnlockSubmit}
+          onPasskeyClick={handleUnlockWithPasskeyClick}
+          isUnlocking={isUnlocking}
+          unlockError={unlockError}
+          onCancel={() => navigate('/app/wallet')}
+          cancelLabel={t('wallet.cancel_and_go_back')}
+        />
       )}
 
       {toastMessage && (

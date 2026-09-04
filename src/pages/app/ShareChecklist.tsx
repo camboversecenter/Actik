@@ -76,7 +76,7 @@ export default function ShareChecklist({
             Share Verification Checklist
           </h2>
           <p className="text-sm text-stone-500 mt-0.5">
-            🔒 Verify your credential before sharing
+            Verify your credential before sharing
           </p>
         </div>
       </div>
@@ -232,18 +232,18 @@ export default function ShareChecklist({
               className="mt-1 w-4 h-4 text-indigo-600 border-stone-300 rounded focus:ring-indigo-500 cursor-pointer"
             />
             <span className="text-sm text-stone-700 leading-tight">
-              Issuer is accredited by MoEYS: <strong className="text-emerald-600">✓ YES</strong>
+              Issuer is accredited by MoEYS: <strong className="text-emerald-600">YES</strong>
             </span>
           </label>
         </div>
       </div>
 
       {/* Warning Box */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
+      <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+        <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={18} />
         <div className="space-y-2">
-          <p className="text-xs text-red-800 leading-relaxed font-semibold">
-            ❌ STOP: If any information is incorrect, do NOT share. Contact your issuer to update your credential.
+          <p className="text-xs text-rose-800 leading-relaxed font-semibold">
+            STOP: If any information is incorrect, do NOT share. Contact your issuer to update your credential.
           </p>
           <div className="flex items-center gap-1 text-[11px] text-stone-500 font-medium">
             <Mail size={12} className="text-stone-400" />

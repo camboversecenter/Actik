@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 
 // Function name may differ — check actual exports of sdjwt.ts
 import { verify as verifyPresentation, readDisclosures } from '../../lib/sdjwt'
@@ -39,6 +40,19 @@ interface ParsedPresentation {
   issuerDID: string
   issuedAt: number
   expiresAt?: number
+}
+
+// Always-English mono captions under each Khmer check label — literal
+// strings, not run through t(), matching the established "Khmer primary +
+// English technical caption" convention used across the rest of the app
+// (e.g. CredentialDetail.tsx's renderField sublabel). check 2's real detail
+// ("Valid for N more days") already exists on the check object once it
+// passes and takes precedence over this static gloss.
+const CHECK_SUBLABELS: Record<string, string> = {
+  '1': 'Loading credential',
+  '2': 'Checking link validity…',
+  '3': 'Verifying issuer signature…',
+  '4': 'Trust registry check',
 }
 
 // --- Helper Functions ---
@@ -92,6 +106,19 @@ function parsePresentation(presentation: string): ParsedPresentation {
     fields[d.name] = String(d.value)
   })
 
+  // Credentials issued before commit 6502ec7 disclose degree type under the
+  // legacy claim name "degree" instead of "degree_type" (SD-JWT disclosures
+  // are fixed forever at signing time, so old credentials keep the old
+  // name — see CredentialDetail.tsx for the full history). ShareCredential.tsx
+  // always reveals "degree" alongside "degree_type" for such credentials
+  // (they represent the same field), so without this they'd render as two
+  // separate rows — "Degree title" and "Degree type" — showing the exact
+  // same value.
+  if (fields.degree !== undefined) {
+    if (fields.degree_type === undefined) fields.degree_type = fields.degree
+    delete fields.degree
+  }
+
   return {
     fields,
     issuerDID: payload.iss || '',
@@ -101,46 +128,75 @@ function parsePresentation(presentation: string): ParsedPresentation {
 }
 
 /**
- * Formats keys to standard Cambodian / human-readable labels.
+ * Formats keys to Khmer-primary, human-readable labels — reuses the same
+ * i18n keys the wallet/share screens already use for these exact fields,
+ * so the label a holder sees when sharing matches what a verifier sees here.
  */
-function getFieldLabel(key: string): string {
+function getFieldLabel(key: string, t: (k: string) => string): string {
   switch (key) {
     case 'name':
-      return 'Full name'
+      return t('wallet.student_name').replace(/[:៖]\s*$/, '')
     case 'degree':
-      return 'Degree'
+      return t('wallet.degree_title')
     case 'institution':
-      return 'Institution'
+      return t('wallet.institution_name')
     case 'year':
-      return 'Year'
+      return t('wallet.field_year')
     case 'gpa':
-      return 'GPA'
+      return t('wallet.field_gpa')
     case 'national_id':
-      return 'National ID'
+      return t('wallet.field_national_id')
     case 'notes':
-      return 'Notes'
+      return t('wallet.field_notes')
     case 'iss':
-      return 'Issued by'
+      return t('wallet.detail_issued_by')
     case 'iat':
-      return 'Issue date'
+      return t('wallet.issue_date_label')
     case 'email':
-      return 'Email address'
+      return t('wallet.student_email').replace(/[:៖]\s*$/, '')
     case 'student_id':
-      return 'Student ID'
+      return t('wallet.student_id').replace(/[:៖]\s*$/, '')
     case 'degree_type':
-      return 'Degree type'
+      return t('wallet.degree_type').replace(/[:៖]\s*$/, '')
     case 'major':
-      return 'Major'
+      return t('wallet.major').replace(/[:៖]\s*$/, '')
     case 'graduation_date':
-      return 'Graduation date'
+      return t('wallet.graduation_date').replace(/[:៖]\s*$/, '')
     case 'certificate_id':
-      return 'Certificate ID'
+      return t('wallet.certificate_id').replace(/[:៖]\s*$/, '')
     case 'photo':
     case 'student_photo':
-      return 'Certificate photo / scan'
+      return t('wallet.field_photo')
     default:
       return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
   }
+}
+
+/**
+ * The always-English mono caption under each Khmer field label — same
+ * "Khmer primary + English technical caption" pattern used in
+ * CredentialDetail.tsx's renderField. Plain literal strings, not t() — this
+ * caption is deliberately not translated in either language mode.
+ */
+function getFieldSublabel(key: string): string {
+  const map: Record<string, string> = {
+    name: 'Full name',
+    degree: 'Degree',
+    institution: 'Institution',
+    year: 'Year',
+    gpa: 'GPA',
+    national_id: 'National ID',
+    notes: 'Notes',
+    email: 'Email',
+    student_id: 'Student ID',
+    degree_type: 'Degree',
+    major: 'Major',
+    graduation_date: 'Graduation date',
+    certificate_id: 'Certificate ID',
+    photo: 'Certificate photo / scan',
+    student_photo: 'Certificate photo / scan',
+  }
+  return map[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
 }
 
 /**
@@ -149,6 +205,7 @@ function getFieldLabel(key: string): string {
  * Scans row average luminance (perceptual) — robust against JPEG compression artifacts.
  */
 function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFullscreen: () => void }) {
+  const { t } = useLanguage()
   const imgRef = useRef<HTMLImageElement>(null)
   const [clipHeight, setClipHeight] = useState<number | undefined>(undefined)
 
@@ -245,7 +302,7 @@ function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFul
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
-          View Full Screen
+          {t('wallet.view_full_screen')}
         </button>
       </div>
     </>
@@ -253,15 +310,16 @@ function CertificateImageField({ imgSrc, onFullscreen }: { imgSrc: string; onFul
 }
 
 export default function VerifyCredential() {
+  const { t, language, setLanguage } = useLanguage()
   const { token } = useParams<{ token: string }>()
   const isTokenInvalid = !token || token.length < 10
 
   const [status, setStatus] = useState<'loading' | 'success' | 'failed' | 'idle'>('idle')
   const [checks, setChecks] = useState<VerificationCheck[]>([
-    { id: '1', label: 'Loading credential...', status: 'waiting' },
-    { id: '2', label: 'Checking link validity...', status: 'waiting' },
-    { id: '3', label: 'Verifying issuer signature...', status: 'waiting' },
-    { id: '4', label: 'Checking issuer trust registry...', status: 'waiting' },
+    { id: '1', label: t('verify.check_1'), status: 'waiting' },
+    { id: '2', label: t('verify.check_2'), status: 'waiting' },
+    { id: '3', label: t('verify.check_3'), status: 'waiting' },
+    { id: '4', label: t('verify.check_4'), status: 'waiting' },
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
@@ -287,7 +345,7 @@ export default function VerifyCredential() {
       
       if (!limit.allowed) {
         setChecks([
-          { id: 'rate-limit', label: 'Security Check', status: 'failed', errorMessage: 'Verification service temporarily unavailable due to too many requests. Please try again later.' }
+          { id: 'rate-limit', label: t('verify.check_rate_limit'), status: 'failed', errorMessage: t('verify.rate_limit_error') }
         ])
         setStatus('failed')
         return
@@ -295,10 +353,10 @@ export default function VerifyCredential() {
 
       // Initialize checks list
       setChecks([
-        { id: '1', label: 'Loading credential...', status: 'running' },
-        { id: '2', label: 'Checking link validity...', status: 'waiting' },
-        { id: '3', label: 'Verifying issuer signature...', status: 'waiting' },
-        { id: '4', label: 'Checking issuer trust registry...', status: 'waiting' },
+        { id: '1', label: t('verify.check_1'), status: 'running' },
+        { id: '2', label: t('verify.check_2'), status: 'waiting' },
+        { id: '3', label: t('verify.check_3'), status: 'waiting' },
+        { id: '4', label: t('verify.check_4'), status: 'waiting' },
       ])
       setStatus('loading')
 
@@ -456,6 +514,15 @@ export default function VerifyCredential() {
         setParsedPresentation(parsed)
 
         if (active) setStatus('success')
+
+        // Best-effort verification count — fire-and-forget, never blocks
+        // rendering the result. The RPC itself re-validates expiry/revocation
+        // server-side, so this can't inflate the count past what's genuine.
+        if (token) {
+          supabase.rpc('record_verification', { p_share_id: token }).then(({ error }) => {
+            if (error) console.error('[verify] record_verification failed:', error)
+          })
+        }
       } catch (err) {
         console.error(err)
         if (active) {
@@ -546,8 +613,15 @@ export default function VerifyCredential() {
   // Field display ordering reference
   const FIELD_ORDER = ['name', 'degree', 'institution', 'year', 'gpa', 'national_id', 'notes', 'email', 'student_id', 'degree_type', 'major', 'graduation_date', 'certificate_id', 'photo']
 
-  // Filter out raw JWT claims (iss, iat, exp) — shown separately or not at all
-  const SKIP_FIELDS = ['iss', 'iat', 'exp']
+  // Filter out raw JWT claims (iss, iat, exp) — shown separately or not at
+  // all. "degree" is here too: parsePresentation() already merges it into
+  // "degree_type" and deletes the key, so it never actually appears in
+  // parsedPresentation.fields — without also skipping it here, a legacy
+  // credential's share.disclosed_fields (which still lists "degree", since
+  // that's the real on-token name ShareCredential.tsx reveals) would look
+  // like a field that got hidden, even though degree info was shown fine
+  // under "degree_type".
+  const SKIP_FIELDS = ['iss', 'iat', 'exp', 'degree']
   const sortedFields = Object.entries(parsedPresentation?.fields || {})
     .filter(([key]) => !SKIP_FIELDS.includes(key))
     .sort((a, b) => {
@@ -606,7 +680,7 @@ export default function VerifyCredential() {
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Close
+            {t('verify.close')}
           </button>
           <img
             src={fullscreenImage}
@@ -653,20 +727,47 @@ export default function VerifyCredential() {
       {/* Top bar */}
       <header className="border-b border-stone-100 bg-white no-print">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xl font-semibold text-indigo-600">Actik</span>
-            <span className="text-[10px] text-stone-500 -mt-0.5 font-medium">
-              Digital certificates for Cambodia
-            </span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold text-indigo-600">Actik</span>
+              <span className="font-khmer text-[10px] text-stone-500 -mt-0.5 font-medium">
+                {t('verify.tagline')}
+              </span>
+            </div>
           </div>
-          <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-            Verification result
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline font-khmer text-xs font-semibold text-stone-400 uppercase tracking-wider">
+              {t('verify.result_label')}
+            </span>
+            <div className="inline-flex border border-stone-200 rounded-[6px] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setLanguage('km')}
+                aria-pressed={language === 'km'}
+                className={`font-khmer px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
+                  language === 'km' ? 'bg-indigo-600 text-white' : 'bg-white text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                ខ្មែរ
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                aria-pressed={language === 'en'}
+                className={`px-2.5 py-1 text-[11px] font-semibold border-l border-stone-200 transition-colors cursor-pointer ${
+                  language === 'en' ? 'bg-indigo-600 text-white' : 'bg-white text-stone-500 hover:bg-stone-50'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
       <main className="flex-1 w-full max-w-lg mx-auto px-4 py-8">
-        <div className="bg-transparent md:bg-white rounded-xl md:border md:border-stone-200 md:shadow-sm p-4 md:p-8 print-card">
+        <div className="bg-transparent md:bg-white rounded-[14px] md:border md:border-stone-200 md:shadow-sm p-5 md:p-[26px] print-card">
           {/* 1. Invalid Token State */}
           {isTokenInvalid && (
             <div className="text-center py-6">
@@ -679,11 +780,11 @@ export default function VerifyCredential() {
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-stone-900 mb-2">Invalid verification link</h2>
+              <h2 className="font-khmer text-xl font-semibold text-stone-900 mb-2">{t('verify.invalid_link_title')}</h2>
               <p className="text-sm text-stone-600 mb-1">
-                This does not appear to be a valid Actik verification link
+                {t('verify.invalid_link_desc')}
               </p>
-              <p className="text-xs text-stone-400 font-medium">Check that you have the full URL</p>
+              <p className="text-xs text-stone-400 font-medium">{t('verify.invalid_link_hint')}</p>
             </div>
           )}
 
@@ -691,41 +792,41 @@ export default function VerifyCredential() {
           {!isTokenInvalid && status === 'loading' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-stone-900">Verifying credential...</h2>
-                <p className="text-sm text-stone-500 mt-1 font-medium">Running security checks...</p>
+                <h2 className="font-khmer text-[15.5px] font-bold text-stone-900">{t('verify.loading_title')}</h2>
+                <p className="font-mono text-xs text-stone-400 mt-1 font-medium">Running four independent security checks</p>
               </div>
               <div className="space-y-4 pt-4 border-t border-stone-100">
                 {checks.map((check) => (
                   <div key={check.id} className="flex flex-col">
                     <div className="flex items-center gap-3">
                       {check.status === 'waiting' && (
-                        <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center shrink-0">
+                        <div className="w-[18px] h-[18px] rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center shrink-0">
                           <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />
                         </div>
                       )}
                       {check.status === 'running' && (
-                        <div className="w-5 h-5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin shrink-0" />
+                        <div className="w-[18px] h-[18px] rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin shrink-0" />
                       )}
                       {check.status === 'passed' && (
-                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <div className="w-[18px] h-[18px] rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
                       )}
                       {check.status === 'failed' && (
-                        <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <div className="w-[18px] h-[18px] rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </div>
                       )}
                       <span
-                        className={`text-sm font-medium ${
+                        className={`font-khmer text-sm font-medium ${
                           check.status === 'running'
                             ? 'text-indigo-600'
                             : check.status === 'passed'
-                            ? 'text-emerald-700'
+                            ? 'text-emerald-800'
                             : check.status === 'failed'
                             ? 'text-rose-600 font-semibold'
                             : 'text-stone-400'
@@ -734,14 +835,23 @@ export default function VerifyCredential() {
                         {check.label}
                       </span>
                     </div>
+                    {/* Always-English mono technical caption — same "Khmer
+                        primary, English caption" convention used across the
+                        rest of the app for structured/technical detail. */}
+                    <span className="pl-[30px] font-mono text-[10.5px] text-stone-400 mt-0.5">
+                      {check.detail || CHECK_SUBLABELS[check.id]}
+                    </span>
                     {check.status === 'failed' && check.errorMessage && (
-                      <p className="pl-8 pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
+                      <p className="pl-[30px] pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
                         {check.errorMessage}
                       </p>
                     )}
                   </div>
                 ))}
               </div>
+              <p className="text-center font-mono text-[10.5px] text-stone-400 pt-2">
+                {t('verify.no_account_needed')}
+              </p>
             </div>
           )}
 
@@ -750,22 +860,45 @@ export default function VerifyCredential() {
             <div className="space-y-6">
               {/* Header Section */}
               <div className="text-center py-4 flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-3 text-emerald-600 animate-scale-in">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-3 text-emerald-600 animate-scale-in">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-emerald-700">Credential verified</h2>
+                <h2 className="font-khmer text-xl font-bold text-emerald-700">{t('verify.success_title')}</h2>
                 <p className="text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
-                  This credential is authentic and was issued by an accredited institution
+                  {t('verify.success_desc')}
                 </p>
               </div>
 
+              {/* Recap row — the three checks that just ran, restated as a
+                  quick-scan summary rather than making the verifier re-read
+                  the in-progress checklist. */}
+              <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center">
+                {[
+                  { label: t('verify.check_3'), sub: 'Signature · ES256' },
+                  { label: t('verify.check_4'), sub: 'MoEYS registry' },
+                  { label: t('verify.check_2'), sub: 'Link not expired' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-[18px] h-[18px] rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="font-khmer text-xs font-bold text-stone-900 leading-tight">{item.label.replace(/[…\s]*$/, '')}</div>
+                      <div className="font-mono text-[10px] text-stone-400 leading-tight">{item.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Issuer Trust Badge */}
-              <div className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="border border-indigo-200 rounded-[11px] p-4 bg-indigo-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
-                    Issued by:
+                  <span className="font-khmer text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                    {t('verify.issued_by_label')}
                   </span>
                   <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
                   <a
@@ -785,8 +918,8 @@ export default function VerifyCredential() {
                     </svg>
                   </a>
                 </div>
-                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1.5 w-full sm:w-auto border-t sm:border-t-0 border-indigo-100/30 pt-3 sm:pt-0">
-                  <div className="flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-200">
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1.5 w-full sm:w-auto border-t sm:border-t-0 border-indigo-200/40 pt-3 sm:pt-0">
+                  <div className="flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
@@ -794,7 +927,7 @@ export default function VerifyCredential() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    Accredited
+                    {t('verify.accredited_badge')}
                   </div>
                   <div className="px-1.5 py-0.5 bg-stone-100 border border-stone-200 rounded text-[9px] font-bold text-stone-400 uppercase tracking-wider select-none">
                     MoEYS
@@ -804,7 +937,12 @@ export default function VerifyCredential() {
 
               {/* Disclosed Fields Section */}
               <div className="space-y-3">
-                <h3 className="text-lg font-medium text-stone-900">Credential details</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-khmer text-lg font-medium text-stone-900">{t('verify.credential_details_heading')}</h3>
+                  <span className="font-mono text-[10.5px] text-stone-400">
+                    {sortedFields.length} of {sortedFields.length + hiddenFields.length} fields disclosed
+                  </span>
+                </div>
                 <hr className="border-stone-100" />
                 <div className="divide-y divide-stone-100">
                   {sortedFields.map(([key, value]) => {
@@ -813,15 +951,15 @@ export default function VerifyCredential() {
                       const isPdf = valStr.startsWith('data:application/pdf') || valStr.endsWith('.pdf')
                       return (
                         <div key={key} style={{ marginBottom: '1rem', marginTop: '1rem' }}>
-                          <div style={{ 
-                            fontSize: '0.75rem', 
-                            color: 'var(--muted)', 
+                          <div className="font-khmer" style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--muted)',
                             marginBottom: '0.4rem',
                             fontWeight: 600,
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
-                            {getFieldLabel(key)}
+                            {getFieldLabel(key, t)}
                           </div>
                           {isPdf ? (
                             <div style={{ width: '100%', borderRadius: 8, border: '1px solid #e7e5e4', overflow: 'hidden', background: '#f5f5f4' }}>
@@ -833,7 +971,7 @@ export default function VerifyCredential() {
                                 style={{ display: 'block' }}
                               >
                                 <div style={{ padding: '1.5rem', textAlign: 'center', color: '#78716c', fontSize: '0.875rem' }}>
-                                  PDF preview not supported in this browser.
+                                  {t('verify.pdf_not_supported')}
                                 </div>
                               </object>
                             </div>
@@ -865,8 +1003,11 @@ export default function VerifyCredential() {
                       } catch {}
                       return (
                         <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                          <span className="text-stone-500 font-medium">{getFieldLabel(key)}</span>
-                          <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
+                          <span className="font-khmer text-stone-500 font-medium">
+                            {getFieldLabel(key, t)}
+                            <span className="block font-sans font-normal text-[10px] text-stone-400 mt-0.5">{getFieldSublabel(key)}</span>
+                          </span>
+                          <span className="font-mono text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
                             {formatted}
                           </span>
                         </div>
@@ -874,17 +1015,23 @@ export default function VerifyCredential() {
                     }
                     return (
                       <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                        <span className="text-stone-500 font-medium">{getFieldLabel(key)}</span>
+                        <span className="font-khmer text-stone-500 font-medium">
+                          {getFieldLabel(key, t)}
+                          <span className="block font-sans font-normal text-[10px] text-stone-400 mt-0.5">{getFieldSublabel(key)}</span>
+                        </span>
                         <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
-                          {String(value)}
+                          {key === 'degree' || key === 'degree_type' ? formatDegreeTitle(String(value)) : String(value)}
                         </span>
                       </div>
                     )
                   })}
                   {parsedPresentation?.issuedAt && (
                     <div className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
-                      <span className="text-stone-500 font-medium">Issue date</span>
-                      <span className="text-stone-900 font-semibold sm:text-right">
+                      <span className="font-khmer text-stone-500 font-medium">
+                        {t('wallet.issue_date_label')}
+                        <span className="block font-sans font-normal text-[10px] text-stone-400 mt-0.5">Issue date</span>
+                      </span>
+                      <span className="font-mono text-stone-900 font-semibold sm:text-right">
                         {formatTimestamp(parsedPresentation.issuedAt)}
                       </span>
                     </div>
@@ -892,18 +1039,22 @@ export default function VerifyCredential() {
                 </div>
               </div>
 
-              {/* Hidden Fields Notice */}
+              {/* Hidden Fields Notice — leads with the count (per spec's
+                  "N hidden by the credential holder"), field names + the
+                  reassurance clause follow as a muted mono caption. */}
               {hiddenFields.length > 0 && (
-                <div className="px-3 py-2 bg-stone-50 rounded-lg border border-stone-200/60 text-xs text-stone-500 flex items-start gap-2">
+                <div className="px-3.5 py-3 bg-stone-50 rounded-lg border border-stone-200/60 flex items-start gap-2.5">
                   <svg className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>
-                    Some fields are hidden by the holder (selective disclosure).{' '}
-                    <span className="font-semibold text-stone-400">
-                      Hidden: {hiddenFields.map((f) => getFieldLabel(f)).join(', ')}
-                    </span>
-                  </span>
+                  <div>
+                    <div className="font-khmer text-xs font-semibold text-stone-600">
+                      {t('verify.hidden_count_label', { count: hiddenFields.length })}
+                    </div>
+                    <div className="font-mono text-[10.5px] text-stone-400 mt-1">
+                      Hidden: {hiddenFields.map((f) => getFieldSublabel(f)).join(', ')} · selective disclosure does not weaken the signature
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -911,7 +1062,7 @@ export default function VerifyCredential() {
               {share?.expires_at && (
                 <div className="border-t border-stone-100 pt-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span className="font-medium">Link valid until:</span>
+                    <span className="font-khmer font-medium">{t('verify.link_valid_until')}</span>
                     <span className="font-semibold text-stone-700">
                       {formatExpiryDate(share.expires_at)}
                     </span>
@@ -926,20 +1077,22 @@ export default function VerifyCredential() {
                           d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                         />
                       </svg>
-                      This link expires soon
+                      {t('verify.link_expiring_soon')}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Collapsible Technical Details */}
+              {/* Collapsible Technical Details — labels stay English/mono, same as
+                  the mockup's own choice for this section (ISSUER DID, SHARE
+                  TOKEN, etc. are shown in caps mono regardless of language). */}
               <div className="border-t border-stone-100 pt-4 no-print">
                 <button
                   type="button"
                   onClick={() => setDetailsExpanded(!detailsExpanded)}
                   className="w-full flex items-center justify-between text-xs font-semibold text-stone-400 hover:text-indigo-600 focus:outline-none transition-colors"
                 >
-                  <span>Technical verification details</span>
+                  <span className="font-khmer">{t('verify.technical_details_toggle')}</span>
                   <span>{detailsExpanded ? '▲' : '▼'}</span>
                 </button>
                 {detailsExpanded && (
@@ -981,49 +1134,54 @@ export default function VerifyCredential() {
             <div className="space-y-6">
               {/* Header Section */}
               <div className="text-center py-4 flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mb-3 text-rose-500 animate-scale-in">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-3 text-rose-500 animate-scale-in">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-rose-700">Verification failed</h2>
-                <p className="text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
+                <h2 className="font-khmer text-xl font-bold text-rose-700">{t('verify.failed_title')}</h2>
+                <p className="font-khmer text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
                   {getFailureSubtext()}
                 </p>
               </div>
 
-              {/* Sequential check results list */}
+              {/* Sequential check results list — stops at the failed step;
+                  checks that never ran (still 'waiting') are omitted rather
+                  than shown grayed out, since nothing meaningful happened to
+                  them. */}
               <div className="mt-8 border border-rose-100 rounded-xl p-4 bg-rose-50/10 space-y-4">
-                <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                  Verification Steps
+                <h3 className="font-khmer text-xs font-bold text-stone-400 uppercase tracking-widest">
+                  {t('verify.verification_steps_heading')}
                 </h3>
                 <div className="space-y-3.5">
-                  {checks.map((check) => (
+                  {checks
+                    .slice(0, checks.findIndex((c) => c.status === 'failed') + 1 || checks.length)
+                    .map((check) => (
                     <div key={check.id} className="flex flex-col">
                       <div className="flex items-center gap-3">
                         {check.status === 'passed' && (
-                          <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
                         )}
                         {check.status === 'failed' && (
-                          <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </div>
                         )}
                         {(check.status === 'waiting' || check.status === 'running') && (
-                          <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center shrink-0">
+                          <div className="w-[18px] h-[18px] rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center shrink-0">
                             <div className="w-1.5 h-1.5 rounded-full bg-stone-300" />
                           </div>
                         )}
                         <span
-                          className={`text-sm font-medium ${
+                          className={`font-khmer text-sm font-medium ${
                             check.status === 'passed'
-                              ? 'text-emerald-700'
+                              ? 'text-emerald-800'
                               : check.status === 'failed'
                               ? 'text-rose-600 font-semibold'
                               : 'text-stone-400'
@@ -1033,8 +1191,8 @@ export default function VerifyCredential() {
                         </span>
                       </div>
                       {check.status === 'failed' && check.errorMessage && (
-                        <p className="pl-8 pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
-                          Reason: {check.errorMessage}
+                        <p className="pl-[30px] pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
+                          {check.errorMessage}
                         </p>
                       )}
                     </div>
@@ -1045,10 +1203,19 @@ export default function VerifyCredential() {
               {/* Guidance / What to do */}
               {failedCheck && (
                 <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 text-stone-600 text-xs leading-relaxed">
-                  <span className="font-bold text-stone-700 block mb-1">What to do:</span>
+                  <span className="font-khmer font-bold text-stone-700 block mb-1">{t('verify.what_to_do_label')}</span>
                   <p className="font-medium">{getGuidanceText()}</p>
                 </div>
               )}
+
+              {/* Single action — the public trust-registry search. No
+                  "report issue" button: there's no backend to receive one. */}
+              <a
+                href="/public"
+                className="block w-full text-center bg-white border border-stone-300 hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-khmer font-semibold h-11 rounded-lg text-sm transition-colors flex items-center justify-center"
+              >
+                {t('verify.search_registry_btn')}
+              </a>
             </div>
           )}
         </div>
@@ -1059,8 +1226,8 @@ export default function VerifyCredential() {
       {!isTokenInvalid && status !== 'loading' && (
         <footer className="mt-12 text-center space-y-6 pb-12 no-print border-t border-stone-200/60 pt-8">
           <div className="text-left max-w-lg mx-auto">
-            <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest text-center mb-6">
-              How does Actik verification work?
+            <h4 className="font-khmer text-xs font-bold text-stone-400 uppercase tracking-widest text-center mb-6">
+              {t('verify.footer_heading')}
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-stone-600 px-4">
               <div className="space-y-1 text-center">
@@ -1074,9 +1241,9 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Cryptographic signature</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_signature_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  The issuer's digital seal proves authenticity
+                  {t('verify.trust_signature_desc')}
                 </p>
               </div>
               <div className="space-y-1 text-center">
@@ -1090,9 +1257,9 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Trust registry</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_registry_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  MoEYS confirms the institution is legitimate
+                  {t('verify.trust_registry_desc')}
                 </p>
               </div>
               <div className="space-y-1 text-center">
@@ -1112,22 +1279,22 @@ export default function VerifyCredential() {
                     />
                   </svg>
                 </div>
-                <span className="font-bold text-stone-800 block">Selective disclosure</span>
+                <span className="font-khmer font-bold text-stone-800 block">{t('verify.trust_disclosure_title')}</span>
                 <p className="text-stone-500 leading-normal">
-                  Holder controls what you see
+                  {t('verify.trust_disclosure_desc')}
                 </p>
               </div>
             </div>
           </div>
           <div className="space-y-1 text-xs text-stone-400">
-            <p className="font-medium">Powered by Actik — Digital certificates for Cambodia</p>
+            <p className="font-medium">{t('verify.powered_by')}</p>
             <a
               href="https://actik.app"
               target="_blank"
               rel="noopener noreferrer"
               className="text-indigo-500 hover:underline font-semibold"
             >
-              Learn more at actik.app
+              {t('verify.learn_more')}
             </a>
           </div>
         </footer>

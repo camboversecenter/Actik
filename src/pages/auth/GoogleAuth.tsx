@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { checkRateLimit, getClientIp } from '../../lib/rateLimit'
+import { GraduationCap, Building2 } from 'lucide-react'
 
 // Message types posted from the /auth/callback popup back to this window
 const AUTH_COMPLETE = 'actik-auth-complete'
@@ -179,7 +180,7 @@ export default function GoogleAuth() {
 
         {/* Tagline */}
         <p className="text-xs text-gray-500 uppercase tracking-wider mb-6">
-          Digital certificates for Cambodia
+          Proof of ownership
         </p>
 
         {/* Divider */}
@@ -233,7 +234,7 @@ export default function GoogleAuth() {
 
         {/* Error message */}
         {errorMsg && (
-          <p className="text-sm text-red-600 mt-4 font-medium">
+          <p className="text-sm text-rose-600 mt-4 font-medium">
             {errorMsg}
           </p>
         )}
@@ -472,8 +473,8 @@ export function GoogleCallback() {
             Completing sign in...
           </p>
           {debugError && (
-            <div className="mt-6 p-4 w-full bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-mono text-left whitespace-pre-wrap shadow-sm">
-              <strong className="block text-red-800 mb-1">Callback Debug Info:</strong>
+            <div className="mt-6 p-4 w-full bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-mono text-left whitespace-pre-wrap shadow-sm">
+              <strong className="block text-rose-800 mb-1">Callback Debug Info:</strong>
               {debugError}
             </div>
           )}
@@ -509,8 +510,9 @@ export function GoogleCallback() {
                     selectedRole === 'student' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-gray-300 bg-white active:bg-gray-100'
                   }`}
                 >
-                  {/* Graduation Cap Icon */}
-                  <div className="text-3xl md:text-4xl">🎓</div>
+                  <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <GraduationCap size={22} className="text-indigo-600" />
+                  </div>
                   <div>
                     <h4 className="text-sm md:text-base font-semibold text-gray-900 mb-0.5">Student</h4>
                     <p className="text-xs text-gray-500 leading-normal">
@@ -526,8 +528,9 @@ export function GoogleCallback() {
                     selectedRole === 'issuer' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-gray-300 bg-white active:bg-gray-100'
                   }`}
                 >
-                  {/* Institution Building Icon */}
-                  <div className="text-3xl md:text-4xl">🏛️</div>
+                  <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Building2 size={22} className="text-indigo-600" />
+                  </div>
                   <div>
                     <h4 className="text-sm md:text-base font-semibold text-gray-900 mb-0.5">Institution</h4>
                     <p className="text-xs text-gray-500 leading-normal">
@@ -540,7 +543,7 @@ export function GoogleCallback() {
 
               {/* Error Message */}
               {saveError && (
-                <p className="text-sm text-red-600 mb-4 font-medium">
+                <p className="text-sm text-rose-600 mb-4 font-medium">
                   {saveError}
                 </p>
               )}

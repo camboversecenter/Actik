@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { CheckCircle2, XCircle, ClipboardList, FileEdit } from 'lucide-react'
 
 export interface AuditLog {
   id: string
@@ -124,15 +125,15 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
   // Formatting helpers
   const getActionStyles = (action: string) => {
     if (action.includes('APPROVED') || action.includes('RESTORED')) {
-      return { icon: '✅', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+      return { icon: CheckCircle2, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     }
     if (action.includes('REVOKED') || action.includes('REJECTED')) {
-      return { icon: '❌', color: 'text-rose-700 bg-rose-50 border-rose-200' }
+      return { icon: XCircle, color: 'text-rose-700 bg-rose-50 border-rose-200' }
     }
     if (action.includes('REGISTERED')) {
-      return { icon: '📋', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
+      return { icon: ClipboardList, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' }
     }
-    return { icon: '📝', color: 'text-stone-700 bg-stone-50 border-stone-200' }
+    return { icon: FileEdit, color: 'text-stone-700 bg-stone-50 border-stone-200' }
   }
 
   const filteredLogs = logs.filter(log => {
@@ -166,7 +167,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
         <select 
           value={filterAction}
           onChange={(e) => setFilterAction(e.target.value)}
-          className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="text-sm border border-stone-200 rounded-[9px] px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option>All Actions</option>
           <option>Approved</option>
@@ -177,7 +178,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
         <select 
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
-          className="text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="text-sm border border-stone-200 rounded-[9px] px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option>All Time</option>
           <option>Last 7 days</option>
@@ -189,7 +190,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
           placeholder="Search admin, institution..." 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="sm:col-span-2 text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="sm:col-span-2 text-sm border border-stone-200 rounded-[9px] px-3 py-2 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
       </div>
 
@@ -198,7 +199,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
         {loading ? (
           <div className="animate-pulse space-y-4">
             {[1,2,3].map(i => (
-              <div key={i} className="h-32 bg-stone-200 rounded-lg w-full"></div>
+              <div key={i} className="h-32 bg-stone-200 rounded-xl w-full"></div>
             ))}
           </div>
         ) : filteredLogs.length === 0 ? (
@@ -221,9 +222,9 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
                   </span>
                 </div>
                 
-                <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border mb-4 ${style.color}`}>
-                    <span>{style.icon}</span> {log.action}
+                <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border mb-4 ${style.color}`}>
+                    <style.icon size={13} /> {log.action}
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm mb-4">
@@ -302,7 +303,7 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
         
         {filteredLogs.length > 0 && (
           <div className="text-center pt-4">
-            <button className="px-4 py-2 bg-white border border-stone-200 text-sm font-semibold text-stone-600 rounded-lg hover:bg-stone-50 shadow-sm transition-colors">
+            <button className="px-4 py-2 bg-white border border-stone-200 text-sm font-semibold text-stone-600 rounded-[9px] hover:bg-stone-50 shadow-sm transition-colors">
               Load More
             </button>
           </div>
@@ -317,19 +318,19 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
         <div className="flex gap-2">
           <button 
             onClick={handleExport}
-            className="px-3 py-1.5 border border-stone-200 text-stone-700 bg-white hover:bg-stone-50 rounded-md text-xs font-bold shadow-sm transition-colors"
+            className="px-3 py-1.5 border border-stone-200 text-stone-700 bg-white hover:bg-stone-50 rounded-[9px] text-xs font-bold shadow-sm transition-colors"
           >
             Export Log
           </button>
           <button 
             onClick={() => window.print()}
-            className="px-3 py-1.5 border border-stone-200 text-stone-700 bg-white hover:bg-stone-50 rounded-md text-xs font-bold shadow-sm transition-colors"
+            className="px-3 py-1.5 border border-stone-200 text-stone-700 bg-white hover:bg-stone-50 rounded-[9px] text-xs font-bold shadow-sm transition-colors"
           >
             Print
           </button>
           <button 
             onClick={onClose}
-            className="px-4 py-1.5 ml-2 border border-stone-300 text-stone-700 bg-white hover:bg-stone-100 rounded-md text-xs font-bold shadow-sm transition-colors"
+            className="px-4 py-1.5 ml-2 border border-stone-200 text-stone-700 bg-white hover:bg-stone-100 rounded-[9px] text-xs font-bold shadow-sm transition-colors"
           >
             Close
           </button>
