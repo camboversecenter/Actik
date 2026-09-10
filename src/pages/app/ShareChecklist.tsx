@@ -27,7 +27,6 @@ export default function ShareChecklist({
   const [checkedGraduationDate, setCheckedGraduationDate] = useState(false)
   const [checkedCertificateId, setCheckedCertificateId] = useState(false)
   const [checkedIssuer, setCheckedIssuer] = useState(false)
-  const [checkedAccredited, setCheckedAccredited] = useState(false)
 
   // Check if a field has actual data
   const has = (value: any): boolean => value !== undefined && value !== null && value !== '' && value !== '—'
@@ -35,7 +34,6 @@ export default function ShareChecklist({
   // Check if all boxes are checked
   const allChecked =
     checkedIssuer &&
-    checkedAccredited &&
     (has(claims.name) ? checkedName : true) &&
     (has(claims.email || claims.sub) ? checkedEmail : true) &&
     (has(claims.student_id || claims.studentId) ? checkedStudentId : true) &&
@@ -224,17 +222,6 @@ export default function ShareChecklist({
             </span>
           </label>
 
-          <label className="flex items-start gap-3 cursor-pointer select-none group">
-            <input
-              type="checkbox"
-              checked={checkedAccredited}
-              onChange={(e) => setCheckedAccredited(e.target.checked)}
-              className="mt-1 w-4 h-4 text-indigo-600 border-stone-300 rounded focus:ring-indigo-500 cursor-pointer"
-            />
-            <span className="text-sm text-stone-700 leading-tight">
-              Issuer is accredited by MoEYS: <strong className="text-emerald-600">YES</strong>
-            </span>
-          </label>
         </div>
       </div>
 

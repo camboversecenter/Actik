@@ -13,7 +13,6 @@ import VerifyCredential from './pages/verify/VerifyCredential'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Notifications from './pages/app/Notifications'
 import InstitutionSettings from './pages/app/InstitutionSettings'
-import VerifyRegistry from './pages/public/VerifyRegistry'
 import Landing from './pages/public/Landing'
 import Activity from './pages/app/Activity'
 import WalletCategory from './pages/app/WalletCategory'
@@ -23,7 +22,6 @@ import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
 import { VaultProvider } from './vault/zk-vault'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
-import { initializeRateLimiting } from './lib/rateLimit'
 
 // ==========================================
 // 6. Placeholder Page Components
@@ -353,7 +351,6 @@ export function RootRedirect() {
 // ==========================================
 export default function App() {
   useEffect(() => {
-    initializeRateLimiting()
   }, [])
 
   return (
@@ -431,9 +428,6 @@ export default function App() {
 
         {/* Public verification route */}
         <Route path="/verify/:token" element={<VerifyCredential />} />
-        
-        {/* Public registry verification portal */}
-        <Route path="/public" element={<VerifyRegistry />} />
 
         {/* Global fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />

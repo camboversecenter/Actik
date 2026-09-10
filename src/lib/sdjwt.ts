@@ -130,49 +130,151 @@ export function present(fullSdJwt: string, revealNames: string[]): string {
   return [jwt, ...keep].join('~') + '~'
 }
 
-export interface VerifyResult {
-  valid: boolean
-  issuer?: string
-  claims: Claims
-  error?: string
+/**
+ * Why a presentation was refused. These strings are the contract: localise the
+ * message shown to a person, never the reason itself, and never renumber or
+ * rename one once it has shipped — a caller (or a log, or another
+ * implementation) is matching on it.
+ */
+export type RejectionReason =
+  | 'MALFORMED_PRESENTATION'
+  | 'ISSUER_KEY_MALFORMED'
+  | 'SIGNATURE_INVALID'
+  | 'DISCLOSURE_NOT_SIGNED'
+  | 'CREDENTIAL_EXPIRED'
+  | 'CREDENTIAL_NOT_YET_VALID'
+
+export class VerificationRejected extends Error {
+  readonly reason: RejectionReason
+  constructor(reason: RejectionReason, detail?: string) {
+    super(detail ?? reason)
+    this.name = 'VerificationRejected'
+    this.reason = reason
+  }
+}
+
+/**
+ * The four fields a reader must compare against the document in their hand.
+ * A field is null when the holder chose not to disclose it.
+ *
+ * A valid signature says the issuer signed *a* credential carrying these
+ * values. It says nothing about the paper, the PDF or the photo the code was
+ * printed on: a genuine code lifted from a real certificate and placed on a
+ * forged one verifies perfectly. The comparison is the only thing that closes
+ * that gap, which is why it is a field on the result and not a footnote.
+ */
+export interface PrintedDocumentFields {
+  subjectName: string | null
+  documentId: string | null
+  issuingOrganisation: string | null
+  issueDate: string | null
+}
+
+function asText(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null
+  return String(value)
+}
+
+/**
+ * What verification produces when it does not throw.
+ *
+ * There is deliberately no `valid`, `isValid` or equivalent accessor. A caller
+ * that reaches this object already knows the signature verified against the
+ * key it supplied; what it does not yet know — and what this type forces it to
+ * handle — is whether the signed fields describe the document in front of the
+ * reader.
+ */
+export class CredentialAssertion {
+  readonly issuer: string
+  readonly issuedAt: number | null
+  readonly expiresAt: number | null
+  readonly claims: Claims
+  readonly mustMatchPrintedDocument: PrintedDocumentFields
+
+  constructor(issuer: string, payload: Record<string, unknown>, claims: Claims) {
+    this.issuer = issuer
+    this.issuedAt = typeof payload.iat === 'number' ? payload.iat : null
+    this.expiresAt = typeof payload.exp === 'number' ? payload.exp : null
+    this.claims = claims
+    this.mustMatchPrintedDocument = {
+      subjectName: asText(claims.name ?? claims.student_name),
+      documentId: asText(claims.certificate_id ?? claims.student_id),
+      issuingOrganisation: asText(claims.institution ?? claims.institution_name ?? claims.university),
+      issueDate: asText(claims.graduation_date ?? claims.issue_date ?? claims.year),
+    }
+  }
+}
+
+function reasonFor(e: unknown): RejectionReason {
+  const code = (e as { code?: string })?.code
+  switch (code) {
+    case 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED':
+      return 'SIGNATURE_INVALID'
+    case 'ERR_JWT_EXPIRED':
+      return 'CREDENTIAL_EXPIRED'
+    case 'ERR_JWT_CLAIM_VALIDATION_FAILED':
+      return (e as { claim?: string }).claim === 'nbf'
+        ? 'CREDENTIAL_NOT_YET_VALID'
+        : 'MALFORMED_PRESENTATION'
+    default:
+      return 'MALFORMED_PRESENTATION'
+  }
 }
 
 /**
  * Verify a presentation against the issuer's public key:
  *  1. the issuer signature is valid (and `exp` not passed),
  *  2. every revealed disclosure hashes to a digest the issuer signed.
+ *
+ * Returns a `CredentialAssertion`, or throws `VerificationRejected` carrying a
+ * stable `reason`. It never returns a verdict: refusal is an exception and
+ * acceptance is a set of fields somebody still has to read.
  */
-export async function verify(presentation: string, issuerPublicJwk: JWK): Promise<VerifyResult> {
+export async function verify(
+  presentation: string,
+  issuerPublicJwk: JWK
+): Promise<CredentialAssertion> {
+  let key: Awaited<ReturnType<typeof importJWK>>
   try {
-    const { jwt, disclosures } = parseSdJwt(presentation)
-    const jwk = issuerPublicJwk.alg 
-      ? issuerPublicJwk 
-      : { ...issuerPublicJwk, alg: 'ES256' }
-    const key = await importJWK(jwk, 'ES256')
-
-    // jwtVerify checks the signature AND throws if `exp` is in the past.
-    const { payload } = await jwtVerify(jwt, key)
-    const signedDigests = (payload._sd as string[] | undefined) ?? []
-
-    const claims: Claims = {}
-    for (const d of disclosures) {
-      const digest = await sha256b64u(d)
-      // Never log `d` or the claims it decodes to: a disclosure is the
-      // credential's payload, and console output outlives the tab.
-      if (!signedDigests.includes(digest)) {
-        return { valid: false, claims: {}, 
-          error: 'A disclosure does not match any signed hash.' }
-      }
-      const [, name, value] = fromB64uJSON<[string, string, unknown]>(d)
-      claims[name] = value
-    }
-
-    return { valid: true, issuer: payload.iss, claims }
-  } catch (e) {
-    // The message only: a jose error carries the decoded payload on `cause`,
-    // and that is the credential's contents.
-    const message = e instanceof Error ? e.message : String(e)
-    console.error('[sdjwt verify] error:', message)
-    return { valid: false, claims: {}, error: message }
+    const jwk = issuerPublicJwk.alg ? issuerPublicJwk : { ...issuerPublicJwk, alg: 'ES256' }
+    key = await importJWK(jwk, 'ES256')
+  } catch {
+    throw new VerificationRejected('ISSUER_KEY_MALFORMED')
   }
+
+  const { jwt, disclosures } = parseSdJwt(presentation)
+
+  let payload: Record<string, unknown>
+  try {
+    // jwtVerify checks the signature AND throws if `exp` is in the past.
+    // `algorithms` pins ES256: without it a caller could be steered by the
+    // token's own header.
+    ;({ payload } = await jwtVerify(jwt, key, { algorithms: ['ES256'] }) as unknown as {
+      payload: Record<string, unknown>
+    })
+  } catch (e) {
+    // The reason, never the payload: a jose error carries the decoded claims
+    // on `cause`, and those are the credential's contents.
+    throw new VerificationRejected(reasonFor(e))
+  }
+
+  const signedDigests = (payload._sd as string[] | undefined) ?? []
+  const claims: Claims = {}
+  for (const d of disclosures) {
+    const digest = await sha256b64u(d)
+    // Never log `d` or the claims it decodes to.
+    if (!signedDigests.includes(digest)) {
+      throw new VerificationRejected('DISCLOSURE_NOT_SIGNED')
+    }
+    let name: string
+    let value: unknown
+    try {
+      ;[, name, value] = fromB64uJSON<[string, string, unknown]>(d)
+    } catch {
+      throw new VerificationRejected('MALFORMED_PRESENTATION')
+    }
+    claims[name] = value
+  }
+
+  return new CredentialAssertion(String(payload.iss ?? ''), payload, claims)
 }
