@@ -175,10 +175,12 @@ export default function RegisterIssuer() {
       if (!setupOk) throw new Error('Failed to secure your signing key. Please try again.')
 
       const ciphertext = await encryptPayload(privateJwk)
-      let vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('owner', currentUser.id)
-      if (vaultRes.error && (vaultRes.error.message.includes('owner') || vaultRes.error.code === 'PGRST204' || vaultRes.error.code === '42703')) {
-        vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('user_id', currentUser.id)
-      }
+      // Into issuer_secrets, not onto the world-readable registry row — see
+      // supabase/migrations/20260910_rls_hardening.sql.
+      const vaultRes = await supabase.from('issuer_secrets').upsert(
+        { owner: currentUser.id, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
+        { onConflict: 'owner' }
+      )
       if (vaultRes.error) throw vaultRes.error
 
       // Step 4: Store private key in sessionStorage for this session too, so

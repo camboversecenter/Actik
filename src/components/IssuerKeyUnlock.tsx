@@ -60,39 +60,42 @@ function isMissingColumnError(error: { message?: string; code?: string } | null)
   return !!(error.message?.includes('owner') || error.code === 'PGRST204' || error.code === '42703')
 }
 
+// The encrypted signing key lives in `issuer_secrets` (owner-only), not on the
+// world-readable `issuers` registry row — see
+// supabase/migrations/20260910_rls_hardening.sql.
 async function fetchCiphertext(userId: string): Promise<EncryptedPayload | null> {
-  let { data, error } = await supabase
-    .from('issuers')
+  const { data, error } = await supabase
+    .from('issuer_secrets')
     .select('signing_key_ciphertext')
     .eq('owner', userId)
     .maybeSingle()
 
-  if (isMissingColumnError(error)) {
-    const fallback = await supabase
-      .from('issuers')
-      .select('signing_key_ciphertext')
-      .eq('user_id', userId)
-      .maybeSingle()
-    data = fallback.data
-    error = fallback.error
-  }
   if (error) throw error
   return (data?.signing_key_ciphertext as EncryptedPayload | undefined) ?? null
 }
 
 async function persistKey(userId: string, publicJwk: JWK, ciphertext: EncryptedPayload) {
+  // The public half stays on the registry row; the private half never does.
   let { error } = await supabase
     .from('issuers')
-    .update({ public_jwk: publicJwk, signing_key_ciphertext: ciphertext })
+    .update({ public_jwk: publicJwk })
     .eq('owner', userId)
 
   if (isMissingColumnError(error)) {
     ;({ error } = await supabase
       .from('issuers')
-      .update({ public_key: JSON.stringify(publicJwk), signing_key_ciphertext: ciphertext })
+      .update({ public_key: JSON.stringify(publicJwk) })
       .eq('user_id', userId))
   }
   if (error) throw error
+
+  const secretRes = await supabase
+    .from('issuer_secrets')
+    .upsert(
+      { owner: userId, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
+      { onConflict: 'owner' }
+    )
+  if (secretRes.error) throw secretRes.error
 }
 
 interface IssuerKeyUnlockProps {

@@ -158,19 +158,28 @@ export default function InstitutionSettings() {
       if (!setupOk) throw new Error('Failed to secure your new signing key. Please try again.')
 
       const ciphertext = await encryptPayload(privateJwk)
+      // The public half goes on the registry row; the encrypted private half
+      // goes to issuer_secrets, which nobody but this issuer can read — see
+      // supabase/migrations/20260910_rls_hardening.sql.
       let res = await supabase
         .from('issuers')
-        .update({ public_jwk: publicJwk, signing_key_ciphertext: ciphertext })
+        .update({ public_jwk: publicJwk })
         .eq('owner', currentUser.id)
 
       if (res.error && (res.error.message.includes('owner') || res.error.message.includes('public_jwk') || res.error.code === '42703')) {
         res = await supabase
           .from('issuers')
-          .update({ public_key: JSON.stringify(publicJwk), signing_key_ciphertext: ciphertext })
+          .update({ public_key: JSON.stringify(publicJwk) })
           .eq('user_id', currentUser.id)
       }
 
       if (res.error) throw res.error
+
+      const secretRes = await supabase.from('issuer_secrets').upsert(
+        { owner: currentUser.id, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
+        { onConflict: 'owner' }
+      )
+      if (secretRes.error) throw secretRes.error
 
       sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
       sessionStorage.setItem('issuer_did', issuer.did)

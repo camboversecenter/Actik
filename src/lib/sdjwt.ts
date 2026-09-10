@@ -157,10 +157,9 @@ export async function verify(presentation: string, issuerPublicJwk: JWK): Promis
     const claims: Claims = {}
     for (const d of disclosures) {
       const digest = await sha256b64u(d)
-      console.log('[sdjwt] disclosure digest:', digest, 
-        'in signedDigests:', signedDigests.includes(digest))
+      // Never log `d` or the claims it decodes to: a disclosure is the
+      // credential's payload, and console output outlives the tab.
       if (!signedDigests.includes(digest)) {
-        console.error('[sdjwt] MISMATCH — disclosure not signed:', d)
         return { valid: false, claims: {}, 
           error: 'A disclosure does not match any signed hash.' }
       }
@@ -170,10 +169,10 @@ export async function verify(presentation: string, issuerPublicJwk: JWK): Promis
 
     return { valid: true, issuer: payload.iss, claims }
   } catch (e) {
-    console.error('[sdjwt verify] error:', e)
-    console.error('[sdjwt verify] error message:', 
-      e instanceof Error ? e.message : String(e))
-    return { valid: false, claims: {}, error: 
-      e instanceof Error ? e.message : String(e) }
+    // The message only: a jose error carries the decoded payload on `cause`,
+    // and that is the credential's contents.
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[sdjwt verify] error:', message)
+    return { valid: false, claims: {}, error: message }
   }
 }

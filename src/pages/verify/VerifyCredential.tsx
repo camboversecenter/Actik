@@ -21,11 +21,26 @@ interface VerificationCheck {
 interface ShareRecord {
   id: string
   credential_id: string
-  holder_id: string
   presentation: string
   disclosed_fields: string[]
   expires_at: string
   created_at: string
+}
+
+/**
+ * What get_share_for_verification() returns. `presentation` comes back only
+ * for a live share: an expired or revoked link yields its status and its
+ * dates, never its contents.
+ */
+interface ShareLookupRow {
+  id: string | null
+  presentation: string | null
+  issuer_did: string | null
+  disclosed_fields: string[] | null
+  credential_id: string | null
+  expires_at: string | null
+  created_at: string | null
+  status: 'ok' | 'expired' | 'revoked' | 'not_found'
 }
 
 interface IssuerRecord {
@@ -323,6 +338,9 @@ export default function VerifyCredential() {
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
+  // Which way check 2 failed — expired and withdrawn read the same to the
+  // crypto and very differently to the person holding the paper.
+  const [linkStatus, setLinkStatus] = useState<'expired' | 'revoked' | null>(null)
   const [issuer, setIssuer] = useState<IssuerRecord | null>(null)
   const [parsedPresentation, setParsedPresentation] = useState<ParsedPresentation | null>(null)
   const [detailsExpanded, setDetailsExpanded] = useState(false)
@@ -365,47 +383,69 @@ export default function VerifyCredential() {
       if (!active) return
 
       try {
-        const { data: shareData, error: shareError } = await supabase
-          .from('shares')
-          .select('*')
-          .eq('id', token)
-          .single()
+        // `shares` has no public read policy: an anonymous select would have
+        // handed out every holder's presentation, live or not. This RPC
+        // returns one share by id, and returns its presentation only while
+        // the link is neither expired nor revoked
+        // (supabase/migrations/20260910_rls_hardening.sql).
+        const { data: shareRows, error: shareError } = await supabase.rpc(
+          'get_share_for_verification',
+          { p_share_id: token }
+        )
 
-        if (shareError || !shareData) {
-          updateCheck('1', 'failed', 'This link does not exist or has been revoked')
+        const lookup = (Array.isArray(shareRows) ? shareRows[0] : shareRows) as
+          | ShareLookupRow
+          | undefined
+
+        if (shareError || !lookup || lookup.status === 'not_found') {
+          updateCheck('1', 'failed', 'This link does not exist')
           if (active) setStatus('failed')
           return
         }
 
-        // Support database columns mapping with fallbacks
         const shareRecord: ShareRecord = {
-          id: shareData.id,
-          credential_id: shareData.credential_id || '',
-          holder_id: shareData.holder_id || shareData.owner || '',
-          presentation: shareData.presentation,
-          disclosed_fields: shareData.disclosed_fields || shareData.revealed || [],
-          expires_at: shareData.expires_at,
-          created_at: shareData.created_at,
+          id: lookup.id || token || '',
+          credential_id: lookup.credential_id || '',
+          presentation: lookup.presentation || '',
+          disclosed_fields: lookup.disclosed_fields || [],
+          expires_at: lookup.expires_at || '',
+          created_at: lookup.created_at || '',
         }
 
         setShare(shareRecord)
         updateCheck('1', 'passed')
 
-        // --- CHECK 2: Expiry check ---
+        // --- CHECK 2: is the link still live? ---
         updateCheck('2', 'running')
         await new Promise((r) => setTimeout(r, 400))
         if (!active) return
 
-        const isExpired = new Date(shareRecord.expires_at) < new Date()
-        if (isExpired) {
-          const formattedDate = new Date(shareRecord.expires_at).toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-          updateCheck('2', 'failed', `This share link expired on ${formattedDate}`)
+        // Withdrawal by the holder is its own outcome, not a generic failure:
+        // the holder took the link back, the credential is not in question.
+        if (lookup.status === 'revoked') {
+          setLinkStatus('revoked')
+          updateCheck('2', 'failed', 'The holder has withdrawn this share link')
+          if (active) setStatus('failed')
+          return
+        }
+
+        // Expiry is decided by the database, not by this browser's clock.
+        if (lookup.status === 'expired' || new Date(shareRecord.expires_at) < new Date()) {
+          setLinkStatus('expired')
+          const formattedDate = shareRecord.expires_at
+            ? new Date(shareRecord.expires_at).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : ''
+          updateCheck(
+            '2',
+            'failed',
+            formattedDate ? `This share link expired on ${formattedDate}` : 'This share link has expired'
+          )
           if (active) setStatus('failed')
           return
         }
@@ -462,18 +502,13 @@ export default function VerifyCredential() {
           publicJwk = { ...publicJwk, alg: 'ES256' }
         }
 
-        // Log for debugging (remove after fix confirmed)
-        console.log('[verify] publicJwk:', JSON.stringify(publicJwk))
-        console.log('[verify] presentation prefix:', 
-          shareRecord.presentation.substring(0, 80))
-
         const verifyResult = await verifyPresentation(
           shareRecord.presentation, 
           publicJwk
         )
 
-        // Log the actual error for debugging
         if (!verifyResult.valid) {
+          // The reason, never the payload.
           console.error('[verify] verification failed:', verifyResult.error)
           updateCheck('3', 'failed', 
             `The credential signature is invalid. This credential may have been tampered with.`)
@@ -582,9 +617,11 @@ export default function VerifyCredential() {
     if (!failedCheck) return 'An error occurred during verification.'
     switch (failedCheck.id) {
       case '1':
-        return 'This link does not exist or has been revoked by the holder'
+        return 'This link does not exist'
       case '2':
-        return 'This link has expired'
+        return linkStatus === 'revoked'
+          ? 'The holder has withdrawn this link'
+          : 'This link has expired'
       case '3':
         return "This credential's signature is invalid"
       case '4':
@@ -598,9 +635,11 @@ export default function VerifyCredential() {
     if (!failedCheck) return ''
     switch (failedCheck.id) {
       case '1':
-        return 'The holder has revoked this link. Ask them to share a new one.'
+        return 'Check the link you were given, or ask the holder to share a new one.'
       case '2':
-        return 'Ask the credential holder to generate a new share link.'
+        return linkStatus === 'revoked'
+          ? 'The holder withdrew this link. Ask them for a new one if you still need it.'
+          : 'Ask the credential holder to generate a new share link.'
       case '3':
         return 'This credential may be fraudulent. Do not accept it.'
       case '4':
