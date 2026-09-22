@@ -1,4 +1,6 @@
--- Actik schema for Supabase (run in the SQL editor).
+-- Actik schema for Supabase (run in the SQL editor), then run every file in
+-- supabase/migrations/ in filename order — the triggers and the RPCs the app
+-- calls (get_share_for_verification, admin_list_profile_emails, …) live there.
 -- Enables pgcrypto for gen_random_uuid().
 create extension if not exists "pgcrypto";
 
@@ -22,20 +24,31 @@ create table if not exists profiles (
 create table if not exists issuers (
   id uuid primary key default gen_random_uuid(),
   owner uuid references auth.users(id) on delete set null,
+  -- mirrors `owner`; several call sites fall back to it (see
+  -- migrations/20260817_admin_registry_schema_and_audit_log.sql).
+  user_id uuid references auth.users(id) on delete set null,
   name text not null,
   did text not null unique,
   public_jwk jsonb not null,
   accredited boolean not null default false,
-  created_at timestamptz default now(),
-  -- zk-vault envelope for the issuer's signing private key (ciphertext only —
-  -- mirrors profiles' vault_* columns above). signing_key_ciphertext holds the
-  -- encrypted privateJwk payload itself, which is outside the vault library's
-  -- own envelope contract.
+  created_at timestamptz default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- issuer_secrets: the issuer's zk-vault envelopes and the encrypted signing
+-- key. Deliberately NOT on `issuers`: that table is world-readable (it is the
+-- registry), and an encrypted signing key published beside its salt is an
+-- offline cracking exercise, not a secret. Owner-only, no anon, no admin.
+-- ---------------------------------------------------------------------------
+create table if not exists issuer_secrets (
+  owner uuid primary key references auth.users(id) on delete cascade,
+  issuer_id uuid references issuers(id) on delete cascade,
   vault_envelope_pin text,
   vault_pin_salt text,
   vault_envelope_passkey text,
   passkey_id text,
-  signing_key_ciphertext jsonb
+  signing_key_ciphertext jsonb,
+  updated_at timestamptz not null default now()
 );
 
 -- ---------------------------------------------------------------------------
@@ -102,6 +115,7 @@ create table if not exists shares (
 -- ===========================================================================
 alter table profiles enable row level security;
 alter table issuers enable row level security;
+alter table issuer_secrets enable row level security;
 alter table pending_credentials enable row level security;
 alter table credentials enable row level security;
 alter table shares enable row level security;
@@ -121,17 +135,26 @@ $$ language plpgsql security definer;
 
 create policy "own profile" on profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
-create policy "issuers and admins can select profiles" on profiles
-  for select to authenticated using (
-    public.is_admin_or_issuer(auth.uid())
-  );
+-- No cross-user profile reads: a profile row carries the holder's vault
+-- envelopes and PIN salt. The admin dashboard reads id + email through
+-- admin_list_profile_emails() instead (migrations/20260910_rls_hardening.sql).
 
 -- issuers: public registry (anyone can read), owner can create/update theirs.
+-- Public read is intended: this is the registry. It is only safe because the
+-- signing-key material lives in issuer_secrets, not here.
 create policy "read registry" on issuers for select using (true);
+-- Registration always starts unaccredited, and an issuer may never write its
+-- own standing. The column-level half of that rule is the
+-- issuers_guard_registry_columns trigger (migrations/20260910_rls_hardening.sql).
 create policy "manage own issuer" on issuers
-  for insert with check (auth.uid() = owner);
+  for insert to authenticated with check (
+    auth.uid() = coalesce(owner, user_id)
+    and coalesce(accredited, false) = false
+  );
 create policy "update own issuer" on issuers
-  for update using (auth.uid() = owner);
+  for update to authenticated
+  using (auth.uid() = owner or (owner is null and auth.uid() = user_id))
+  with check (auth.uid() = owner or (owner is null and auth.uid() = user_id));
 create policy "admin update issuers" on issuers
   for update using (
     exists (
@@ -140,6 +163,11 @@ create policy "admin update issuers" on issuers
         and public.profiles.role = 'admin'
     )
   );
+
+-- issuer_secrets: the owning issuer, and nobody else.
+create policy "own issuer secrets" on issuer_secrets
+  for all to authenticated
+  using (auth.uid() = owner) with check (auth.uid() = owner);
 
 -- pending_credentials: any authenticated user may create (issue) one; the
 -- recipient reads/deletes rows addressed to their email.
@@ -154,8 +182,10 @@ create policy "delete my pending" on pending_credentials
 create policy "own credentials" on credentials
   for all using (auth.uid() = owner) with check (auth.uid() = owner);
 
--- shares: owner manages; ANYONE can read by id (a share link is a bearer token).
+-- shares: owner manages. There is deliberately no public select policy — a
+-- blanket one lets any anon caller enumerate every holder's presentation.
+-- Verifiers call get_share_for_verification(id), which hands back the
+-- presentation only while the share is neither expired nor revoked
+-- (migrations/20260910_rls_hardening.sql).
 create policy "owner manages shares" on shares
   for all using (auth.uid() = owner) with check (auth.uid() = owner);
-create policy "public read share" on shares
-  for select using (true);

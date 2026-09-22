@@ -3,9 +3,12 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 
-// Function name may differ — check actual exports of sdjwt.ts
-import { verify as verifyPresentation, readDisclosures } from '../../lib/sdjwt'
-import { checkRateLimit, getClientIp } from '../../lib/rateLimit'
+import {
+  verify as verifyPresentation,
+  readDisclosures,
+  VerificationRejected,
+  type CredentialAssertion,
+} from '../../lib/sdjwt'
 
 // --- TypeScript Types ---
 type CheckStatus = 'waiting' | 'running' | 'passed' | 'failed'
@@ -21,11 +24,26 @@ interface VerificationCheck {
 interface ShareRecord {
   id: string
   credential_id: string
-  holder_id: string
   presentation: string
   disclosed_fields: string[]
   expires_at: string
   created_at: string
+}
+
+/**
+ * What get_share_for_verification() returns. `presentation` comes back only
+ * for a live share: an expired or revoked link yields its status and its
+ * dates, never its contents.
+ */
+interface ShareLookupRow {
+  id: string | null
+  presentation: string | null
+  issuer_did: string | null
+  disclosed_fields: string[] | null
+  credential_id: string | null
+  expires_at: string | null
+  created_at: string | null
+  status: 'ok' | 'expired' | 'revoked' | 'not_found'
 }
 
 interface IssuerRecord {
@@ -124,6 +142,27 @@ function parsePresentation(presentation: string): ParsedPresentation {
     issuerDID: payload.iss || '',
     issuedAt: payload.iat || 0,
     expiresAt: payload.exp,
+  }
+}
+
+/**
+ * One sentence per rejection reason. The reason string is the stable contract
+ * (see sdjwt.ts); this is the part that may be reworded or translated.
+ */
+function messageForRejection(reason: string): string {
+  switch (reason) {
+    case 'SIGNATURE_INVALID':
+      return 'The signature does not match these fields. This code did not verify.'
+    case 'DISCLOSURE_NOT_SIGNED':
+      return 'A field in this code was not covered by the signature. This code did not verify.'
+    case 'CREDENTIAL_EXPIRED':
+      return 'The credential itself has expired. Ask the holder for a current one.'
+    case 'CREDENTIAL_NOT_YET_VALID':
+      return 'The credential is dated in the future. Check the date on this device.'
+    case 'ISSUER_KEY_MALFORMED':
+      return "The registry's key for this issuer is unusable, so this code was not checked."
+    default:
+      return 'This code could not be read as a credential. It did not verify.'
   }
 }
 
@@ -323,7 +362,17 @@ export default function VerifyCredential() {
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
+  // Which way check 2 failed — expired and withdrawn read the same to the
+  // crypto and very differently to the person holding the paper.
+  const [linkStatus, setLinkStatus] = useState<'expired' | 'revoked' | null>(null)
   const [issuer, setIssuer] = useState<IssuerRecord | null>(null)
+  // What verification produced. There is no boolean on it by design: holding
+  // this object means a registered key signed these fields, which is not the
+  // same as the document in the reader's hand being the one that was issued.
+  const [assertion, setAssertion] = useState<CredentialAssertion | null>(null)
+  // Refused and "we could not check" are different answers and must not be
+  // dressed the same. The code is only to blame in the first case.
+  const [failureKind, setFailureKind] = useState<'rejected' | 'unavailable'>('rejected')
   const [parsedPresentation, setParsedPresentation] = useState<ParsedPresentation | null>(null)
   const [detailsExpanded, setDetailsExpanded] = useState(false)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
@@ -340,17 +389,6 @@ export default function VerifyCredential() {
     let active = true
 
     async function runVerification() {
-      const clientIp = getClientIp() || 'unknown'
-      const limit = await checkRateLimit(clientIp, 'verify/credential', 100, 60)
-      
-      if (!limit.allowed) {
-        setChecks([
-          { id: 'rate-limit', label: t('verify.check_rate_limit'), status: 'failed', errorMessage: t('verify.rate_limit_error') }
-        ])
-        setStatus('failed')
-        return
-      }
-
       // Initialize checks list
       setChecks([
         { id: '1', label: t('verify.check_1'), status: 'running' },
@@ -361,51 +399,71 @@ export default function VerifyCredential() {
       setStatus('loading')
 
       // --- CHECK 1: Fetch the share ---
-      await new Promise((r) => setTimeout(r, 400))
       if (!active) return
 
       try {
-        const { data: shareData, error: shareError } = await supabase
-          .from('shares')
-          .select('*')
-          .eq('id', token)
-          .single()
+        // `shares` has no public read policy: an anonymous select would have
+        // handed out every holder's presentation, live or not. This RPC
+        // returns one share by id, and returns its presentation only while
+        // the link is neither expired nor revoked
+        // (supabase/migrations/20260910_rls_hardening.sql).
+        const { data: shareRows, error: shareError } = await supabase.rpc(
+          'get_share_for_verification',
+          { p_share_id: token }
+        )
 
-        if (shareError || !shareData) {
-          updateCheck('1', 'failed', 'This link does not exist or has been revoked')
+        const lookup = (Array.isArray(shareRows) ? shareRows[0] : shareRows) as
+          | ShareLookupRow
+          | undefined
+
+        if (shareError || !lookup || lookup.status === 'not_found') {
+          updateCheck('1', 'failed', 'This link does not exist')
           if (active) setStatus('failed')
           return
         }
 
-        // Support database columns mapping with fallbacks
         const shareRecord: ShareRecord = {
-          id: shareData.id,
-          credential_id: shareData.credential_id || '',
-          holder_id: shareData.holder_id || shareData.owner || '',
-          presentation: shareData.presentation,
-          disclosed_fields: shareData.disclosed_fields || shareData.revealed || [],
-          expires_at: shareData.expires_at,
-          created_at: shareData.created_at,
+          id: lookup.id || token || '',
+          credential_id: lookup.credential_id || '',
+          presentation: lookup.presentation || '',
+          disclosed_fields: lookup.disclosed_fields || [],
+          expires_at: lookup.expires_at || '',
+          created_at: lookup.created_at || '',
         }
 
         setShare(shareRecord)
         updateCheck('1', 'passed')
 
-        // --- CHECK 2: Expiry check ---
+        // --- CHECK 2: is the link still live? ---
         updateCheck('2', 'running')
-        await new Promise((r) => setTimeout(r, 400))
         if (!active) return
 
-        const isExpired = new Date(shareRecord.expires_at) < new Date()
-        if (isExpired) {
-          const formattedDate = new Date(shareRecord.expires_at).toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-          updateCheck('2', 'failed', `This share link expired on ${formattedDate}`)
+        // Withdrawal by the holder is its own outcome, not a generic failure:
+        // the holder took the link back, the credential is not in question.
+        if (lookup.status === 'revoked') {
+          setLinkStatus('revoked')
+          updateCheck('2', 'failed', 'The holder has withdrawn this share link')
+          if (active) setStatus('failed')
+          return
+        }
+
+        // Expiry is decided by the database, not by this browser's clock.
+        if (lookup.status === 'expired' || new Date(shareRecord.expires_at) < new Date()) {
+          setLinkStatus('expired')
+          const formattedDate = shareRecord.expires_at
+            ? new Date(shareRecord.expires_at).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : ''
+          updateCheck(
+            '2',
+            'failed',
+            formattedDate ? `This share link expired on ${formattedDate}` : 'This share link has expired'
+          )
           if (active) setStatus('failed')
           return
         }
@@ -417,7 +475,6 @@ export default function VerifyCredential() {
 
         // --- CHECK 3: Signature verification ---
         updateCheck('3', 'running')
-        await new Promise((r) => setTimeout(r, 400))
         if (!active) return
 
         const jwt = shareRecord.presentation.split('~')[0]
@@ -425,33 +482,47 @@ export default function VerifyCredential() {
         const issuerDID = payload?.iss
 
         if (!issuerDID) {
-          updateCheck('3', 'failed', 'The credential signature is invalid. This credential may have been tampered with.')
+          setFailureKind('rejected')
+          updateCheck('3', 'failed', 'This code names no issuer, so there is nothing to check it against.')
           if (active) setStatus('failed')
           return
         }
 
-        // Fetch issuer registry record to resolve public key for signature check
+        // One read of the registry, used for both the key and the standing.
         // Use select('*') — avoids 400 if optional columns like 'domain' don't exist yet
-        const { data: issuerData, error: issuerError } = await supabase
+        const { data: registryIssuer, error: registryError } = await supabase
           .from('issuers')
           .select('*')
           .eq('did', issuerDID)
-          .single()
+          .maybeSingle()
 
-        if (issuerError || !issuerData) {
-          updateCheck('3', 'failed', 'The credential signature is invalid. This credential may have been tampered with.')
+        // A registry we cannot read is our problem, not the code's. Saying
+        // "this may be fraudulent" here would accuse a credential we never
+        // actually checked.
+        if (registryError) {
+          setFailureKind('unavailable')
+          updateCheck('3', 'failed', 'The trust registry could not be reached, so this code was not checked.')
           if (active) setStatus('failed')
           return
         }
 
-        // Execute cryptographic validation
+        // An unknown issuer is a refusal, but a plain one: during rollout it
+        // may be an institution that has not enrolled yet.
+        if (!registryIssuer) {
+          setFailureKind('rejected')
+          updateCheck('3', 'failed', 'The issuer of this code is not listed in the trust registry.')
+          if (active) setStatus('failed')
+          return
+        }
+
         // Safely parse public_jwk — Supabase may return string or object
-        let publicJwk = issuerData.public_jwk
+        let publicJwk = registryIssuer.public_jwk
         if (typeof publicJwk === 'string') {
           try {
             publicJwk = JSON.parse(publicJwk)
           } catch {
-            updateCheck('3', 'failed', 'The issuer public key is malformed.')
+            setFailureKind('unavailable')
+            updateCheck('3', 'failed', "The registry's record for this issuer is unreadable, so this code was not checked.")
             if (active) setStatus('failed')
             return
           }
@@ -462,46 +533,30 @@ export default function VerifyCredential() {
           publicJwk = { ...publicJwk, alg: 'ES256' }
         }
 
-        // Log for debugging (remove after fix confirmed)
-        console.log('[verify] publicJwk:', JSON.stringify(publicJwk))
-        console.log('[verify] presentation prefix:', 
-          shareRecord.presentation.substring(0, 80))
-
-        const verifyResult = await verifyPresentation(
-          shareRecord.presentation, 
-          publicJwk
-        )
-
-        // Log the actual error for debugging
-        if (!verifyResult.valid) {
-          console.error('[verify] verification failed:', verifyResult.error)
-          updateCheck('3', 'failed', 
-            `The credential signature is invalid. This credential may have been tampered with.`)
+        let credential: CredentialAssertion
+        try {
+          credential = await verifyPresentation(shareRecord.presentation, publicJwk)
+        } catch (e) {
+          if (!(e instanceof VerificationRejected)) throw e
+          // The reason, never the payload. The reason string is the contract;
+          // only the sentence shown to the reader is localised.
+          console.error('[verify] rejected:', e.reason)
+          setFailureKind(e.reason === 'ISSUER_KEY_MALFORMED' ? 'unavailable' : 'rejected')
+          updateCheck('3', 'failed', messageForRejection(e.reason))
           if (active) setStatus('failed')
           return
         }
 
+        setAssertion(credential)
         updateCheck('3', 'passed')
 
-        // --- CHECK 4: Trust registry check ---
+        // --- CHECK 4: Trust registry standing (same record, no second read) ---
         updateCheck('4', 'running')
-        await new Promise((r) => setTimeout(r, 400))
         if (!active) return
 
-        const { data: registryIssuer, error: registryError } = await supabase
-          .from('issuers')
-          .select('*')
-          .eq('did', issuerDID)
-          .single()
-
-        if (registryError || !registryIssuer) {
-          updateCheck('4', 'failed', 'The issuer of this credential is not in the MoEYS trust registry')
-          if (active) setStatus('failed')
-          return
-        }
-
         if (!registryIssuer.accredited) {
-          updateCheck('4', 'failed', 'The issuing institution is registered but not yet accredited by MoEYS')
+          setFailureKind('rejected')
+          updateCheck('4', 'failed', 'This institution is listed in the registry but is not accredited.')
           if (active) setStatus('failed')
           return
         }
@@ -582,13 +637,17 @@ export default function VerifyCredential() {
     if (!failedCheck) return 'An error occurred during verification.'
     switch (failedCheck.id) {
       case '1':
-        return 'This link does not exist or has been revoked by the holder'
+        return 'This link does not exist'
       case '2':
-        return 'This link has expired'
+        return linkStatus === 'revoked'
+          ? 'The holder has withdrawn this link'
+          : 'This link has expired'
       case '3':
-        return "This credential's signature is invalid"
+        return failureKind === 'unavailable'
+          ? 'This code was not checked'
+          : "This code did not verify"
       case '4':
-        return 'The issuing institution is not trusted'
+        return 'The issuing institution is not accredited in the trust registry'
       default:
         return 'An error occurred during verification.'
     }
@@ -598,11 +657,15 @@ export default function VerifyCredential() {
     if (!failedCheck) return ''
     switch (failedCheck.id) {
       case '1':
-        return 'The holder has revoked this link. Ask them to share a new one.'
+        return 'Check the link you were given, or ask the holder to share a new one.'
       case '2':
-        return 'Ask the credential holder to generate a new share link.'
+        return linkStatus === 'revoked'
+          ? 'The holder withdrew this link. Ask them for a new one if you still need it.'
+          : 'Ask the credential holder to generate a new share link.'
       case '3':
-        return 'This credential may be fraudulent. Do not accept it.'
+        return failureKind === 'unavailable'
+          ? 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
+          : 'This code did not verify. Do not accept it as proof, and ask the holder for the credential another way.'
       case '4':
         return 'Contact the institution directly to verify their credentials.'
       default:
@@ -858,14 +921,12 @@ export default function VerifyCredential() {
           {/* 3. Verified Result State */}
           {!isTokenInvalid && status === 'success' && (
             <div className="space-y-6">
-              {/* Header Section */}
+              {/* Header Section — deliberately no tick and no colour verdict.
+                  A tick answers "is this fine?", which a signature cannot
+                  answer: it says a registered key signed these fields, and the
+                  reader still has to compare them with the document. */}
               <div className="text-center py-4 flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-3 text-emerald-600 animate-scale-in">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="font-khmer text-xl font-bold text-emerald-700">{t('verify.success_title')}</h2>
+                <h2 className="font-khmer text-xl font-bold text-stone-900">{t('verify.success_title')}</h2>
                 <p className="text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
                   {t('verify.success_desc')}
                 </p>
@@ -877,15 +938,11 @@ export default function VerifyCredential() {
               <div className="flex flex-wrap gap-x-6 gap-y-3 justify-center">
                 {[
                   { label: t('verify.check_3'), sub: 'Signature · ES256' },
-                  { label: t('verify.check_4'), sub: 'MoEYS registry' },
+                  { label: t('verify.check_4'), sub: 'Trust registry' },
                   { label: t('verify.check_2'), sub: 'Link not expired' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <div className="w-[18px] h-[18px] rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-stone-300 shrink-0" />
                     <div>
                       <div className="font-khmer text-xs font-bold text-stone-900 leading-tight">{item.label.replace(/[…\s]*$/, '')}</div>
                       <div className="font-mono text-[10px] text-stone-400 leading-tight">{item.sub}</div>
@@ -893,6 +950,38 @@ export default function VerifyCredential() {
                   </div>
                 ))}
               </div>
+
+              {/* The transplant check. A genuine code photographed off a real
+                  certificate and printed on a forged one verifies perfectly,
+                  because nothing about the paper is signed. Comparing these
+                  four fields with the document is the only thing that closes
+                  it, so they are given their own block above the details. */}
+              {assertion && (
+                <div className="border border-amber-200 rounded-[11px] p-4 bg-amber-50/60 space-y-3">
+                  <div>
+                    <h3 className="font-khmer text-sm font-bold text-stone-900">{t('verify.compare_heading')}</h3>
+                    <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">{t('verify.compare_desc')}</p>
+                  </div>
+                  <div className="divide-y divide-amber-200/60">
+                    {([
+                      ['subjectName', t('verify.compare_subject')],
+                      ['documentId', t('verify.compare_document_id')],
+                      ['issuingOrganisation', t('verify.compare_organisation')],
+                      ['issueDate', t('verify.compare_issue_date')],
+                    ] as const).map(([field, label]) => {
+                      const value = assertion.mustMatchPrintedDocument[field]
+                      return (
+                        <div key={field} className="flex items-baseline justify-between gap-4 py-1.5">
+                          <span className="font-khmer text-xs font-semibold text-stone-500 shrink-0">{label}</span>
+                          <span className={`text-sm text-right ${value ? 'font-semibold text-stone-900' : 'italic text-stone-400'}`}>
+                            {value ?? t('verify.compare_not_disclosed')}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Issuer Trust Badge */}
               <div className="border border-indigo-200 rounded-[11px] p-4 bg-indigo-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -918,20 +1007,11 @@ export default function VerifyCredential() {
                     </svg>
                   </a>
                 </div>
-                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1.5 w-full sm:w-auto border-t sm:border-t-0 border-indigo-200/40 pt-3 sm:pt-0">
-                  <div className="flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M2.166 4.9L10 1.154l7.834 3.746A1 1 0 0118.5 5.8v4.9c0 4.197-3.076 7.844-7.834 9.154a1 1 0 01-.666 0C5.076 18.544 2 14.897 2 10.7V5.8a1 1 0 01.666-.9zM10 3.153L3.834 6.1v4.6c0 3.4 2.457 6.425 6.166 7.554 3.709-1.129 6.166-4.154 6.166-7.554V6.1L10 3.153zm2.707 5.554a1 1 0 00-1.414 0L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l3-3a1 1 0 000-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {t('verify.accredited_badge')}
-                  </div>
-                  <div className="px-1.5 py-0.5 bg-stone-100 border border-stone-200 rounded text-[9px] font-bold text-stone-400 uppercase tracking-wider select-none">
-                    MoEYS
-                  </div>
+                {/* Standing, stated. Not a badge: a shield with a tick reads
+                    as "safe", which is a claim about the institution nobody
+                    here is in a position to make. */}
+                <div className="w-full sm:w-auto border-t sm:border-t-0 border-indigo-200/40 pt-3 sm:pt-0 sm:text-right">
+                  <p className="font-khmer text-xs font-semibold text-stone-700">{t('verify.accredited_badge')}</p>
                 </div>
               </div>
 
@@ -1134,12 +1214,24 @@ export default function VerifyCredential() {
             <div className="space-y-6">
               {/* Header Section */}
               <div className="text-center py-4 flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-3 text-rose-500 animate-scale-in">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 animate-scale-in ${
+                  failureKind === 'unavailable'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-600'
+                    : 'bg-rose-50 border border-rose-200 text-rose-500'
+                }`}>
+                  {failureKind === 'unavailable' ? (
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
                 </div>
-                <h2 className="font-khmer text-xl font-bold text-rose-700">{t('verify.failed_title')}</h2>
+                <h2 className={`font-khmer text-xl font-bold ${failureKind === 'unavailable' ? 'text-amber-700' : 'text-rose-700'}`}>
+                  {failureKind === 'unavailable' ? t('verify.unavailable_title') : t('verify.failed_title')}
+                </h2>
                 <p className="font-khmer text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
                   {getFailureSubtext()}
                 </p>
@@ -1207,15 +1299,6 @@ export default function VerifyCredential() {
                   <p className="font-medium">{getGuidanceText()}</p>
                 </div>
               )}
-
-              {/* Single action — the public trust-registry search. No
-                  "report issue" button: there's no backend to receive one. */}
-              <a
-                href="/public"
-                className="block w-full text-center bg-white border border-stone-300 hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-khmer font-semibold h-11 rounded-lg text-sm transition-colors flex items-center justify-center"
-              >
-                {t('verify.search_registry_btn')}
-              </a>
             </div>
           )}
         </div>

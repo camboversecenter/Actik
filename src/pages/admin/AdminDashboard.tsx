@@ -164,9 +164,13 @@ export default function AdminDashboard() {
         })
       }
 
+      // Profiles are no longer readable across users — a profile row carries
+      // the holder's vault envelopes and PIN salt. This RPC returns id + email
+      // and nothing else, to admins only
+      // (supabase/migrations/20260910_rls_hardening.sql).
       const [issuersRes, profilesRes] = await Promise.all([
         supabase.from('issuers').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id, email'),
+        supabase.rpc('admin_list_profile_emails'),
       ])
 
       if (issuersRes.error) throw issuersRes.error
@@ -178,7 +182,7 @@ export default function AdminDashboard() {
 
       const emails: Record<string, string> = {}
       if (profilesRes.data) {
-        profilesRes.data.forEach((p) => {
+        (profilesRes.data as { id: string; email: string | null }[]).forEach((p) => {
           emails[p.id] = p.email || ''
         })
       }

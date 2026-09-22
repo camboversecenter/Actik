@@ -5,7 +5,6 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
-import { checkRateLimit } from '../../lib/rateLimit'
 import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check, Loader2, EyeOff } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 
@@ -437,13 +436,6 @@ export default function ShareCredential() {
     try {
       setIsSharing(true)
       setShareError(null)
-
-      const limit = await checkRateLimit(currentUser.id, 'credential/share', 50, 1440)
-      if (!limit.allowed) {
-        setShareError('Daily sharing limit reached. Please try again tomorrow.')
-        setIsSharing(false)
-        return
-      }
 
       // Step A: Build the presentation.
       // Institution/iss/iat/exp are always visible in addition to selection

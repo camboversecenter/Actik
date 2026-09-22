@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { checkRateLimit, getClientIp } from '../../lib/rateLimit'
 import { GraduationCap, Building2 } from 'lucide-react'
 
 // Message types posted from the /auth/callback popup back to this window
@@ -106,16 +105,6 @@ export default function GoogleAuth() {
     const popup = openAuthPopup('about:blank')
 
     try {
-      const clientIp = getClientIp() || 'unknown'
-      const limit = await checkRateLimit(clientIp, 'auth/login', 5, 15)
-
-      if (!limit.allowed) {
-        if (popup && !popup.closed) popup.close()
-        setErrorMsg(`Too many login attempts. Try again in ${Math.ceil((limit.resetTime - Date.now()) / 60000)} minutes.`)
-        setLoading(false)
-        return
-      }
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

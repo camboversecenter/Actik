@@ -21,64 +21,10 @@ export interface AuditLog {
   institution_name?: string
 }
 
-// Dummy data for visual development if table is empty
-const MOCK_LOGS: AuditLog[] = [
-  {
-    id: 'log-1',
-    action: 'APPROVED INSTITUTION',
-    admin_id: 'admin-1',
-    institution_id: 'inst-1',
-    timestamp: '2026-12-12T12:31:00Z',
-    ip_address: '192.168.1.100',
-    device_info: 'Chrome/Windows',
-    user_agent: null,
-    reason: null,
-    signature: '0x3f5a9c2e...',
-    status_before: 'PENDING',
-    status_after: 'ACCREDITED',
-    details: {},
-    admin_email: 'admin@moeys.gov.kh',
-    institution_name: 'National University of Management'
-  },
-  {
-    id: 'log-2',
-    action: 'INSTITUTION REGISTERED',
-    admin_id: null,
-    institution_id: 'inst-1',
-    timestamp: '2026-12-11T15:45:00Z',
-    ip_address: '203.188.100.25',
-    device_info: 'Chrome/macOS',
-    user_agent: null,
-    reason: null,
-    signature: null,
-    status_before: null,
-    status_after: 'PENDING',
-    details: { did: 'did:web:num.edu.kh' },
-    admin_email: 'num-registrant@num.edu.kh',
-    institution_name: 'National University of Management'
-  },
-  {
-    id: 'log-3',
-    action: 'REVOKED ACCREDITATION',
-    admin_id: 'admin-1',
-    institution_id: 'inst-2',
-    timestamp: '2026-12-12T09:15:00Z',
-    ip_address: '192.168.1.100',
-    device_info: 'Chrome/Windows',
-    user_agent: null,
-    reason: 'Issuing fraudulent credentials',
-    signature: '0x7c2b1d9e...',
-    status_before: 'ACCREDITED',
-    status_after: 'REVOKED',
-    details: {},
-    admin_email: 'admin@moeys.gov.kh',
-    institution_name: 'Fake Institute Online'
-  }
-]
-
 export default function AuditLogView({ onClose }: { onClose: () => void }) {
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterAction, setFilterAction] = useState('All Actions')
   const [filterDate, setFilterDate] = useState('All Time')
@@ -91,22 +37,27 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
 
   const fetchLogs = async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const { data, error } = await supabase
         .from('audit_logs')
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(20)
-      
+
       if (error) {
-        // Fallback to mock data if table doesn't exist yet
-        console.log('Audit table missing or error, using mock data.', error)
-        setLogs(MOCK_LOGS)
+        // Say the log could not be read. Never stand in for it: an audit
+        // trail with invented entries is not an audit trail.
+        console.error('[audit] could not read audit_logs:', error.message)
+        setLogs([])
+        setLoadError(true)
       } else {
         setLogs(data || [])
       }
     } catch (e) {
-      setLogs(MOCK_LOGS)
+      console.error('[audit] could not read audit_logs:', e instanceof Error ? e.message : String(e))
+      setLogs([])
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -201,6 +152,10 @@ export default function AuditLogView({ onClose }: { onClose: () => void }) {
             {[1,2,3].map(i => (
               <div key={i} className="h-32 bg-stone-200 rounded-xl w-full"></div>
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="text-center py-12 text-amber-700 text-sm font-medium">
+            The audit log could not be read. Nothing is shown rather than something approximate.
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="text-center py-12 text-stone-500 text-sm font-medium">
