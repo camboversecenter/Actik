@@ -50,7 +50,12 @@ into `src/vault/zk-vault/` and its `src/components/` into `src/vault/components/
 ### 3. Create the Supabase project
 
 - Create a project at supabase.com.
-- In the SQL editor, run `supabase/schema.sql` (tables + Row Level Security).
+- In the SQL editor, run `supabase/apply_all.sql` — tables, Row Level Security,
+  functions and triggers, in one idempotent script. It is safe to re-run, and
+  it is also how you bring an existing project up to date.
+  (`supabase/migrations/` holds the same changes as individual dated files;
+  `supabase/schema.sql` is the original bootstrap and is no longer complete on
+  its own.)
 - Auth → turn on Email. For quick local testing you can disable email
   confirmation.
 
