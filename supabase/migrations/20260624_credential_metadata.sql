@@ -1,3 +1,8 @@
+-- Was supabase/migration_metadata.sql — loose and undated, same as the share
+-- activity fields. Lower stakes (schema.sql declares these columns inline for
+-- a fresh project) but it has to be in the ordered set for an older project to
+-- converge. Dated first: everything after it assumes these columns.
+
 -- Migration: Update credentials and pending_credentials tables to store certificate metadata
 
 -- 1. Update credentials table

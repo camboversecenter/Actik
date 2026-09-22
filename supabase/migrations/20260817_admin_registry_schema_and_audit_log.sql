@@ -26,6 +26,7 @@ alter table issuers add column if not exists revoked_by uuid references auth.use
 -- pending issuer row, but schema.sql never had a delete policy for issuers —
 -- only insert/update. Without this, reject only worked if it was silently
 -- falling through on a service-role context; make the admin path explicit.
+drop policy if exists "admin delete issuers" on issuers;
 create policy "admin delete issuers" on issuers
   for delete using (
     exists (
@@ -58,6 +59,7 @@ create table if not exists audit_logs (
 
 alter table audit_logs enable row level security;
 
+drop policy if exists "admin insert audit_logs" on audit_logs;
 create policy "admin insert audit_logs" on audit_logs
   for insert to authenticated with check (
     exists (
@@ -67,6 +69,7 @@ create policy "admin insert audit_logs" on audit_logs
     )
   );
 
+drop policy if exists "admin select audit_logs" on audit_logs;
 create policy "admin select audit_logs" on audit_logs
   for select to authenticated using (
     exists (

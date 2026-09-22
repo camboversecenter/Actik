@@ -1,6 +1,13 @@
--- Actik schema for Supabase (run in the SQL editor), then run every file in
--- supabase/migrations/ in filename order — the triggers and the RPCs the app
--- calls (get_share_for_verification, admin_list_profile_emails, …) live there.
+-- NOT THE SETUP FILE ANY MORE. Run supabase/apply_all.sql instead: it is every
+-- migration folded into one idempotent script, and it is the only file that
+-- leaves a database in a state the app can actually run against — the trigger
+-- and the five RPCs the app calls do not exist here.
+--
+-- This file is kept as the original bootstrap, matching what a project created
+-- from it looked like before supabase/migrations/ existed. If you edit it,
+-- edit apply_all.sql too, or the next person inherits the drift this comment
+-- is standing in for.
+--
 -- Enables pgcrypto for gen_random_uuid().
 create extension if not exists "pgcrypto";
 

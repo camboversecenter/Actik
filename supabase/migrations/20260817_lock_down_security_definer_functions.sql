@@ -11,4 +11,13 @@
 revoke all on function public.check_recipient_by_email(text) from public, anon;
 grant execute on function public.check_recipient_by_email(text) to authenticated;
 
-revoke all on function public.handle_new_user() from public, anon, authenticated;
+-- handle_new_user() is the on_auth_user_created trigger function, created in
+-- the Supabase project rather than here, so a database built from this repo
+-- alone does not have it and an unguarded REVOKE stops the whole run.
+do $$
+begin
+  if to_regprocedure('public.handle_new_user()') is not null then
+    execute 'revoke all on function public.handle_new_user() from public, anon, authenticated';
+  end if;
+end;
+$$;
