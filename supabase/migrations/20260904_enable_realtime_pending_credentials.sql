@@ -8,4 +8,20 @@
 -- Notifications.tsx — but this is the fix that makes updates instant instead
 -- of same-tab-only or up-to-20s-stale.)
 
-alter publication supabase_realtime add table pending_credentials;
+-- Guarded twice: `supabase_realtime` is created by the Supabase platform (a
+-- database built from this repo alone has no such publication), and adding a
+-- table that is already in it raises rather than no-opping.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'pending_credentials'
+     )
+  then
+    execute 'alter publication supabase_realtime add table public.pending_credentials';
+  end if;
+end;
+$$;

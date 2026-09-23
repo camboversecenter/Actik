@@ -187,14 +187,11 @@ export default function IssuerDashboard() {
           ] = await Promise.all([
             supabase.from('credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did),
             supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did),
-            // Best-effort: view_count is summed client-side since Supabase-js
-            // has no clean aggregate select; a failure here (e.g. migration
-            // not yet applied) just leaves the verifications stat at 0.
-            // TODO: unbounded select — PostgREST's default 1000-row cap means
-            // this will silently under-count once a high-volume issuer's
-            // shares pass that many rows. Fine for now; revisit with a
-            // server-side sum (RPC or view) if that becomes real.
-            supabase.from('shares').select('view_count').eq('issuer_did', issuerData.did),
+            // Summed server-side for this issuer's own DIDs. `shares` has no
+            // public read policy any more (it held every holder's
+            // presentation), and an issuer never needed the rows — only the
+            // count. This also drops the old client-side sum's 1000-row cap.
+            supabase.rpc('issuer_verification_count'),
             supabase.from('credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did).gte('created_at', monthStart.toISOString()),
             supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did).lte('created_at', thirtyDaysAgo),
             // select('*') deliberately, not named columns — this table is
@@ -212,9 +209,7 @@ export default function IssuerDashboard() {
           if (active) {
             const claimed = claimedRes.count || 0
             const pending = pendingRes.count || 0
-            const verifications = (sharesRes.data || []).reduce(
-              (sum: number, row: any) => sum + (row.view_count || 0), 0
-            )
+            const verifications = Number(sharesRes.data ?? 0) || 0
             setStats({
               claimed, pending, total: claimed + pending, verifications,
               newThisMonth: newThisMonthRes.count || 0,
@@ -346,10 +341,12 @@ export default function IssuerDashboard() {
       if (!setupOk) throw new Error('Failed to secure your signing key. Please try again.')
 
       const ciphertext = await encryptPayload(privateJwk)
-      let vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('owner', currentUser.id)
-      if (vaultRes.error && (vaultRes.error.message.includes('owner') || vaultRes.error.code === 'PGRST204' || vaultRes.error.code === '42703')) {
-        vaultRes = await supabase.from('issuers').update({ signing_key_ciphertext: ciphertext }).eq('user_id', currentUser.id)
-      }
+      // Into issuer_secrets, not onto the world-readable registry row — see
+      // supabase/migrations/20260910_rls_hardening.sql.
+      const vaultRes = await supabase.from('issuer_secrets').upsert(
+        { owner: currentUser.id, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
+        { onConflict: 'owner' }
+      )
       if (vaultRes.error) throw vaultRes.error
 
       // 4. Save private key in sessionStorage

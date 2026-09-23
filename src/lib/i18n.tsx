@@ -583,12 +583,18 @@ const translations = {
       check_2: 'Checking link validity…',
       check_3: 'Verifying issuer signature…',
       check_4: 'Checking issuer trust registry…',
-      check_rate_limit: 'Security check',
-      rate_limit_error: 'Verification service temporarily unavailable due to too many requests. Please try again later.',
-      success_title: 'Credential verified',
-      success_desc: 'This credential is authentic and was issued by an accredited institution',
+      success_title: 'Signature checked',
+      success_desc: 'A key listed in the trust registry signed the fields below. That is what was checked — it does not confirm that the document in your hand is the one that was issued.',
+      unavailable_title: 'Verification unavailable',
+      compare_heading: 'Compare with the document',
+      compare_desc: 'Nothing about the paper or the file is signed. Check these four against the document in front of you.',
+      compare_subject: 'Name of holder',
+      compare_document_id: 'Document number',
+      compare_organisation: 'Issuing institution',
+      compare_issue_date: 'Issue date',
+      compare_not_disclosed: 'not disclosed',
       issued_by_label: 'Issued by:',
-      accredited_badge: 'Accredited',
+      accredited_badge: 'Listed as accredited in the trust registry',
       credential_details_heading: 'Credential details',
       hidden_fields_notice: 'Some fields are hidden by the holder (selective disclosure).',
       hidden_label: 'Hidden:',
@@ -605,12 +611,11 @@ const translations = {
       verification_steps_heading: 'Verification steps',
       what_to_do_label: 'What to do:',
       reason_label: 'Reason:',
-      search_registry_btn: 'Search the trust registry',
       footer_heading: 'How does Actik verification work?',
       trust_signature_title: 'Cryptographic signature',
-      trust_signature_desc: "The issuer's digital seal proves authenticity",
+      trust_signature_desc: 'Shows which registered key signed these fields',
       trust_registry_title: 'Trust registry',
-      trust_registry_desc: 'MoEYS confirms the institution is legitimate',
+      trust_registry_desc: 'The registry records which institutions are accredited',
       trust_disclosure_title: 'Selective disclosure',
       trust_disclosure_desc: 'Holder controls what you see',
       powered_by: 'Powered by Actik — Proof of ownership',
@@ -1181,12 +1186,18 @@ const translations = {
       check_2: 'ពិនិត្យសុពលភាពតំណ…',
       check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
       check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្ត…',
-      check_rate_limit: 'ត្រួតពិនិត្យសុវត្ថិភាព', // TODO(km-review)
-      rate_limit_error: 'សេវាផ្ទៀងផ្ទាត់មិនអាចប្រើបានជាបណ្តោះអាសន្នដោយសារមានសំណើច្រើនពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។', // TODO(km-review)
-      success_title: 'វិញ្ញាបនបត្រមានសុពលភាព',
-      success_desc: 'វិញ្ញាបនបត្រនេះពិតប្រាកដ និងបានចេញដោយស្ថាប័នទទួលស្គាល់', // TODO(km-review)
+      success_title: 'ហត្ថលេខាត្រូវបានពិនិត្យ', // TODO(km-review)
+      success_desc: 'សោដែលមានក្នុងបញ្ជីទុកចិត្តបានចុះហត្ថលេខាលើព័ត៌មានខាងក្រោម។ នេះជាអ្វីដែលបានពិនិត្យ — វាមិនបញ្ជាក់ថាឯកសារនៅក្នុងដៃអ្នកជាឯកសារដែលបានចេញនោះទេ។', // TODO(km-review)
+      unavailable_title: 'មិនអាចផ្ទៀងផ្ទាត់បានទេ', // TODO(km-review)
+      compare_heading: 'ប្រៀបធៀបជាមួយឯកសារ', // TODO(km-review)
+      compare_desc: 'ក្រដាស ឬឯកសារមិនត្រូវបានចុះហត្ថលេខាទេ។ សូមប្រៀបធៀបព័ត៌មានទាំងបួននេះជាមួយឯកសារនៅចំពោះមុខអ្នក។', // TODO(km-review)
+      compare_subject: 'ឈ្មោះម្ចាស់', // TODO(km-review)
+      compare_document_id: 'លេខឯកសារ', // TODO(km-review)
+      compare_organisation: 'ស្ថាប័នចេញ', // TODO(km-review)
+      compare_issue_date: 'កាលបរិច្ឆេទចេញ', // TODO(km-review)
+      compare_not_disclosed: 'មិនបានបង្ហាញ', // TODO(km-review)
       issued_by_label: 'ចេញដោយ៖',
-      accredited_badge: 'ទទួលស្គាល់',
+      accredited_badge: 'មានក្នុងបញ្ជីទុកចិត្ត ជាស្ថាប័នទទួលស្គាល់', // TODO(km-review)
       credential_details_heading: 'ព័ត៌មានវិញ្ញាបនបត្រ',
       hidden_fields_notice: 'ព័ត៌មានមួយចំនួនត្រូវបានលាក់ដោយម្ចាស់ (ការបង្ហាញដោយជ្រើសរើស)។', // TODO(km-review)
       hidden_label: 'បានលាក់៖', // TODO(km-review)
@@ -1203,12 +1214,11 @@ const translations = {
       verification_steps_heading: 'ជំហានផ្ទៀងផ្ទាត់', // TODO(km-review)
       what_to_do_label: 'គួរធ្វើអ្វី៖',
       reason_label: 'មូលហេតុ៖', // TODO(km-review)
-      search_registry_btn: 'ស្វែងរកក្នុងបញ្ជីទុកចិត្ត', // TODO(km-review)
       footer_heading: 'តើ Actik ផ្ទៀងផ្ទាត់ដោយរបៀបណា?',
       trust_signature_title: 'ហត្ថលេខាគ្រីបតូ',
-      trust_signature_desc: 'ត្រាឌីជីថលរបស់ស្ថាប័នបញ្ជាក់ភាពត្រឹមត្រូវ',
+      trust_signature_desc: 'បង្ហាញថាសោណាមួយដែលបានចុះបញ្ជីបានចុះហត្ថលេខាលើព័ត៌មានទាំងនេះ', // TODO(km-review)
       trust_registry_title: 'បញ្ជីទុកចិត្ត',
-      trust_registry_desc: 'ក្រសួងអប់រំបញ្ជាក់ថាស្ថាប័ននេះស្របច្បាប់',
+      trust_registry_desc: 'បញ្ជីទុកចិត្តកត់ត្រាថាស្ថាប័នណាត្រូវបានទទួលស្គាល់', // TODO(km-review)
       trust_disclosure_title: 'ការបង្ហាញដោយជ្រើសរើស',
       trust_disclosure_desc: 'ម្ចាស់វិញ្ញាបនបត្រគ្រប់គ្រងអ្វីដែលអ្នកឃើញ',
       powered_by: 'ដំណើរការដោយ Actik — ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)
