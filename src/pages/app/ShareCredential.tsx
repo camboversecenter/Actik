@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
+import { ALWAYS_REVEALED } from '../../lib/disclosure'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, present } from '../../lib/sdjwt'
 import { useLanguage } from '../../lib/i18n'
@@ -47,6 +48,42 @@ const spinStyles = `
   }
 `
 
+/** One readable label per claim name, for every list on this screen. */
+function fieldLabel(key: string): string {
+  const labels: Record<string, string> = {
+    name: 'Full name',
+    institution: 'Institution',
+    year: 'Graduation year',
+    gpa: 'GPA',
+    national_id: 'National ID',
+    notes: 'Additional notes',
+    email: 'Email address',
+    student_id: 'Student ID',
+    degree_type: 'Degree type',
+    major: 'Major',
+    graduation_date: 'Graduation date',
+    certificate_id: 'Certificate ID',
+    photo: 'Student photo',
+    student_photo: 'Student photo',
+    sub_type: 'Certificate type',
+    event_name: 'Event',
+    event_date: 'Event date',
+    organizer: 'Organizer',
+    program_name: 'Programme',
+    completion_date: 'Completion date',
+    achievement_title: 'Achievement',
+    date_awarded: 'Date awarded',
+    reason: 'Reason',
+    date: 'Date',
+    cert_name: 'Certification',
+    issuing_body: 'Issuing body',
+    date_certified: 'Date certified',
+    license_number: 'Licence number',
+    expiry_date: 'Expires',
+  }
+  return labels[key] ?? key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+}
+
 export default function ShareCredential() {
   const { credentialId } = useParams<{ credentialId: string }>()
   const navigate = useNavigate()
@@ -74,10 +111,9 @@ export default function ShareCredential() {
   const [isUnlocking, setIsUnlocking] = useState(false)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
 
-  // Selection states (Step 2 & 3) — only the student's name is on by
-  // default; everything else, including graduation year, starts off and is
-  // an explicit opt-in per share.
-  const [selectedFields, setSelectedFields] = useState<string[]>(['name'])
+  // Selection states (Step 2 & 3) — everything here is an explicit opt-in per
+  // share. What is NOT here is ALWAYS_REVEALED below.
+  const [selectedFields, setSelectedFields] = useState<string[]>([])
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>('7days')
   const [customDate, setCustomDate] = useState('')
   const [recipientLabel, setRecipientLabel] = useState('')
@@ -394,40 +430,24 @@ export default function ShareCredential() {
     )
   }
 
-  // Count fields
-  // Always visible: Degree title (DB-column display name, not the SD-JWT
-  // "degree_type"/"degree" claim), Institution, Issuer DID, Issue date (4
-  // fields). Degree *type* and Major are genuine per-share opt-ins despite
-  // sounding similar to "Degree title" — counted below like every other
-  // selectable field.
-  // Selectable: Name, Year, GPA, National ID, Notes, Email, Student ID,
-  // Degree Type, Major, Graduation Date, Certificate ID, Photo
-  const selectableKeys = ['name', 'year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'degree_type', 'major', 'graduation_date', 'certificate_id', 'photo']
-  const totalFields = 4 + Object.keys(availableClaims).filter(k => selectableKeys.includes(k) && availableClaims[k] !== undefined && availableClaims[k] !== '').length
-  // "degree" is excluded here even though it can end up in selectedFields —
-  // it's the internal legacy alias toggleSelectableFields adds alongside
-  // "degree_type" (see renderToggleField's aliasKey), not a distinct
-  // user-facing field, so counting it too would double-count degree type
-  // for credentials that actually carry the legacy claim name.
-  const disclosedFieldsCount = 4 + selectedFields.filter(f => f !== 'degree' && availableClaims[f] !== undefined && availableClaims[f] !== '').length
+  // Count fields. The always-shown side used to be a hardcoded 4; it is now
+  // whatever of ALWAYS_REVEALED this credential actually carries, plus the
+  // issuer DID (always present, and not a disclosure).
+  const selectableKeys = ['year', 'gpa', 'national_id', 'notes', 'student_id', 'email', 'major', 'photo']
+  const alwaysShownKeys = ALWAYS_REVEALED.filter(
+    k => !['iss', 'iat', 'exp', 'degree'].includes(k) &&
+      availableClaims[k] !== undefined && availableClaims[k] !== ''
+  )
+  const alwaysShownCount = alwaysShownKeys.length + 1 // + the issuer DID
+  const totalFields = alwaysShownCount + Object.keys(availableClaims).filter(k => selectableKeys.includes(k) && availableClaims[k] !== undefined && availableClaims[k] !== '').length
+  // 'degree' is the legacy disclosure name for degree_type; both can be
+  // present on a pre-6502ec7 credential and they are one field to a reader,
+  // so it is never counted or listed separately.
+  const disclosedFieldsCount = alwaysShownCount + selectedFields.filter(f => f !== 'degree' && availableClaims[f] !== undefined && availableClaims[f] !== '').length
   
   const hiddenFields = selectableKeys
     .filter(f => availableClaims[f] !== undefined && availableClaims[f] !== '' && !selectedFields.includes(f))
-    .map(f => {
-      if (f === 'name') return 'Full name'
-      if (f === 'year') return 'Graduation year'
-      if (f === 'gpa') return 'GPA'
-      if (f === 'national_id') return 'National ID'
-      if (f === 'notes') return 'Additional notes'
-      if (f === 'email') return 'Email address'
-      if (f === 'student_id') return 'Student ID'
-      if (f === 'degree_type') return 'Degree type'
-      if (f === 'major') return 'Major'
-      if (f === 'graduation_date') return 'Graduation date'
-      if (f === 'certificate_id') return 'Certificate ID'
-      if (f === 'photo') return 'Student photo'
-      return f
-    })
+    .map(fieldLabel)
 
   // --- GENERATE SHARE LINK FLOW ---
   const handleCreateShare = async () => {
@@ -447,8 +467,10 @@ export default function ShareCredential() {
       // since that's the actual on-token name for credentials issued before
       // 6502ec7 (present() filters by literal disclosure name, so it has no
       // way to know "degree" and "degree_type" mean the same thing).
-      const revealNames = ['institution', 'iss', 'iat', 'exp', ...selectedFields,
-        ...(selectedFields.includes('degree_type') ? ['degree'] : [])]
+      // ALWAYS_REVEALED carries the legacy 'degree' alias already, so a
+      // pre-6502ec7 credential discloses its degree under whichever name it
+      // actually has.
+      const revealNames = Array.from(new Set([...ALWAYS_REVEALED, ...selectedFields]))
       const presentationStr = present(decryptedSDJwt, revealNames)
 
       // Step B: Generate UUID token
@@ -843,13 +865,39 @@ export default function ShareCredential() {
 
                 {/* Field Rows */}
                 <div className="border border-stone-200 rounded-xl overflow-hidden">
+                  {/* These rows are the ALWAYS_REVEALED set. The four a
+                      verifier compares against the document — name, document
+                      number, institution, issue date — are not toggles,
+                      because a share that withholds them hands over a
+                      signature tied to nothing. */}
                   {renderAlwaysShownField(t('wallet.issuer_did'), truncateDid(credential?.issuer_did || ''))}
                   {renderAlwaysShownField(t('wallet.institution_name'), credential?.institution_name)}
-                  {renderAlwaysShownField(t('wallet.degree_title'), credential?.degree_title)}
-                  {renderAlwaysShownField(t('wallet.issue_date'), credential && new Date(credential.created_at).toLocaleDateString())}
 
                   {availableClaims.name !== undefined && availableClaims.name !== '' &&
-                    renderToggleField('name', t('wallet.student_name').replace(':', ''), availableClaims.name)}
+                    renderAlwaysShownField(t('wallet.student_name').replace(':', ''), availableClaims.name)}
+
+                  {availableClaims.degree_type !== undefined && availableClaims.degree_type !== '' &&
+                    renderAlwaysShownField(t('wallet.degree_type').replace(':', ''), availableClaims.degree_type)}
+
+                  {availableClaims.graduation_date !== undefined && availableClaims.graduation_date !== '' &&
+                    renderAlwaysShownField(
+                      t('wallet.graduation_date').replace(':', ''),
+                      new Date(availableClaims.graduation_date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+                    )}
+
+                  {availableClaims.certificate_id !== undefined && availableClaims.certificate_id !== '' &&
+                    renderAlwaysShownField(t('wallet.certificate_id').replace(':', ''), availableClaims.certificate_id)}
+
+                  {/* The remaining ALWAYS_REVEALED claims this credential
+                      carries — the five non-degree types keep their substance
+                      here (programme, event, achievement, certification). */}
+                  {alwaysShownKeys
+                    .filter(k => !['institution', 'name', 'degree_type', 'graduation_date', 'certificate_id'].includes(k))
+                    .map(k => (
+                      <React.Fragment key={k}>
+                        {renderAlwaysShownField(fieldLabel(k), String(availableClaims[k]))}
+                      </React.Fragment>
+                    ))}
 
                   {availableClaims.email !== undefined && availableClaims.email !== '' &&
                     renderToggleField('email', t('wallet.student_email').replace(':', ''), availableClaims.email, { mono: true })}
@@ -857,28 +905,11 @@ export default function ShareCredential() {
                   {availableClaims.student_id !== undefined && availableClaims.student_id !== '' &&
                     renderToggleField('student_id', t('wallet.student_id').replace(':', ''), availableClaims.student_id, { mono: true })}
 
-                  {/* degree_type was normalized in decryptCredential from the
-                      legacy "degree" disclosure name if that's what this
-                      credential actually has — aliasKey keeps the toggle
-                      revealing the right on-token name either way. */}
-                  {availableClaims.degree_type !== undefined && availableClaims.degree_type !== '' &&
-                    renderToggleField('degree_type', t('wallet.degree_type').replace(':', ''), availableClaims.degree_type, { aliasKey: 'degree' })}
-
                   {availableClaims.major !== undefined && availableClaims.major !== '' &&
                     renderToggleField('major', t('wallet.major').replace(':', ''), availableClaims.major)}
 
                   {availableClaims.year !== undefined && availableClaims.year !== '' &&
                     renderToggleField('year', t('wallet.field_year'), availableClaims.year)}
-
-                  {availableClaims.graduation_date !== undefined && availableClaims.graduation_date !== '' &&
-                    renderToggleField(
-                      'graduation_date',
-                      t('wallet.graduation_date').replace(':', ''),
-                      new Date(availableClaims.graduation_date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
-                    )}
-
-                  {availableClaims.certificate_id !== undefined && availableClaims.certificate_id !== '' &&
-                    renderToggleField('certificate_id', t('wallet.certificate_id').replace(':', ''), availableClaims.certificate_id, { mono: true })}
 
                   {/* Certificate Photo — its own row since it needs a thumbnail preview */}
                   {(availableClaims.photo || availableClaims.student_photo) && (() => {
@@ -1133,27 +1164,14 @@ export default function ShareCredential() {
               <div style={{ backgroundColor: 'var(--paper)', borderRadius: '8px', padding: '1rem', border: '1px solid var(--line)', fontSize: '0.8rem', lineHeight: '1.4' }}>
                 <div style={{ margin: '0 0 0.4rem' }}>
                   <span className="muted">{t('wallet.disclosed_fields')} </span>
-                  <strong>{['Issuer DID', 'Institution', 'Degree title', 'Issue date', ...selectedFields
-                    // "degree" is the internal legacy alias toggled together
-                    // with "degree_type" (see renderToggleField's aliasKey)
-                    // — drop it here so it doesn't show up as a second,
-                    // unlabeled "degree" entry alongside "Degree type".
+                  {/* The real disclosed set: the issuer DID, whatever of
+                      ALWAYS_REVEALED this credential carries, and the opt-ins
+                      ticked. 'degree' is the legacy alias of degree_type, so
+                      it is dropped rather than listed twice. */}
+                  <strong>{['Issuer DID', ...alwaysShownKeys, ...selectedFields]
                     .filter(f => f !== 'degree')
-                    .map(f => {
-                    if (f === 'name') return 'Full name'
-                    if (f === 'year') return 'Graduation year'
-                    if (f === 'gpa') return 'GPA'
-                    if (f === 'national_id') return 'National ID'
-                    if (f === 'notes') return 'Additional notes'
-                    if (f === 'email') return 'Email address'
-                    if (f === 'student_id') return 'Student ID'
-                    if (f === 'degree_type') return 'Degree type'
-                    if (f === 'major') return 'Major'
-                    if (f === 'graduation_date') return 'Graduation date'
-                    if (f === 'certificate_id') return 'Certificate ID'
-                    if (f === 'photo') return 'Student photo'
-                    return f
-                  })].join(', ')}</strong>
+                    .map(f => (f === 'Issuer DID' ? f : fieldLabel(f)))
+                    .join(', ')}</strong>
                 </div>
                 {hiddenFields.length > 0 && (
                   <div style={{ margin: '0 0 0.4rem' }}>

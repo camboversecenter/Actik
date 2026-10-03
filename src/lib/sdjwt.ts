@@ -196,11 +196,28 @@ export class CredentialAssertion {
     this.issuedAt = typeof payload.iat === 'number' ? payload.iat : null
     this.expiresAt = typeof payload.exp === 'number' ? payload.exp : null
     this.claims = claims
+    // One credential shape per type, one comparison. The first claim present
+    // wins, so a degree compares its certificate number and graduation date
+    // while a professional certification compares its licence number and the
+    // date it was certified — rather than showing the reader nothing.
     this.mustMatchPrintedDocument = {
       subjectName: asText(claims.name ?? claims.student_name),
-      documentId: asText(claims.certificate_id ?? claims.student_id),
-      issuingOrganisation: asText(claims.institution ?? claims.institution_name ?? claims.university),
-      issueDate: asText(claims.graduation_date ?? claims.issue_date ?? claims.year),
+      documentId: asText(
+        claims.certificate_id ?? claims.license_number ?? claims.student_id
+      ),
+      issuingOrganisation: asText(
+        claims.institution ?? claims.institution_name ?? claims.university ?? claims.issuing_body
+      ),
+      issueDate: asText(
+        claims.graduation_date ??
+          claims.date_certified ??
+          claims.completion_date ??
+          claims.date_awarded ??
+          claims.event_date ??
+          claims.date ??
+          claims.issue_date ??
+          claims.year
+      ),
     }
   }
 }
