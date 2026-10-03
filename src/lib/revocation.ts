@@ -21,6 +21,15 @@
 // the Root-signed trust list accepts for that issuer — so a list can be
 // trusted exactly as far as the issuer's credentials can.
 //
+// The list is public, so it names no one. Version 1 carried document numbers,
+// jtis and a free-text reason in the clear: anyone could read which numbered
+// degree an institution had taken back, and why. Version 2 carries only
+// QRSeal's entry hash — SHA-256 over a domain tag, the issuer and the document
+// number (or the jti) — and one of two fixed reasons. Only someone already
+// holding the credential can compute the entry to look for. A guessable
+// numbering scheme can still be enumerated by someone hashing candidates; what
+// they learn is that a number was withdrawn, never whose it was or why.
+//
 // Pure: no network, no storage.
 
 import {
@@ -37,22 +46,60 @@ import {
   type HeldVersion,
 } from './trustList'
 import type { CredentialAssertion } from './sdjwt'
+import { revocationEntryId } from '../khsqr/trustlist'
 
-export const REVOCATIONS_TYPE = 'actik/revocations/1'
+export const REVOCATIONS_TYPE = 'actik/revocations/2'
+/** The format that named credentials in the clear. Opened only to be replaced. */
+export const LEGACY_REVOCATIONS_TYPE = 'actik/revocations/1'
+
+/**
+ * Why a credential was withdrawn — two fixed categories, as in QRSeal. A
+ * free-text reason on a public list ("plagiarism") is exactly what must not be
+ * published; the institution keeps its reasons in its own records.
+ *   withdrawn — taken back: rescinded, issued in error, no longer stands.
+ *   corrected — superseded: the institution has issued a corrected one.
+ */
+export type WithdrawalReason = 'withdrawn' | 'corrected'
 
 export interface RevocationEntry {
-  /** The credential's `jti` — present on everything issued since kids/jtis were added. */
-  jti?: string
-  /**
-   * The document number the institution printed — certificate_id or
-   * license_number. Lets an institution withdraw a credential issued before
-   * jtis existed, and lets a registrar work from the number on the paper.
-   * Deliberately NOT student_id: one student number can sit on several
-   * credentials, and withdrawing one must not withdraw them all.
-   */
-  documentId?: string
-  reason: string
+  /** revocationEntryId(issuer, documentNumber) or revocationEntryId(issuer, 'jti:' + jti). */
+  id: string
+  reason: WithdrawalReason
   revokedAt: number
+}
+
+/**
+ * What an issuer withdraws, before it is hashed for publication: the
+ * credential's `jti`, the document number printed on it, or both.
+ * The document number is certificate_id or license_number — deliberately NOT
+ * student_id: one student number can sit on several credentials, and
+ * withdrawing one must not withdraw them all.
+ */
+export interface WithdrawalRequest {
+  jti?: string | null
+  documentId?: string | null
+  reason: WithdrawalReason
+  revokedAt: number
+}
+
+/** The entry id for a jti. Prefixed so it can never equal a document number's. */
+export function jtiEntryId(issuer: string, jti: string): Promise<string> {
+  return revocationEntryId(issuer, `jti:${jti}`)
+}
+
+/** The entry id for a printed document number — QRSeal's, unchanged, so printed codes match it. */
+export function documentEntryId(issuer: string, documentId: string): Promise<string> {
+  return revocationEntryId(issuer, documentId)
+}
+
+/** Hash a withdrawal into the entries that go on the public list. */
+export async function entriesFor(issuer: string, w: WithdrawalRequest): Promise<RevocationEntry[]> {
+  const out: RevocationEntry[] = []
+  if (w.jti) out.push({ id: await jtiEntryId(issuer, w.jti), reason: w.reason, revokedAt: w.revokedAt })
+  if (w.documentId) {
+    out.push({ id: await documentEntryId(issuer, w.documentId), reason: w.reason, revokedAt: w.revokedAt })
+  }
+  return out
 }
 
 export interface RevocationStatement {
@@ -85,7 +132,7 @@ export class RevocationRejected extends Error {
 export type CredentialStatus =
   | { status: 'clear'; listVersion: number; listIssuedAt: number }
   | { status: 'unchecked'; why: 'none_published' | 'expired'; listExpiredAt?: number }
-  | { status: 'revoked'; reason: string; revokedAt: number; listVersion: number }
+  | { status: 'revoked'; reason: WithdrawalReason; revokedAt: number; listVersion: number }
 
 export interface OpenedRevocations {
   issuer: string
@@ -94,8 +141,12 @@ export interface OpenedRevocations {
   expires: number
   digest: string
   entries: RevocationEntry[]
+  /** True for a version-1 list: genuine, but it names credentials in the clear and must be republished. */
+  legacy: boolean
   document: SignedDocument
 }
+
+const ENTRY_ID = /^[0-9A-F]{64}$/
 
 function isNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
@@ -129,8 +180,9 @@ export async function openRevocationList(
   } catch {
     throw new RevocationRejected('REVOCATIONS_MALFORMED')
   }
+  const legacy = !!s && (s as { type?: unknown }).type === LEGACY_REVOCATIONS_TYPE
   if (
-    !s || s.type !== REVOCATIONS_TYPE || typeof s.issuer !== 'string' ||
+    !s || (s.type !== REVOCATIONS_TYPE && !legacy) || typeof s.issuer !== 'string' ||
     !isNumber(s.version) || !isNumber(s.issuedAt) || !isNumber(s.expires) ||
     !Array.isArray(s.revoked)
   ) {
@@ -161,10 +213,30 @@ export async function openRevocationList(
     }
   }
 
-  for (const e of s.revoked) {
-    if (!e || (typeof e.jti !== 'string' && typeof e.documentId !== 'string') || !isNumber(e.revokedAt)) {
-      throw new RevocationRejected('REVOCATIONS_MALFORMED')
+  let entries: RevocationEntry[]
+  if (legacy) {
+    // A version-1 list still withdraws what it withdrew: hash its entries so
+    // they match, and flag it so the issuer's next publication replaces it.
+    entries = []
+    for (const e of s.revoked as unknown as Array<Record<string, unknown>>) {
+      const jti = typeof e?.jti === 'string' ? e.jti : null
+      const documentId = typeof e?.documentId === 'string' ? e.documentId : null
+      if (!e || (!jti && !documentId) || !isNumber(e.revokedAt)) {
+        throw new RevocationRejected('REVOCATIONS_MALFORMED')
+      }
+      entries.push(...(await entriesFor(s.issuer, { jti, documentId, reason: 'withdrawn', revokedAt: e.revokedAt })))
     }
+  } else {
+    for (const e of s.revoked) {
+      if (
+        !e || typeof e.id !== 'string' || !ENTRY_ID.test(e.id) || !isNumber(e.revokedAt) ||
+        (e.reason !== 'withdrawn' && e.reason !== 'corrected') ||
+        Object.keys(e).some((k) => k !== 'id' && k !== 'reason' && k !== 'revokedAt')
+      ) {
+        throw new RevocationRejected('REVOCATIONS_MALFORMED')
+      }
+    }
+    entries = s.revoked
   }
 
   return {
@@ -173,19 +245,31 @@ export async function openRevocationList(
     issuedAt: s.issuedAt,
     expires: s.expires,
     digest,
-    entries: s.revoked,
+    entries,
+    legacy,
     document: doc,
   }
 }
 
 /** The document numbers a revocation entry may name for this credential. */
-function documentNumbers(assertion: CredentialAssertion): string[] {
+function documentNumbers(assertion: Pick<CredentialAssertion, 'claims'>): string[] {
   const out: string[] = []
   for (const key of ['certificate_id', 'license_number']) {
     const v = assertion.claims[key]
-    if (typeof v === 'string' && v !== '') out.push(v)
+    if (typeof v === 'string' && v !== '' && !out.includes(v)) out.push(v)
   }
   return out
+}
+
+/** Every entry id under which this credential could have been withdrawn. */
+export async function entryIdsForCredential(
+  issuer: string,
+  assertion: Pick<CredentialAssertion, 'jti' | 'claims'>
+): Promise<string[]> {
+  const ids: string[] = []
+  if (assertion.jti) ids.push(await jtiEntryId(issuer, assertion.jti))
+  for (const n of documentNumbers(assertion)) ids.push(await documentEntryId(issuer, n))
+  return ids
 }
 
 /**
@@ -193,19 +277,15 @@ function documentNumbers(assertion: CredentialAssertion): string[] {
  * A credential on the list is revoked even if the list has since expired: an
  * expired list is stale about what it does NOT say, not about what it does.
  */
-export function credentialStatus(
-  assertion: CredentialAssertion,
+export async function credentialStatus(
+  assertion: Pick<CredentialAssertion, 'jti' | 'claims'>,
   revocations: OpenedRevocations | null,
   now: number
-): CredentialStatus {
+): Promise<CredentialStatus> {
   if (!revocations) return { status: 'unchecked', why: 'none_published' }
 
-  const numbers = documentNumbers(assertion)
-  const hit = revocations.entries.find(
-    (e) =>
-      (e.jti !== undefined && assertion.jti !== null && e.jti === assertion.jti) ||
-      (e.documentId !== undefined && numbers.includes(e.documentId))
-  )
+  const ids = await entryIdsForCredential(revocations.issuer, assertion)
+  const hit = revocations.entries.find((e) => ids.includes(e.id))
   if (hit) {
     return { status: 'revoked', reason: hit.reason, revokedAt: hit.revokedAt, listVersion: revocations.version }
   }
@@ -223,7 +303,7 @@ export function credentialStatus(
 export async function buildRevocationList(options: {
   issuerDid: string
   previous: OpenedRevocations | null
-  add: RevocationEntry[]
+  add: WithdrawalRequest[]
   signingKey: CryptoKey
   kid: string
   now: number
@@ -236,7 +316,12 @@ export async function buildRevocationList(options: {
     version: (options.previous?.version ?? 0) + 1,
     issuedAt: options.now,
     expires: options.now + validity,
-    revoked: [...(options.previous?.entries ?? []), ...options.add],
+    revoked: [...(options.previous?.entries ?? [])],
+  }
+  for (const w of options.add) {
+    for (const e of await entriesFor(options.issuerDid, w)) {
+      if (!statement.revoked.some((have) => have.id === e.id)) statement.revoked.push(e)
+    }
   }
   return signStatement(statement, options.signingKey, options.kid)
 }

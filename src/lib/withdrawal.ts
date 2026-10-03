@@ -15,7 +15,8 @@ import {
   openRevocationList,
   RevocationRejected,
   type OpenedRevocations,
-  type RevocationEntry,
+  type WithdrawalRequest,
+  type WithdrawalReason,
 } from './revocation'
 import { keyAcceptedAt, TrustRejected, type SignedDocument } from './trustList'
 import { getIssuerKey } from './issuerKeyStore'
@@ -81,7 +82,7 @@ export async function loadOwnRevocations(did: string): Promise<OpenedRevocations
  * appended. With nothing to add it simply renews the list — which must happen
  * at least every 30 days, or verifiers report standing as unchecked.
  */
-export async function publishWithdrawals(did: string, add: RevocationEntry[]): Promise<OpenedRevocations> {
+export async function publishWithdrawals(did: string, add: WithdrawalRequest[]): Promise<OpenedRevocations> {
   const held = getIssuerKey()
   if (!held || held.did !== did) {
     throw new WithdrawalBlocked('Unlock your signing key first: the list is signed with it.')
@@ -132,7 +133,7 @@ export interface IssuedRecord {
   date: string
   credential_type: string
   email: string | null
-  withdrawn: { reason: string; revokedAt: number } | null
+  withdrawn: { reason: WithdrawalReason; revokedAt: number } | null
 }
 
 /**
@@ -165,14 +166,15 @@ export async function loadIssuedRecords(userId: string): Promise<{
   }
 
   const now = Math.floor(Date.now() / 1000)
-  const records: IssuedRecord[] = (data ?? []).map((r: any) => {
-    // credentialStatus wants an assertion; the log carries the two things a
-    // withdrawal entry can name.
-    const pseudo = {
-      jti: r.jti ?? null,
-      claims: r.document_id ? { certificate_id: r.document_id, license_number: r.document_id } : {},
-    } as unknown as Parameters<typeof credentialStatus>[0]
-    const st = revocations ? credentialStatus(pseudo, revocations, now) : null
+  const records: IssuedRecord[] = await Promise.all((data ?? []).map(async (r: any) => {
+    // The log carries the two things a withdrawal entry can be computed from.
+    const st = revocations
+      ? await credentialStatus(
+          { jti: r.jti ?? null, claims: r.document_id ? { certificate_id: r.document_id } : {} },
+          revocations,
+          now
+        )
+      : null
     return {
       id: r.id,
       jti: r.jti ?? null,
@@ -183,7 +185,7 @@ export async function loadIssuedRecords(userId: string): Promise<{
       email: r.recipient_email ?? null,
       withdrawn: st && st.status === 'revoked' ? { reason: st.reason, revokedAt: st.revokedAt } : null,
     }
-  })
+  }))
 
   return { issuer, records, revocations, revocationsError }
 }

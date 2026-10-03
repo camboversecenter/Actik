@@ -11,6 +11,7 @@ import {
   CredentialWithdrawn,
   type CheckedCredential,
 } from '../../lib/credentialCheck'
+import type { WithdrawalReason } from '../../lib/revocation'
 import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
 
 // --- TypeScript Types ---
@@ -361,7 +362,7 @@ export default function VerifyCredential() {
   // blame in the first; nobody is in the second; the institution decided the
   // third.
   const [failureKind, setFailureKind] = useState<'rejected' | 'unavailable' | 'withdrawn'>('rejected')
-  const [withdrawal, setWithdrawal] = useState<{ reason: string; revokedAt: number } | null>(null)
+  const [withdrawal, setWithdrawal] = useState<{ reason: WithdrawalReason; revokedAt: number } | null>(null)
   const [parsedPresentation, setParsedPresentation] = useState<ParsedPresentation | null>(null)
   const [detailsExpanded, setDetailsExpanded] = useState(false)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
@@ -1257,7 +1258,7 @@ export default function VerifyCredential() {
                 </h2>
                 {failureKind === 'withdrawn' && withdrawal && (
                   <p className="text-sm text-stone-700 mt-2 max-w-sm mx-auto leading-relaxed">
-                    <span className="font-semibold">{t('verify.withdrawn_reason')}</span> {withdrawal.reason}
+                    {t(`verify.withdrawn_${withdrawal.reason}`)}
                     <span className="block text-xs text-stone-500 mt-0.5">
                       {longDate(withdrawal.revokedAt)}
                     </span>

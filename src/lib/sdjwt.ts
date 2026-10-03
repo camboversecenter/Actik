@@ -127,7 +127,7 @@ function parseSdJwt(sdjwt: string): ParsedSdJwt {
  * Only for choosing which trusted key to verify with: every value here is
  * re-checked against the verified payload afterwards, never acted on directly.
  */
-export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null; iss: string | null } {
+export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null; iss: string | null; jti: string | null } {
   try {
     const [h, p] = sdjwt.split('~')[0].split('.')
     const header = fromB64uJSON<Record<string, unknown>>(h)
@@ -136,9 +136,10 @@ export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null
       kid: typeof header.kid === 'string' ? header.kid : null,
       iat: typeof payload.iat === 'number' ? payload.iat : null,
       iss: typeof payload.iss === 'string' ? payload.iss : null,
+      jti: typeof payload.jti === 'string' ? payload.jti : null,
     }
   } catch {
-    return { kid: null, iat: null, iss: null }
+    return { kid: null, iat: null, iss: null, jti: null }
   }
 }
 

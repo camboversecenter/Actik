@@ -8,6 +8,7 @@
 
 import { checkCredential, type CheckedCredential } from './credentialCheck'
 import { loadRevocationState, loadTrustState } from './trustAnchor'
+import { checkPrintedCopy, type PrintedCopyResult } from './printedCredential'
 
 export { ClaimRefused, CredentialRefused, signedOr } from './credentialCheck'
 
@@ -21,4 +22,22 @@ export async function verifyIssuedCredential(
       ? await loadRevocationState(issuerDid, trust.list)
       : { list: null, failure: null }
   return checkCredential(sdjwt, issuerDid, trust, revocations, Math.floor(Date.now() / 1000))
+}
+
+/**
+ * The printed copy that came with a credential, checked before the holder
+ * keeps it: it must verify on its own (QRSeal Profile B against the same trust
+ * list), come from the same issuer, and name the same document and holder as
+ * the credential it arrived with. Returns the code, or null with the reason it
+ * was dropped — a bad printed copy never blocks the credential itself.
+ */
+export async function verifyPrintedCopy(
+  printed: string | null | undefined,
+  credential: CheckedCredential
+): Promise<PrintedCopyResult> {
+  if (!printed) return { payload: null, reason: null }
+  const trust = await loadTrustState()
+  const issuerDid = credential.assertion.issuer
+  const revocations = trust.list ? await loadRevocationState(issuerDid, trust.list) : { list: null, failure: null }
+  return checkPrintedCopy(printed, credential, trust, revocations, Math.floor(Date.now() / 1000))
 }

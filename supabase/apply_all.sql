@@ -571,6 +571,10 @@ alter table public.credentials         add column if not exists type_metadata js
 -- The credential's own identifier (its signed `jti`), so the issuer can later
 -- withdraw exactly it.
 alter table public.pending_credentials add column if not exists credential_jti uuid;
+-- The printed (KH1:) copy signed at issuance, delivered to the holder with the
+-- credential and moved into their encrypted vault on claim.
+alter table public.pending_credentials add column if not exists printed_code text
+  check (printed_code is null or (printed_code like 'KH1:%' and length(printed_code) <= 4096));
 -- A share link may be limited to N views; 1 makes it single-use.
 alter table public.shares add column if not exists max_views integer
   check (max_views is null or max_views > 0);
@@ -770,6 +774,18 @@ begin
   if stmt is null or (stmt ->> 'version') is null then
     raise exception 'not a signed revocation list';
   end if;
+  if (stmt ->> 'type') is distinct from 'actik/revocations/2' then
+    raise exception 'revocation lists must be published as actik/revocations/2 (hashed entries)';
+  end if;
+  if jsonb_typeof(stmt -> 'revoked') is distinct from 'array' or exists (
+    select 1 from jsonb_array_elements(stmt -> 'revoked') e
+    where jsonb_typeof(e) <> 'object'
+       or exists (select 1 from jsonb_object_keys(e) k where k not in ('id', 'reason', 'revokedAt'))
+       or (e ->> 'id') !~ '^[0-9A-F]{64}$'
+       or (e ->> 'reason') not in ('withdrawn', 'corrected')
+  ) then
+    raise exception 'a revocation entry may carry only a hashed id, a fixed reason and a date';
+  end if;
   if (stmt ->> 'issuer') is distinct from new.issuer_did then
     raise exception 'revocation list names issuer %, stored under %', stmt ->> 'issuer', new.issuer_did;
   end if;
@@ -789,8 +805,18 @@ create trigger revocation_lists_guard
 
 alter table public.revocation_lists enable row level security;
 
+-- Public reads see only hashed (version 2) lists; an institution still sees
+-- its own version-1 list, so it can renew it.
 drop policy if exists "read revocation lists" on public.revocation_lists;
-create policy "read revocation lists" on public.revocation_lists for select using (true);
+create policy "read revocation lists" on public.revocation_lists for select using (
+  public.try_jsonb(document ->> 'statement') ->> 'type' = 'actik/revocations/2'
+);
+-- owns_accredited_issuer() is not executable by anon, so the owner's own read
+-- is a separate policy that applies to signed-in users only.
+drop policy if exists "issuer reads own revocations" on public.revocation_lists;
+create policy "issuer reads own revocations" on public.revocation_lists
+  for select to authenticated using (public.owns_accredited_issuer(issuer_did));
+
 
 drop policy if exists "issuer publishes own revocations" on public.revocation_lists;
 create policy "issuer publishes own revocations" on public.revocation_lists

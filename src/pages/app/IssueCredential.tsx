@@ -482,51 +482,15 @@ export default function IssueCredential() {
         expiresInSec: 365 * 24 * 60 * 60 * 5
       })
 
-      // Step 3: Save to Supabase. The `credentials` table on this project's
-      // live schema doesn't have issuer_id/holder_id/holder_email/sd_jwt/
-      // claimed columns (confirmed directly against the DB — only the older
-      // schema.sql shape plus a handful of added columns exists there), so
-      // an insert attempt against it always fails with 42703. Every issued
-      // credential actually lives in `pending_credentials` until claimed,
-      // at which point Notifications.tsx's executeClaim() migrates it into
-      // `credentials` (owner/label/cipher/iv shape). Insert there directly
-      // instead of carrying a first attempt that can never succeed.
-      const credentialData: any = {
-        recipient_email: studentEmail.trim().toLowerCase(),
-        sdjwt: sdJwt,
-        issuer_did: issuerInfo.did,
-        institution_name: issuerInfo.name,
-        credential_type: selectedType,
-        // The database copies this into issued_credentials (the issuer's own
-        // log) as the row goes in — see log_issued_credential().
-        credential_jti: credentialJti
-      }
-      if (selectedType === 'academic_degree') {
-        credentialData.label = degreeTitle
-        credentialData.degree_type = degreeTitle
-        credentialData.student_id = studentId.trim()
-        credentialData.major = major.trim()
-        credentialData.graduation_date = graduationDate
-        credentialData.certificate_id = certificateId.trim()
-      } else {
-        credentialData.type_metadata = typeMetadata
-        credentialData.label = typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
-      }
-
-      const res = await supabase.from('pending_credentials').insert(credentialData)
-
-      if (res.error) {
-        if (res.error.code === '23505' && res.error.message.includes('certificate_id')) {
-          throw new Error('A certificate with this ID has already been issued by your institution.')
-        }
-        throw res.error
-      }
-
-      // The printed copy. A failure here never undoes the issuance above — the
-      // credential is already in the holder's inbox — it only means there is
-      // no printable copy to offer.
+      // The printed copy, signed before the credential goes out so that it
+      // travels with it: the holder keeps it in their vault and can reprint
+      // it, or hand it on, without asking the institution again. A failure
+      // here never blocks the issuance — it only means there is no printable
+      // copy to offer.
       setPrinted(null)
       setPrintUnavailable(null)
+      let printedCopy: { payload: string; title: string; holder: string; documentId: string; institution: string; issueDate: string } | null = null
+      let printUnavailableWhy: string | null = null
       const documentNumber =
         selectedType === 'academic_degree' ? certificateId.trim()
         : selectedType === 'professional_certification' ? licenseNumber.trim()
@@ -538,7 +502,7 @@ export default function IssueCredential() {
       const printedTitle =
         selectedType === 'academic_degree' ? formatDegreeTitle(degreeTitle) : certName.trim()
       if (!documentNumber) {
-        setPrintUnavailable('no_number')
+        printUnavailableWhy = 'no_number'
       } else {
         try {
           let documentHash: string | undefined
@@ -569,11 +533,59 @@ export default function IssueCredential() {
               ...(documentHash ? { documentHash } : {}),
             },
           })
-          setPrinted({ payload, title: printedTitle, ...fields })
+          printedCopy = { payload, title: printedTitle, ...fields }
         } catch (e) {
-          setPrintUnavailable(e instanceof PrintRefused ? e.message : e instanceof Error ? e.message : String(e))
+          printUnavailableWhy = e instanceof PrintRefused ? e.message : e instanceof Error ? e.message : String(e)
         }
       }
+
+
+      // Step 3: Save to Supabase. The `credentials` table on this project's
+      // live schema doesn't have issuer_id/holder_id/holder_email/sd_jwt/
+      // claimed columns (confirmed directly against the DB — only the older
+      // schema.sql shape plus a handful of added columns exists there), so
+      // an insert attempt against it always fails with 42703. Every issued
+      // credential actually lives in `pending_credentials` until claimed,
+      // at which point Notifications.tsx's executeClaim() migrates it into
+      // `credentials` (owner/label/cipher/iv shape). Insert there directly
+      // instead of carrying a first attempt that can never succeed.
+      const credentialData: any = {
+        recipient_email: studentEmail.trim().toLowerCase(),
+        sdjwt: sdJwt,
+        issuer_did: issuerInfo.did,
+        institution_name: issuerInfo.name,
+        credential_type: selectedType,
+        // The database copies this into issued_credentials (the issuer's own
+        // log) as the row goes in — see log_issued_credential().
+        credential_jti: credentialJti,
+        // The holder's copy of the printed code. Not secret — it is what is
+        // printed on the paper — but it names the holder, so it is the
+        // holder's row like the rest; it moves into their encrypted vault on claim.
+        printed_code: printedCopy?.payload ?? null
+      }
+      if (selectedType === 'academic_degree') {
+        credentialData.label = degreeTitle
+        credentialData.degree_type = degreeTitle
+        credentialData.student_id = studentId.trim()
+        credentialData.major = major.trim()
+        credentialData.graduation_date = graduationDate
+        credentialData.certificate_id = certificateId.trim()
+      } else {
+        credentialData.type_metadata = typeMetadata
+        credentialData.label = typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
+      }
+
+      const res = await supabase.from('pending_credentials').insert(credentialData)
+
+      if (res.error) {
+        if (res.error.code === '23505' && res.error.message.includes('certificate_id')) {
+          throw new Error('A certificate with this ID has already been issued by your institution.')
+        }
+        throw res.error
+      }
+
+      setPrinted(printedCopy)
+      setPrintUnavailable(printUnavailableWhy)
 
       clearDraft()
       setIssueSuccess(true)

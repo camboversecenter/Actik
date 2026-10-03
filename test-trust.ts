@@ -183,15 +183,15 @@ const withdrawnJti = (await checkCredential(withdrawn, numDid, trust, noRevocati
 
 const rev1 = await buildRevocationList({
   issuerDid: numDid, previous: null, signingKey: numNewKey, kid: numNewKid, now,
-  add: [{ jti: withdrawnJti, reason: 'Degree rescinded by the academic board', revokedAt: now }],
+  add: [{ jti: withdrawnJti, reason: 'withdrawn', revokedAt: now }],
 })
 const opened1 = await openRevocationList(rev1, { list, issuerDid: numDid })
 const revs1: RevocationState = { list: opened1, failure: null }
 
 let w: CredentialWithdrawn | null = null
 try { await checkCredential(withdrawn, numDid, trust, revs1, now) } catch (e) { w = e as CredentialWithdrawn }
-assert(w?.reason === 'CREDENTIAL_REVOKED' && w.withdrawalReason === 'Degree rescinded by the academic board',
-  'a withdrawn credential is refused, and the refusal says the institution withdrew it and why')
+assert(w?.reason === 'CREDENTIAL_REVOKED' && w.withdrawalReason === 'withdrawn',
+  'a withdrawn credential is refused, and the refusal says the institution withdrew it')
 assert(!w!.unavailable, 'a withdrawal is a verdict, not a "could not check"')
 
 const cleared = await checkCredential(fresh, numDid, trust, revs1, now)
@@ -201,11 +201,13 @@ assert(cleared.standing.status === 'clear' && cleared.standing.listVersion === 1
 // Withdraw by the number on the paper — for credentials issued before jtis.
 const rev2 = await buildRevocationList({
   issuerDid: numDid, previous: opened1, signingKey: numNewKey, kid: numNewKid, now,
-  add: [{ documentId: 'NUM-2026-BBA-0417', reason: 'Issued with the wrong graduation date', revokedAt: now }],
+  add: [{ documentId: 'NUM-2026-BBA-0417', reason: 'corrected', revokedAt: now }],
 })
 const revs2: RevocationState = { list: await openRevocationList(rev2, { list, issuerDid: numDid }), failure: null }
-assert((await reason(() => checkCredential(legacy, numDid, trust, revs2, now))) === 'CREDENTIAL_REVOKED',
-  'a credential can be withdrawn by its printed document number')
+let corrected: CredentialWithdrawn | null = null
+try { await checkCredential(legacy, numDid, trust, revs2, now) } catch (e) { corrected = e as CredentialWithdrawn }
+assert(corrected?.reason === 'CREDENTIAL_REVOKED' && corrected.withdrawalReason === 'corrected',
+  'a credential can be withdrawn by its printed document number, as replaced by a corrected one')
 const sameStudentOtherDoc = await issue(numNew, { extra: { certificate_id: 'NUM-2026-TRN-0417' } })
 assert((await checkCredential(sameStudentOtherDoc, numDid, trust, revs2, now)).standing.status === 'clear',
   "withdrawing one document does not withdraw the student's others")
@@ -223,11 +225,57 @@ assert((await reason(() => checkCredential(present(legacy, ALWAYS_REVEALED), num
 // logic on its own.
 const { credentialStatus } = await import('./src/lib/revocation.ts')
 const otherDoc = (await checkCredential(sameStudentOtherDoc, numDid, trust, noRevocations, now)).assertion
-const lapsedStatus = credentialStatus(otherDoc, revs2.list, now + 40 * DAY)
+const lapsedStatus = await credentialStatus(otherDoc, revs2.list, now + 40 * DAY)
 assert(lapsedStatus.status === 'unchecked' && lapsedStatus.why === 'expired',
   'a lapsed withdrawal list makes standing unchecked, not clear')
-assert(credentialStatus((await checkCredential(withdrawn, numDid, trust, noRevocations, now)).assertion, revs2.list, now + 40 * DAY).status === 'revoked',
+assert((await credentialStatus((await checkCredential(withdrawn, numDid, trust, noRevocations, now)).assertion, revs2.list, now + 40 * DAY)).status === 'revoked',
   'but a credential on a lapsed list is still withdrawn')
+
+console.log('\nwithdrawal lists name no one')
+// The list is public. It must not say which document numbers or jtis were
+// withdrawn, nor carry an institution's explanation.
+for (const text of [rev1.statement, rev2.statement]) {
+  assert(!text.includes('NUM-2026') && !text.includes(withdrawnJti),
+    'the published list carries no document number and no jti')
+  const st = JSON.parse(text)
+  assert(st.type === 'actik/revocations/2' &&
+    st.revoked.every((e: Record<string, unknown>) =>
+      /^[0-9A-F]{64}$/.test(String(e.id)) && (e.reason === 'withdrawn' || e.reason === 'corrected') &&
+      Object.keys(e).sort().join() === 'id,reason,revokedAt'),
+    'each entry is a hash, a fixed category and a date — nothing else')
+}
+const { revocationEntryId } = await import('./src/khsqr/trustlist.ts')
+assert(opened1.entries[0].id === await revocationEntryId(numDid, `jti:${withdrawnJti}`),
+  "a jti entry is QRSeal's entry hash over 'jti:' and the jti")
+// Withdrawing the same thing twice does not grow the list.
+const again = await buildRevocationList({
+  issuerDid: numDid, previous: opened1, signingKey: numNewKey, kid: numNewKid, now,
+  add: [{ jti: withdrawnJti, reason: 'withdrawn', revokedAt: now + 5 }],
+})
+assert(JSON.parse(again.statement).revoked.length === 1, 'withdrawing the same credential twice adds no entry')
+// A list carrying a plaintext field, even signed by the issuer, is not accepted.
+const leaky = await signStatement({ ...JSON.parse(rev1.statement), version: 9,
+  revoked: [{ ...opened1.entries[0], documentId: 'NUM-2026-BBA-0999' }] }, numNewKey, numNewKid)
+assert((await reason(() => openRevocationList(leaky, { list, issuerDid: numDid }))) === 'REVOCATIONS_MALFORMED',
+  'an entry with any field beyond id, reason and date is refused')
+const freeText = await signStatement({ ...JSON.parse(rev1.statement), version: 9,
+  revoked: [{ ...opened1.entries[0], reason: 'Plagiarism' }] }, numNewKey, numNewKid)
+assert((await reason(() => openRevocationList(freeText, { list, issuerDid: numDid }))) === 'REVOCATIONS_MALFORMED',
+  'a free-text reason is refused')
+// An old-format list still withdraws what it withdrew, and is flagged for replacement.
+const v1 = await signStatement({ type: 'actik/revocations/1', issuer: numDid, version: 3, issuedAt: now,
+  expires: now + 30 * DAY, revoked: [{ documentId: 'NUM-2026-BBA-0417', reason: 'Wrong date', revokedAt: now }] },
+  numNewKey, numNewKid)
+const openedV1 = await openRevocationList(v1, { list, issuerDid: numDid })
+assert(openedV1.legacy && (await credentialStatus(otherDoc, openedV1, now)).status === 'clear' &&
+  (await credentialStatus({ jti: null, claims: { certificate_id: 'NUM-2026-BBA-0417' } }, openedV1, now)).status === 'revoked',
+  'an old-format list still withdraws what it named, and is flagged for republishing')
+const republished = await buildRevocationList({
+  issuerDid: numDid, previous: openedV1, signingKey: numNewKey, kid: numNewKid, now, add: [],
+})
+assert(!republished.statement.includes('NUM-2026') && !republished.statement.includes('Wrong date') &&
+  JSON.parse(republished.statement).version === 4,
+  'renewing an old-format list republishes it as hashes, keeping its withdrawals')
 
 console.log('\nwithdrawal lists that must not be believed')
 const strangerKey = await importSigningKey(stranger.privateJwk)

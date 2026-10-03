@@ -27,6 +27,7 @@ import {
   type CheckedPrinted,
 } from '../../lib/printedCredential'
 import { CredentialRefused, CredentialWithdrawn, messageForRefusal } from '../../lib/credentialCheck'
+import type { WithdrawalReason } from '../../lib/revocation'
 import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
 
 type Result =
@@ -35,7 +36,7 @@ type Result =
   | { kind: 'other' }
   | { kind: 'rejected'; message: string }
   | { kind: 'unavailable'; message: string }
-  | { kind: 'withdrawn'; reason: string; revokedAt: number }
+  | { kind: 'withdrawn'; reason: WithdrawalReason; revokedAt: number }
   | { kind: 'checked'; checked: CheckedPrinted }
 
 type Mode = 'camera' | 'photo' | 'paste'
@@ -307,9 +308,7 @@ function ScanResult({ result }: { result: Exclude<Result, { kind: 'checking' }> 
     return (
       <div className="border border-rose-200 bg-rose-50 rounded-xl p-5 space-y-2">
         <h2 className="text-lg font-bold text-rose-800">{t('verify.withdrawn_title')}</h2>
-        <p className="text-sm text-rose-900">
-          <span className="font-semibold">{t('verify.withdrawn_reason')}</span> {result.reason}
-        </p>
+        <p className="text-sm text-rose-900">{t(`verify.withdrawn_${result.reason}`)}</p>
         {result.revokedAt > 0 && (
           <p className="text-xs text-rose-700">{longDate(result.revokedAt)}</p>
         )}

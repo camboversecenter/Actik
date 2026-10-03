@@ -111,6 +111,7 @@ const translations = {
       detail_issued_by: 'Issued by:',
       issuer_did: 'Issuer DID:',
       encrypted_badge: 'Encrypted in your vault',
+      no_printed_copy: 'The institution did not sign a printed copy of this credential.',
       raw_token_trigger: 'Advanced: export full credential',
       raw_token_modal_title: 'Full credential export',
       raw_token_modal_subtitle: 'For developer or audit use',
@@ -577,10 +578,53 @@ const translations = {
       final_cta_button: 'Sign in',
       footer_rights: '© 2026 Actik. All rights reserved.'
     },
+    museum: {
+      title: 'Add to a CamboVerse museum',
+      intro: 'You decide what can be shown. The original file stays in your wallet — the exhibit carries only its fingerprint, the picture you prepare here and, if you choose, the institution’s signed code.',
+      image_heading: 'What the picture shows',
+      mode_cover: 'Cover',
+      mode_crop: 'Crop',
+      cover_hint: 'Drag over anything you do not want shown — date or place of birth, ID or student number, photograph, signatures.',
+      crop_hint: 'Drag to choose the part of the certificate to show.',
+      undo: 'Undo',
+      reset: 'Start again',
+      no_image: 'Show no picture — only the title and the institution',
+      pdf_no_image: 'This certificate is a PDF, so no picture goes with the exhibit; it shows the title and the institution.',
+      no_file: 'This credential has no file, so the exhibit shows the title and the institution.',
+      sensitive_heading: 'This credential carries:',
+      sensitive_hint: 'They are probably printed on the certificate. Cover them before showing it.',
+      general_warning: 'Certificates often show a full name, date and place of birth, an ID or student number and a photograph. The picture is reduced in size and re-saved, which removes hidden photo data such as location.',
+      visibility_heading: 'Who may see it',
+      vis_private: 'Only me',
+      vis_private_hint: 'It hangs in your room and is shown to no one else.',
+      vis_link: 'People I send a link to',
+      vis_link_hint: 'Shown only to people who have your room’s link.',
+      vis_public: 'Anyone',
+      vis_public_hint: 'Anyone who finds your room.',
+      vis_note: 'This is the most the museum may show it to. If your room is set stricter, the room wins.',
+      public_confirm: 'I have checked the picture and it shows nothing I do not want public.',
+      printed_heading: 'The institution’s signed code',
+      printed_include: 'Include it',
+      printed_hint: 'Lets the museum show who issued it, checked on the viewer’s own device. Anyone who can see the exhibit can read what the code signs: your name, the document number, the institution and the date.',
+      printed_none: 'This credential has no printed code, so the museum will show it as added by you.',
+      preview: 'Preview the picture',
+      preview_heading: 'Exactly what can be shown',
+      prepare: 'Prepare exhibit file',
+      preparing: 'Preparing…',
+      download: 'Download exhibit file',
+      copy: 'Copy',
+      copied: 'Copied',
+      done: 'Exhibit file ready. Add it to your room in CamboVerse. It will say you added it — that is normal, not a warning.',
+      refused_withdrawn: 'The institution has withdrawn this credential, so it cannot be added to a museum.',
+      refused_rejected: 'This credential did not verify, so it cannot be added to a museum.',
+      close: 'Close',
+      export_button: 'Add to museum',
+    },
     print: {
       title: 'Printable certificate',
       toolbar_hint: 'Print on A4, landscape. Use “Save as PDF” in the print dialog to keep a file.',
       print_button: 'Print',
+      reprint: 'Print certificate',
       certifies: 'This certifies that',
       has_been_awarded: 'has been awarded',
       signed_fields: 'Signed into the code — the verifier’s screen must show exactly these',
@@ -639,7 +683,8 @@ const translations = {
       check_4: 'Checking the signed trust registry…',
       check_5: 'Checking whether the issuer withdrew it…',
       withdrawn_title: 'Withdrawn by the issuer',
-      withdrawn_reason: 'The institution gave this reason:',
+      withdrawn_withdrawn: 'The institution that issued it has withdrawn it.',
+      withdrawn_corrected: 'The institution has replaced it with a corrected credential. Ask the holder for the corrected one.',
       standing_clear_title: 'Not withdrawn.',
       standing_clear_desc: "Checked against {issuer}'s withdrawal list, version {version}, dated {date}. A withdrawal made after that date would not show here.",
       standing_unchecked_title: 'Signature valid, standing unchecked.',
@@ -775,6 +820,7 @@ const translations = {
       detail_issued_by: 'ចេញដោយ៖',
       issuer_did: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
       encrypted_badge: 'ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
+      no_printed_copy: 'ស្ថាប័នមិនបានចុះហត្ថលេខាលើច្បាប់បោះពុម្ពនៃលិខិតនេះទេ។', // TODO(km-review)
       raw_token_trigger: 'កម្រិតខ្ពស់៖ នាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
       raw_token_modal_title: 'ការនាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
       raw_token_modal_subtitle: 'សម្រាប់អ្នកអភិវឌ្ឍ ឬការត្រួតពិនិត្យ', // TODO(km-review)
@@ -1242,10 +1288,53 @@ const translations = {
       final_cta_button: 'ចូលគណនី',
       footer_rights: '© 2026 Actik។ រក្សាសិទ្ធិគ្រប់យ៉ាង។'
     },
+    museum: {
+      title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)
+      intro: 'អ្នកជាអ្នកសម្រេចថាអ្វីអាចបង្ហាញបាន។ ឯកសារដើមនៅតែក្នុងកាបូបរបស់អ្នក — វត្ថុតាំងពិព័រណ៍មានតែស្នាមម្រាមដៃរបស់វា រូបភាពដែលអ្នករៀបចំនៅទីនេះ និងកូដដែលស្ថាប័នបានចុះហត្ថលេខា ប្រសិនបើអ្នកជ្រើសរើស។', // TODO(km-review)
+      image_heading: 'អ្វីដែលរូបភាពបង្ហាញ', // TODO(km-review)
+      mode_cover: 'បិទបាំង', // TODO(km-review)
+      mode_crop: 'កាត់', // TODO(km-review)
+      cover_hint: 'អូសលើអ្វីដែលអ្នកមិនចង់បង្ហាញ — ថ្ងៃខែឆ្នាំ ឬទីកន្លែងកំណើត លេខអត្តសញ្ញាណ ឬលេខសិស្ស រូបថត ហត្ថលេខា។', // TODO(km-review)
+      crop_hint: 'អូសដើម្បីជ្រើសផ្នែកនៃវិញ្ញាបនបត្រដែលត្រូវបង្ហាញ។', // TODO(km-review)
+      undo: 'មិនធ្វើវិញ', // TODO(km-review)
+      reset: 'ចាប់ផ្តើមម្តងទៀត', // TODO(km-review)
+      no_image: 'កុំបង្ហាញរូបភាព — បង្ហាញតែចំណងជើង និងស្ថាប័ន', // TODO(km-review)
+      pdf_no_image: 'វិញ្ញាបនបត្រនេះជា PDF ដូច្នេះគ្មានរូបភាពភ្ជាប់ទេ វាបង្ហាញចំណងជើង និងស្ថាប័ន។', // TODO(km-review)
+      no_file: 'លិខិតនេះគ្មានឯកសារ ដូច្នេះវាបង្ហាញចំណងជើង និងស្ថាប័ន។', // TODO(km-review)
+      sensitive_heading: 'លិខិតនេះមាន៖', // TODO(km-review)
+      sensitive_hint: 'ទាំងនេះប្រហែលជាបានបោះពុម្ពលើវិញ្ញាបនបត្រ។ សូមបិទបាំងវាមុនពេលបង្ហាញ។', // TODO(km-review)
+      general_warning: 'វិញ្ញាបនបត្រច្រើនតែបង្ហាញឈ្មោះពេញ ថ្ងៃខែឆ្នាំ និងទីកន្លែងកំណើត លេខអត្តសញ្ញាណ ឬលេខសិស្ស និងរូបថត។ រូបភាពត្រូវបានបង្រួម និងរក្សាទុកឡើងវិញ ដែលលុបទិន្នន័យលាក់ ដូចជាទីតាំង។', // TODO(km-review)
+      visibility_heading: 'អ្នកណាអាចមើលឃើញ', // TODO(km-review)
+      vis_private: 'តែខ្ញុំ', // TODO(km-review)
+      vis_private_hint: 'វាព្យួរក្នុងបន្ទប់របស់អ្នក ហើយមិនបង្ហាញអ្នកដទៃ។', // TODO(km-review)
+      vis_link: 'អ្នកដែលខ្ញុំផ្ញើតំណ', // TODO(km-review)
+      vis_link_hint: 'បង្ហាញតែអ្នកដែលមានតំណបន្ទប់របស់អ្នក។', // TODO(km-review)
+      vis_public: 'គ្រប់គ្នា', // TODO(km-review)
+      vis_public_hint: 'អ្នកណាក៏ដោយដែលរកឃើញបន្ទប់របស់អ្នក។', // TODO(km-review)
+      vis_note: 'នេះជាកម្រិតខ្ពស់បំផុតដែលសារមន្ទីរអាចបង្ហាញ។ ប្រសិនបើបន្ទប់របស់អ្នកកំណត់តឹងជាង បន្ទប់ឈ្នះ។', // TODO(km-review)
+      public_confirm: 'ខ្ញុំបានពិនិត្យរូបភាព ហើយវាមិនបង្ហាញអ្វីដែលខ្ញុំមិនចង់ឱ្យសាធារណៈឃើញទេ។', // TODO(km-review)
+      printed_heading: 'កូដដែលស្ថាប័នបានចុះហត្ថលេខា', // TODO(km-review)
+      printed_include: 'ដាក់បញ្ចូល', // TODO(km-review)
+      printed_hint: 'អនុញ្ញាតឱ្យសារមន្ទីរបង្ហាញថាអ្នកណាជាអ្នកចេញ ដោយពិនិត្យលើឧបករណ៍របស់អ្នកមើលផ្ទាល់។ អ្នកដែលមើលឃើញវត្ថុតាំងអាចអានអ្វីដែលកូដចុះហត្ថលេខា៖ ឈ្មោះ លេខឯកសារ ស្ថាប័ន និងកាលបរិច្ឆេទ។', // TODO(km-review)
+      printed_none: 'លិខិតនេះគ្មានកូដបោះពុម្ព ដូច្នេះសារមន្ទីរនឹងបង្ហាញថាអ្នកជាអ្នកបន្ថែម។', // TODO(km-review)
+      preview: 'មើលរូបភាពជាមុន', // TODO(km-review)
+      preview_heading: 'អ្វីដែលអាចបង្ហាញបានពិតប្រាកដ', // TODO(km-review)
+      prepare: 'រៀបចំឯកសារវត្ថុតាំង', // TODO(km-review)
+      preparing: 'កំពុងរៀបចំ…', // TODO(km-review)
+      download: 'ទាញយកឯកសារវត្ថុតាំង', // TODO(km-review)
+      copy: 'ចម្លង', // TODO(km-review)
+      copied: 'បានចម្លង', // TODO(km-review)
+      done: 'ឯកសារវត្ថុតាំងរួចរាល់។ បន្ថែមវាទៅបន្ទប់របស់អ្នកក្នុង CamboVerse។ វានឹងបង្ហាញថាអ្នកជាអ្នកបន្ថែម — នោះជារឿងធម្មតា មិនមែនជាការព្រមានទេ។', // TODO(km-review)
+      refused_withdrawn: 'ស្ថាប័នបានដកហូតលិខិតនេះ ដូច្នេះមិនអាចបន្ថែមទៅសារមន្ទីរបានទេ។', // TODO(km-review)
+      refused_rejected: 'លិខិតនេះមិនបានផ្ទៀងផ្ទាត់ ដូច្នេះមិនអាចបន្ថែមទៅសារមន្ទីរបានទេ។', // TODO(km-review)
+      close: 'បិទ', // TODO(km-review)
+      export_button: 'បន្ថែមទៅសារមន្ទីរ', // TODO(km-review)
+    },
     print: {
       title: 'វិញ្ញាបនបត្រសម្រាប់បោះពុម្ព', // TODO(km-review)
       toolbar_hint: 'បោះពុម្ពលើក្រដាស A4 ផ្តេក។ ប្រើ “Save as PDF” ក្នុងប្រអប់បោះពុម្ព ដើម្បីរក្សាទុកជាឯកសារ។', // TODO(km-review)
       print_button: 'បោះពុម្ព', // TODO(km-review)
+      reprint: 'បោះពុម្ពវិញ្ញាបនបត្រ', // TODO(km-review)
       certifies: 'សូមបញ្ជាក់ថា', // TODO(km-review)
       has_been_awarded: 'ត្រូវបានប្រគល់', // TODO(km-review)
       signed_fields: 'បានចុះហត្ថលេខាក្នុងកូដ — អេក្រង់អ្នកផ្ទៀងផ្ទាត់ត្រូវបង្ហាញដូចនេះទាំងស្រុង', // TODO(km-review)
@@ -1304,7 +1393,8 @@ const translations = {
       check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្តដែលបានចុះហត្ថលេខា…', // TODO(km-review)
       check_5: 'ពិនិត្យថាតើស្ថាប័នបានដកហូតវាឬទេ…', // TODO(km-review)
       withdrawn_title: 'ត្រូវបានដកហូតដោយស្ថាប័នចេញ', // TODO(km-review)
-      withdrawn_reason: 'ស្ថាប័នបានផ្តល់មូលហេតុនេះ៖', // TODO(km-review)
+      withdrawn_withdrawn: 'ស្ថាប័នដែលបានចេញវា បានដកហូតវាវិញ។', // TODO(km-review)
+      withdrawn_corrected: 'ស្ថាប័នបានជំនួសវាដោយលិខិតបញ្ជាក់ដែលបានកែតម្រូវ។ សូមស្នើសុំលិខិតដែលបានកែតម្រូវពីម្ចាស់។', // TODO(km-review)
       standing_clear_title: 'មិនត្រូវបានដកហូតទេ។', // TODO(km-review)
       standing_clear_desc: 'បានពិនិត្យជាមួយបញ្ជីដកហូតរបស់ {issuer} កំណែ {version} ចុះថ្ងៃ {date}។ ការដកហូតដែលធ្វើក្រោយថ្ងៃនោះនឹងមិនបង្ហាញនៅទីនេះទេ។', // TODO(km-review)
       standing_unchecked_title: 'ហត្ថលេខាត្រឹមត្រូវ តែស្ថានភាពមិនទាន់បានពិនិត្យ។', // TODO(km-review)

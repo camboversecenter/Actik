@@ -163,13 +163,13 @@ assert(unavailable, 'with no usable trust list the answer is "could not check", 
 // Withdrawal: the in-app withdrawal (jti + document number) reaches the paper.
 const revDoc = await buildRevocationList({
   issuerDid: numDid, previous: null, signingKey: held.key, kid: held.kid, now,
-  add: [{ jti: crypto.randomUUID(), documentId: 'NUM-2026-BBA-0417', reason: 'Degree rescinded by the academic board', revokedAt: now }],
+  add: [{ jti: crypto.randomUUID(), documentId: 'NUM-2026-BBA-0417', reason: 'withdrawn', revokedAt: now }],
 })
 const revs = { list: await openRevocationList(revDoc, { list, issuerDid: numDid }), failure: null }
 let withdrawn: InstanceType<typeof CredentialWithdrawn> | null = null
 try { await verifyPrintedCredential(printed, trust, revs, now) } catch (e) { withdrawn = e as InstanceType<typeof CredentialWithdrawn> }
-assert(withdrawn?.reason === 'CREDENTIAL_REVOKED' && withdrawn.withdrawalReason === 'Degree rescinded by the academic board',
-  "withdrawing a credential in the app withdraws its printed copy, with the institution's reason")
+assert(withdrawn?.reason === 'CREDENTIAL_REVOKED' && withdrawn.withdrawalReason === 'withdrawn',
+  'withdrawing a credential in the app withdraws its printed copy')
 const otherCert = await issuePrintedCredential({ signingKey: held.key, publicJwk: held.publicJwk,
   claims: { ...claims, documentId: 'NUM-2026-BBA-0418' } })
 const cleared = await verifyPrintedCredential(otherCert, trust, revs, now)
@@ -202,5 +202,37 @@ assert((await reason(() => verifyPrintedCredential('https://actik.app/x', trust,
   'a URL handed straight to the verifier is refused before anything else')
 assert(classifyScanned('00020101021129370016A000000677010111', origin).kind === 'other',
   'an ordinary code is "not an Actik code", not a forgery')
+
+// Claim time: the printed copy is kept only if it belongs with its credential.
+console.log('\nthe printed copy delivered with a credential')
+const { issueSdJwt } = await import('./src/lib/sdjwt.ts')
+const { checkCredential } = await import('./src/lib/credentialCheck.ts')
+const { checkPrintedCopy } = await import('./src/lib/printedCredential.ts')
+const sdjwt = await issueSdJwt({
+  issuerDid: numDid, signingKey: held.key, kid: held.kid, jti: crypto.randomUUID(),
+  subject: { name: 'ចាន់ សុភ័ក្រ', institution: 'National University of Management', certificate_id: 'NUM-2026-BBA-0417',
+    graduation_date: '2026-07-15', degree_type: 'Bachelor of Business Administration' },
+  vct: 'https://actik.kh/credentials/academic_degree', expiresInSec: 5 * 365 * DAY,
+})
+const credential = await checkCredential(sdjwt, numDid, trust, none, now)
+const kept = await checkPrintedCopy(printed, credential, trust, none, now)
+assert(kept.payload === printed, 'a printed copy of the same document, by the same issuer, is kept')
+const wrongDoc = await checkPrintedCopy(otherCert, credential, trust, none, now)
+assert(wrongDoc.payload === null && wrongDoc.reason === 'DOCUMENT_MISMATCH', "a printed copy of another document is not kept")
+const ruppHeld = await holdIssuerKey(rupp.privateJwk, ruppDid)
+const ruppCopy = await issuePrintedCredential({ signingKey: ruppHeld.key, publicJwk: ruppHeld.publicJwk,
+  claims: { ...claims, issuer: ruppDid, issuingOrganisation: 'Royal University of Phnom Penh' } })
+const wrongIssuer = await checkPrintedCopy(ruppCopy, credential, trust, none, now)
+assert(wrongIssuer.payload === null && wrongIssuer.reason === 'ISSUER_MISMATCH', "another institution's printed copy is not kept")
+const otherName = await issuePrintedCredential({ signingKey: held.key, publicJwk: held.publicJwk,
+  claims: { ...claims, subjectName: 'Someone Else' } })
+assert((await checkPrintedCopy(otherName, credential, trust, none, now)).payload === null,
+  "a printed copy naming someone else is not kept")
+const tampered = printed.slice(0, -3) + (printed.endsWith('A') ? 'BBB' : 'AAA')
+assert((await checkPrintedCopy(tampered, credential, trust, none, now)).payload === null, 'a damaged printed copy is not kept')
+const { readPrintedFields } = await import('./src/lib/printedCredential.ts')
+const read = await readPrintedFields(printed)
+assert(read?.subjectName === 'ចាន់ សុភ័ក្រ' && read.documentId === 'NUM-2026-BBA-0417' && read.documentHash === claims.documentHash,
+  'a reprint takes its four fields from the code itself')
 
 console.log('\nALL TESTS PASSED')

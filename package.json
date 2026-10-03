@@ -9,9 +9,10 @@
     "preview": "vite preview",
     "test:sdjwt": "tsx test-sdjwt.ts",
     "test:claim": "tsx test-claim.ts",
-    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed",
+    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed && npm run test:museum",
     "test:trust": "tsx test-trust.ts",
-    "test:printed": "tsx test-printed.ts"
+    "test:printed": "tsx test-printed.ts",
+    "test:museum": "tsx test-museum.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-khmer": "^5.3.0",

@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
-import { readDisclosures } from '../../lib/sdjwt'
+import { readDisclosures, peekJwt } from '../../lib/sdjwt'
+import { readPrintedFields } from '../../lib/printedCredential'
+import PrintableCertificate from '../../components/PrintableCertificate'
+import MuseumExportDialog from '../../components/MuseumExportDialog'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2 } from 'lucide-react'
+import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2, Printer, Frame } from 'lucide-react'
 
 // Reusing same Credential interface
 interface Credential {
@@ -70,6 +73,13 @@ export default function CredentialDetail() {
   const [detail, setDetail] = useState<Record<string, any> | null>(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [showRawTokenModal, setShowRawTokenModal] = useState(false)
+  // The institution's printed (KH1:) copy, if it signed one: kept in the vault
+  // beside the credential, so the holder can reprint it.
+  const [printed, setPrinted] = useState<{
+    payload: string; holder: string; documentId: string; institution: string; issueDate: string
+  } | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
+  const [showMuseum, setShowMuseum] = useState(false)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -261,15 +271,24 @@ export default function CredentialDetail() {
       const decryptCredDetails = async (cred: Credential) => {
         try {
           setIsDecrypting(true)
-          let sdjwtString = ''
-
+          let decrypted: { sdjwt: string; printed?: string }
           if (cred.cipher && cred.iv) {
-            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
+            decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string; printed?: string }
           } else {
             const parsedPayload = JSON.parse(cred.sd_jwt)
-            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
+            decrypted = await decryptPayload(parsedPayload) as { sdjwt: string; printed?: string }
+          }
+          const sdjwtString = decrypted.sdjwt
+
+          if (typeof decrypted.printed === 'string') {
+            // The paper shows exactly what the code signs — taken from the code.
+            const f = await readPrintedFields(decrypted.printed)
+            if (f) {
+              setPrinted({
+                payload: decrypted.printed, holder: f.subjectName, documentId: f.documentId,
+                institution: f.issuingOrganisation, issueDate: f.issueDate,
+              })
+            }
           }
 
           const disclosures = readDisclosures(sdjwtString)
@@ -391,6 +410,27 @@ export default function CredentialDetail() {
       >
         {t('wallet.share_credential')}
       </button>
+
+      {isUnlocked && detail && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <button
+            type="button"
+            disabled={!printed}
+            title={printed ? undefined : t('wallet.no_printed_copy')}
+            onClick={() => setShowPrint(true)}
+            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            <Printer size={15} /> {t('print.reprint')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMuseum(true)}
+            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <Frame size={15} /> {t('museum.export_button')}
+          </button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-5 md:p-8 text-sm text-left">
@@ -618,6 +658,31 @@ export default function CredentialDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPrint && printed && (
+        <PrintableCertificate
+          payload={printed.payload}
+          title={formatDegreeTitle(credential.degree_title)}
+          holder={printed.holder}
+          documentId={printed.documentId}
+          institution={printed.institution}
+          issueDate={printed.issueDate}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
+
+      {showMuseum && detail && (
+        <MuseumExportDialog
+          credentialId={credential.id}
+          issuerDid={credential.issuer_did}
+          sdjwt={detail.rawJwt}
+          jti={peekJwt(detail.rawJwt).jti}
+          claims={detail}
+          title={formatDegreeTitle(credential.degree_title)}
+          printed={printed?.payload ?? null}
+          onClose={() => setShowMuseum(false)}
+        />
       )}
 
       {/* UNLOCK MODAL — cancel navigates back to the wallet rather than just

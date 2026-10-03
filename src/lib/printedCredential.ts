@@ -55,6 +55,7 @@ import {
   CredentialRefused,
   CredentialWithdrawn,
   messageForRefusal,
+  type CheckedCredential,
   type RevocationState,
   type TrustState,
 } from './credentialCheck'
@@ -183,15 +184,12 @@ class ActikProfileBSource implements ProfileBTrustSource {
         byKid.set(kid, [...(byKid.get(kid) ?? []), { issuer, key }])
       }
     }
-    // QRSeal names withdrawn credentials by a hash of issuer and document
-    // number. Actik's lists carry the number itself (and the jti, which a
-    // printed code does not have); hash them the QRSeal way to match.
+    // Actik's list entries are QRSeal's own entry hashes (issuer and document
+    // number), so a printed code's entry is looked up as-is.
     const withdrawn = new Map<string, RevocationEntry>()
     const opened: OpenedRevocations | null = revocations.list
     if (opened) {
-      for (const e of opened.entries) {
-        if (e.documentId) withdrawn.set(await revocationEntryId(opened.issuer, e.documentId), e)
-      }
+      for (const e of opened.entries) withdrawn.set(e.id, e)
     }
     return new ActikProfileBSource(byKid, revocations, withdrawn, issuerHint, now)
   }
@@ -229,7 +227,7 @@ class ActikProfileBSource implements ProfileBTrustSource {
     const opened = this.revocations.list
     if (!opened || opened.issuer !== issuer) return { state: 'unchecked' }
     const hit = this.withdrawnByEntryId.get(entryId)
-    if (hit) return { state: 'revoked', revokedAt: hit.revokedAt, reason: 'withdrawn', listVersion: opened.version }
+    if (hit) return { state: 'revoked', revokedAt: hit.revokedAt, reason: hit.reason, listVersion: opened.version }
     if (this.now > opened.expires + CLOCK_SKEW_SECONDS) return { state: 'unchecked' }
     return { state: 'clear', listVersion: opened.version, listIssuedAt: opened.issuedAt }
   }
@@ -287,7 +285,7 @@ export async function verifyPrintedCredential(
       // words are in Actik's list. Find them by the same hash.
       const decoded = await peekDocumentId(scanned)
       const entry = decoded ? source.withdrawalFor(await revocationEntryId(hint, decoded)) : undefined
-      throw new CredentialWithdrawn(entry?.reason ?? 'Withdrawn by the issuer', entry?.revokedAt ?? 0)
+      throw new CredentialWithdrawn(entry?.reason ?? 'withdrawn', entry?.revokedAt ?? 0)
     }
     refuse(e.reason)
   }
@@ -365,4 +363,64 @@ export function classifyScanned(text: string, ownOrigin: string): ScannedKind {
   }
   if (scanned.startsWith(PREFIX)) return { kind: 'printed', payload: scanned }
   return { kind: 'other' }
+}
+
+/**
+ * The four printed fields (and file hash) a code carries, read without
+ * verifying it. For the holder's own reprint, from their vault, of a code that
+ * was verified when it was claimed: the paper must show exactly what the code
+ * signs, so the fields are taken from the code, never from the wallet's
+ * display columns. Anyone scanning the reprint verifies it in full.
+ */
+export async function readPrintedFields(payload: string): Promise<{
+  subjectName: string
+  documentId: string
+  issuingOrganisation: string
+  issueDate: string
+  documentHash: string | null
+} | null> {
+  try {
+    if (!payload.startsWith(PREFIX)) return null
+    const cose = decodeCoseSign1(await inflate(decodeBase45(payload.slice(PREFIX.length))))
+    const claims = decodeCbor(cose.payload)
+    if (!(claims instanceof Map)) return null
+    const text = (k: string) => (typeof claims.get(k) === 'string' ? (claims.get(k) as string) : null)
+    const subjectName = text('sn'), documentId = text('di'), issuingOrganisation = text('io'), issueDate = text('idt')
+    if (subjectName === null || documentId === null || issuingOrganisation === null || issueDate === null) return null
+    return { subjectName, documentId, issuingOrganisation, issueDate, documentHash: text('dh') }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Whether a printed copy delivered with a credential belongs with it: it
+ * verifies on its own, comes from the same issuer, and names the same document
+ * and holder. Used at claim time (claimVerification.verifyPrintedCopy).
+ */
+export type PrintedCopyResult = { payload: string } | { payload: null; reason: string | null }
+
+export async function checkPrintedCopy(
+  printed: string,
+  credential: CheckedCredential,
+  trust: TrustState,
+  revocations: RevocationState,
+  now: number
+): Promise<PrintedCopyResult> {
+  const issuerDid = credential.assertion.issuer
+  try {
+    const checked = await verifyPrintedCredential(printed, trust, revocations, now)
+    const signed = credential.assertion.mustMatchPrintedDocument
+    const paper = checked.assertion.mustMatchPrintedDocument
+    const same = (a: string | null, b: string) => a !== null && a.normalize('NFC').trim() === b.normalize('NFC').trim()
+    if (checked.assertion.issuer !== issuerDid) return { payload: null, reason: 'ISSUER_MISMATCH' }
+    if (!same(signed.documentId, paper.documentId)) return { payload: null, reason: 'DOCUMENT_MISMATCH' }
+    if (signed.subjectName !== null && !same(signed.subjectName, paper.subjectName)) {
+      return { payload: null, reason: 'SUBJECT_MISMATCH' }
+    }
+    return { payload: printed.trim() }
+  } catch (e) {
+    if (e instanceof CredentialRefused) return { payload: null, reason: e.reason }
+    throw e
+  }
 }

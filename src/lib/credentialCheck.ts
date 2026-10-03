@@ -22,7 +22,7 @@ import {
   type TrustListIssuer,
   type TrustListKey,
 } from './trustList'
-import { credentialStatus, type CredentialStatus, type OpenedRevocations } from './revocation'
+import { credentialStatus, type CredentialStatus, type OpenedRevocations, type WithdrawalReason } from './revocation'
 
 /**
  * A credential that must not be accepted. `reason` is the stable part — match
@@ -122,9 +122,9 @@ function refuse(reason: string): never {
 
 /** Revocation details travel on the refusal so an interface can show them. */
 export class CredentialWithdrawn extends CredentialRefused {
-  readonly withdrawalReason: string
+  readonly withdrawalReason: WithdrawalReason
   readonly revokedAt: number
-  constructor(withdrawalReason: string, revokedAt: number) {
+  constructor(withdrawalReason: WithdrawalReason, revokedAt: number) {
     super('CREDENTIAL_REVOKED', messageForRefusal('CREDENTIAL_REVOKED'))
     this.name = 'CredentialWithdrawn'
     this.withdrawalReason = withdrawalReason
@@ -192,7 +192,7 @@ export async function checkCredential(
 
   // 5. Has the issuer withdrawn it?
   if (revocations.failure) refuse(revocations.failure)
-  const standing = credentialStatus(assertion, revocations.list, now)
+  const standing = await credentialStatus(assertion, revocations.list, now)
   if (standing.status === 'revoked') throw new CredentialWithdrawn(standing.reason, standing.revokedAt)
 
   return {

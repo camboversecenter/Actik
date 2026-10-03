@@ -5,7 +5,7 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { verifyIssuedCredential, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
 
 interface PendingCredential {
   id: string
@@ -29,6 +29,7 @@ interface PendingCredential {
   major?: string
   graduation_date?: string
   certificate_id?: string
+  printed_code?: string | null
 }
 
 export default function Notifications() {
@@ -150,7 +151,8 @@ export default function Notifications() {
         claimed: false,
         claimed_at: null,
         created_at: p.created_at,
-        credential_type: p.credential_type
+        credential_type: p.credential_type,
+        printed_code: p.printed_code ?? null
       }))
 
       setPendingList(unclaimedList)
@@ -266,9 +268,16 @@ export default function Notifications() {
       // Check the signature before the vault swallows it. Until this ran, a
       // row that merely *said* it came from an accredited institution went
       // into the holder's wallet looking exactly like one that did.
-      const { assertion } = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const checked = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const { assertion } = checked
 
-      const payload = { sdjwt: cred.sd_jwt }
+      // The printed copy, if the institution signed one, goes into the vault
+      // beside the credential — but only if it checks out on its own and names
+      // the same document and holder. Otherwise it is left behind.
+      const printed = await verifyPrintedCopy(cred.printed_code, checked)
+      if (printed.payload === null && printed.reason) console.warn('[claim] printed copy not kept:', printed.reason)
+
+      const payload = printed.payload ? { sdjwt: cred.sd_jwt, printed: printed.payload } : { sdjwt: cred.sd_jwt }
       const encryptedPayload = await encryptPayload(payload)
       const encryptedStr = JSON.stringify(encryptedPayload)
 

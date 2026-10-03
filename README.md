@@ -94,7 +94,11 @@ accredited.
 
 **Institutions** sign their own withdrawal lists from the app (Issued
 credentials → Withdrawals) and must renew them at least every 30 days, or
-verifiers report their credentials' standing as *unchecked*.
+verifiers report their credentials' standing as *unchecked*. The lists are
+public, so they name no one: each entry is a hash of the issuer and the
+document number (or jti), one of two fixed reasons (`withdrawn`, `corrected`)
+and a date. An institution still holding a list in the older plaintext format
+is told to renew it; until it does, only it can read that list.
 
 **Key changes.** When an institution regenerates its key, the old one is
 retired (what it signed keeps verifying) and the new one is recorded — but
@@ -145,6 +149,12 @@ genuine code copied onto a forged certificate still verifies, and only that
 comparison catches it — plus its standing against the institution's withdrawal
 list. Withdrawing a credential in the app withdraws its printed copy too.
 
+**The holder keeps the printed code.** It is signed before the credential goes
+out and travels with it; when the holder claims the credential, their app
+checks the code on its own and that it names the same document, holder and
+institution, then stores it in their encrypted vault. The holder can reprint
+the certificate from the wallet (credential → **Print certificate**).
+
 **What is QRSeal and what is Actik.** The wire format, signature check, issuer
 binding and reason strings are QRSeal's, vendored unmodified in `src/khsqr/`
 and checked against QRSeal's own conformance vectors (`npm run test:printed`).
@@ -158,6 +168,17 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 `Permissions-Policy: camera=(self)` (not `camera=()`). The Khmer font is bundled
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
+
+## Personal museum (CamboVerse)
+
+A holder can add a credential to a CamboVerse personal museum: credential →
+**Add to museum**. They crop the picture and cover what should not be shown,
+choose who may see it (only me by default), and choose whether to include the
+institution's signed printed code. The app builds an `actik/exhibit/1` file on
+the device — the original file's SHA-256, the prepared picture, the code — and
+never the original file. A withdrawn credential cannot be exported. Format,
+how CamboVerse should read it, and the open identity question (D5):
+[`docs/MUSEUM_EXPORT.md`](docs/MUSEUM_EXPORT.md).
 
 ## Try the full flow
 
