@@ -115,8 +115,12 @@ person who already holds a wallet is bound to that wallet's key, so a copy or a
 replayed answer is refused.
 
 The cryptography is standard and we claim none of it. Selective disclosure, key
-binding, status lists and limits on over-asking all exist; Cambodia already runs
-a national document-verification service. Our contribution is narrower: where the
+binding, status lists and limits on over-asking all exist. Cambodia's national
+platform already verifies official documents online, against a record it holds;
+what it does not do is put a credential in the holder's own hand, from any
+accredited issuer, to be checked offline and shown in part. ACTIK does, and is
+offered beside the national platform as a choice, not in place of it. Our
+contribution is narrower than the mechanisms: where the
 limits sit, what the verifier is told, and which of the claims a design makes
 can be checked in its code. We separate claims that are true of the published
 system, claims carried from earlier work, claims that follow from stated
@@ -127,7 +131,16 @@ premises, and guesses to be tested. Nothing has been issued to anyone.
 \section{Introduction}
 \label{sec:intro}
 
-A graduate in Phnom Penh applies for a job. She brings a photocopy of her
+A student finishes a course on a digital topic and asks a simple question: can I
+have my certificate digitally --- not a scan, not a link to someone else's
+website, but a certificate I keep, that anyone can check, and that I can show
+without showing everything else? In Cambodia today the answer is mostly no. The
+national verification platform checks official documents against a record held
+on its own servers; it gives the holder a code that points there, not a
+credential of their own~\citep{verifygovkh,chay2026qrseal}. A course from a
+training provider usually ends with a PDF or a sheet of paper.
+
+Later the same person applies for a job. She brings a photocopy of her
 degree, certified as a true copy, and the employer files it. Nobody checks it
 against the university, because there is no easy way to; and the employer, if
 it wants to, can ask her age, whether she is married, and for a photograph,
@@ -139,7 +152,8 @@ employer can ask for more than it needs. Technology for the first problem is
 mature: a signed credential can be checked by anyone, offline, in milliseconds.
 The second problem is usually left to law and to the employer's conscience.
 
-This paper is about the place where the two meet. When a candidate answers an
+This paper is about a system that gives people their certificates digitally,
+and about the place where those two problems meet. When a candidate answers an
 employer with signed credentials instead of a form, the format of the request
 decides what can be asked, and the format of the answer decides what the
 employer is told. Both are design decisions, made once, and they shape every
@@ -159,7 +173,11 @@ Cambodia already has a national document-verification service, Verify.gov.kh,
 which places QR codes on diplomas and other official documents and checks them
 online against a record held by the platform~\citep{verifygovkh,cambodianess2026verifygov,khmertimes2026verifygov}.
 
-None of that is ours, and nothing in this paper depends on improving it.
+None of that is ours. What the national platform does not offer --- a credential
+the holder keeps and presents, from issuers beyond government bodies, checked
+without contacting anyone --- is what ACTIK adds, and it is offered beside the
+platform, for people and institutions to choose, not instead of it
+(Section~\ref{sec:choice}).
 
 \subsection{What we claim}
 \label{sec:claims}
@@ -248,9 +266,17 @@ that the document comes from a recognised government body~\citep{verifygovkh}.
 Press reports describe its use for grade-12 certificates and university degrees,
 including degrees of the university at which the present authors work, and its
 adoption beyond Cambodia~\citep{khmertimes2026verifygov,cambodianess2026verifygov}.
-We have not verified those figures and do not rely on them. We note only that
-national, online verification of official documents exists and is used, and that
-ACTIK is not proposed as a replacement for it (Section~\ref{sec:discussion}).
+We have not verified those figures and do not rely on them.
+
+Its architecture has been analysed in an earlier preprint by one of the present
+authors, and we carry that analysis rather than repeat it~\citep{chay2026qrseal}.
+In short: the code on an issued document carries a \emph{reference} to a record,
+a URL with a key in it, rather than the credential itself. Verification therefore
+depends on the platform staying reachable for the life of the document; a
+photograph of the document carries a working key; and official codes that open
+websites teach the public a habit that QR phishing exploits. The same analysis
+credits what a reference buys --- a correction or withdrawal is visible to the
+next reader at once --- and we return to that in Section~\ref{sec:choice}.
 
 \subsection{Limits on what a requester may ask}
 \label{sec:known-hiring}
@@ -732,16 +758,53 @@ into the trust list, and an employment record designed so that it cannot be used
 against its holder. And a statement, for each, of which claims are true of the
 code and which are guesses.
 
-\subsection{Relation to the national platform}
+\subsection{Beside the national platform: more, and a choice}
+\label{sec:choice}
 
-Verify.gov.kh answers a question ACTIK does not: whether a document issued by a
-recognised government body matches the record the platform holds, checked online
-against that record~\citep{verifygovkh}. ACTIK answers different questions: what
-a holder chooses to show, from private as well as public issuers, checked offline
-against signed lists, with the limits on asking described here. The two are
-complementary. A credential verified on the national platform could be one input
-to an issuer deciding to sign an ACTIK credential; we propose no integration and
-claim none.
+ACTIK is not proposed against Verify.gov.kh. It is proposed as a second option
+that does more of what a holder needs, for people and institutions to choose
+between. Table~\ref{tab:choice} sets the two side by side. The rows for
+Verify.gov.kh rest on its own published description~\citep{verifygovkh} and on
+the earlier analysis~\citep{chay2026qrseal} (\kind{carried}); the rows for ACTIK
+are \kind{specified}.
+
+\begin{widetable}
+\centering\small
+\caption{What each option gives a holder and a verifier. Neither is required by the
+other; an issuer may use both, and a holder may present whichever a verifier
+accepts.}
+\label{tab:choice}
+\begin{tabularx}{\linewidth}{@{}lXX@{}}
+\toprule
+& Verify.gov.kh & ACTIK \\
+\midrule
+What the holder has & a document with a code that points to the platform's record & a signed credential in their own encrypted wallet, and optionally a printed code that carries the credential itself \\
+Who can issue & recognised government bodies, as the platform describes itself & any issuer the Root admits: accredited institutions, including training providers, and registered employers for employment records \\
+How it is checked & online, against the platform's servers & offline, against signed lists the verifier already holds \\
+What is shown & the stored contents of the record & what the holder chooses to disclose, above a fixed minimum \\
+Proof that the presenter is the holder & none in the code; a copy of the link works & bound credentials need the holder's key, for that verifier only \\
+Withdrawal & visible at once to the next reader & visible as of the issuer's last signed list, up to its refresh interval later \\
+Standing & a national government service in operation & a design with tests, not deployed \\
+\bottomrule
+\end{tabularx}
+\end{widetable}
+
+Two rows favour the national platform and we state them plainly. A withdrawal on
+an online record takes effect at the next lookup, where ACTIK's takes effect only
+when a verifier next refreshes the issuer's list. And Verify.gov.kh is an
+operating government service with institutional standing; ACTIK is a tested
+design that nobody yet uses.
+
+The choice is not exclusive. A university may keep issuing through the national
+platform and also sign an ACTIK credential for the same degree; a training
+provider whose courses the national platform does not cover can issue through
+ACTIK alone; a holder may present whichever the verifier in front of them
+accepts. We propose no integration between the two and claim none.
+
+\textbf{Proposition 7} (\kind{conjectural}). \emph{Given the choice, holders of
+short courses and employment records, for which no national record exists, will
+take up a holder-kept credential more readily than holders of degrees, which the
+national platform already covers.} Nothing here tests it.
 
 \subsection{The ecosystem}
 
@@ -759,7 +822,7 @@ wants to show people's achievements without holding them (\kind{analytic}).
 
 We would rather list the paper's limits than have them found.
 
-There is no empirical content about people. Propositions~2, 4 and~6 are
+There is no empirical content about people. Propositions~2, 4, 6 and~7 are
 conjectures. Propositions~1, 3 and~5 follow from stated premises and are not
 thereby true of the world.
 
@@ -812,7 +875,11 @@ of this changes who gets hired.
 \section{Conclusion}
 \label{sec:conclusion}
 
-A certificate check that says \emph{verified} answers a narrower question than it
+Someone who finishes a course should be able to keep the certificate, show it to
+anyone, and show only what is needed. Cambodia's national platform verifies
+official records online; ACTIK puts a signed credential in the holder's hand, and
+is offered beside the platform for people to choose. A certificate check that
+says \emph{verified} answers a narrower question than it
 appears to, and a request for proof that can ask anything will be used to ask too
 much. Both are settled by format before anyone looks at a credential. ACTIK's
 answer is to return evidence instead of a verdict, to write the limits on asking

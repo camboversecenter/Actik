@@ -178,6 +178,20 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
 
+## Alongside Verify.gov.kh
+
+ACTIK is not an alternative *to* Cambodia's national verification platform; it
+is a second option beside it, for people and institutions to choose.
+Verify.gov.kh checks official documents online against a record on its own
+servers, and the code on a document points to that record. ACTIK gives the
+holder the certificate itself — a signed credential in their own wallet, from
+any issuer the trust Root admits (training providers and employers included),
+checked offline and shown in part. An issuer can use both; a holder can present
+whichever a verifier accepts. The national platform's advantages — withdrawal
+visible at the next lookup, and standing as an operating government service — are
+stated in the paper (`paper/`, section 8.2), with the architectural comparison
+carried from the QRSeal preprint.
+
 ## Paper
 
 `paper/` holds a preprint describing this design and what has and has not been
