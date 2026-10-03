@@ -1,0 +1,879 @@
+% !TEX program = pdflatex
+%
+% Proof Without a Verdict — an ACTIK case
+% Preprint. Comments welcome.
+%
+% Build:  make -C paper        (single column and two column)
+% Two column only:  make -C paper twocol
+\ifdefined\twocol
+  \documentclass[10pt,a4paper,twocolumn]{article}
+\else
+  \documentclass[11pt,a4paper]{article}
+\fi
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+\ifdefined\twocol
+  \usepackage[margin=0.85in]{geometry}
+  \setlength{\columnsep}{20pt}
+\else
+  \usepackage[margin=1in]{geometry}
+\fi
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{enumitem}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks,breaklinks]{hyperref}
+\providecommand{\doi}[1]{\href{https://doi.org/#1}{doi:\nolinkurl{#1}}}
+
+\makeatletter
+\g@addto@macro\UrlBreaks{%
+  \do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m%
+  \do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z%
+  \do\0\do\1\do\2\do\3\do\4\do\5\do\6\do\7\do\8\do\9\do\-\do\.\do\=\do\&\do\?}
+\makeatother
+\Urlmuskip=0mu plus 1mu
+
+\hypersetup{
+  pdftitle={Proof Without a Verdict},
+  pdfauthor={Sengtha Chay; Mouniseyhak Va},
+  pdfsubject={Holder-controlled credentials, limits on what may be asked, and tiered issuers: an ACTIK case},
+}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\kind}[1]{\textsc{#1}}
+
+\ifdefined\twocol
+  \newenvironment{widetable}{\begin{table*}[t]}{\end{table*}}
+  \setlength{\emergencystretch}{3em}
+  \tolerance=1200
+\else
+  \newenvironment{widetable}{\begin{table}[t]}{\end{table}}
+\fi
+
+% ---------------------------------------------------------------------------
+% AUTHORS: the author list, affiliations and the contribution statement below
+% must be confirmed by the people named before this is posted.
+% ---------------------------------------------------------------------------
+\title{\textbf{Proof Without a Verdict}\\[0.4em]
+  \large Holder-Controlled Credentials, Limits on What May Be Asked,\\
+  and Tiered Issuers --- An ACTIK Case}
+
+\author{Sengtha Chay\textsuperscript{1} \and Mouniseyhak Va\textsuperscript{2}\\[0.6em]
+  \small National University of Management, Phnom Penh, Cambodia\\
+  \small \textsuperscript{1}Director, CamboVerse Center \quad \textsuperscript{2}CamboVerse DevOps\\
+  \small Corresponding author: \texttt{sengtha@num.edu.kh}}
+
+\date{October 2026\\[0.5em]\normalsize\emph{Preprint --- comments welcome.}}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Keywords:} verifiable credentials; selective disclosure; holder binding;
+credential revocation; recruitment; non-discrimination; digital certificates;
+employment records; trust lists; emerging economies; CamboVerse; Cambodia
+
+\paragraph{Disclaimer.}
+This is independent academic research. The views are the authors' own and do
+not represent the National University of Management or any body within it. The
+paper is not affiliated with, endorsed by, funded by, commissioned by, or
+developed for any government, ministry, accreditation body, regulator, employer
+or other institution. The roles named in the design --- Root, accredited
+institution, registered employer, holder, requester --- are hypothetical
+placeholders; nothing here implies that any body holds, or has agreed to hold,
+any of them. Institution names in examples are fictional unless a source is
+cited. ACTIK and CamboVerse are project names. No issuance, adoption, usage or
+hiring figures appear in this paper, because none exist: ACTIK has not been
+deployed. What has been built has been tested, and the tests are public.
+
+\begin{abstract}
+\noindent
+Systems that verify certificates usually answer with a verdict: a tick, a
+green screen, the word \emph{verified}. We argue that the verdict is the wrong
+output, and that the questions a verifier is asked to settle are set by the
+format before anyone looks at a credential. We make the argument with ACTIK, an
+open-source application for issuing and managing digital assets --- certificates
+first, employment records second --- built for Cambodia and intended as the data
+layer of the CamboVerse ecosystem.
+
+Four design choices carry the argument. First, verification returns evidence
+rather than a verdict: who issued the credential, its standing as of a dated
+list, and the fields a reader must compare with the document in front of them;
+the result types contain no boolean. Second, an employer's request for proof is
+written in a format that cannot ask for date of birth, sex, marital status, a
+photograph, a national identity number or a student number, and the limit is
+enforced three times --- in the candidate's application, in the database, and in
+the employer's application --- so that it does not depend on a registrar. Third,
+the signed trust list carries each issuer's kind: a registered employer may sign
+employment records and nothing else, and every verifier says which kind of
+issuer it is. Fourth, withdrawal lists name no one, and a credential issued to a
+person who already holds a wallet is bound to that wallet's key, so a copy or a
+replayed answer is refused.
+
+The cryptography is standard and we claim none of it. Selective disclosure, key
+binding, status lists and limits on over-asking all exist; Cambodia already runs
+a national document-verification service. Our contribution is narrower: where the
+limits sit, what the verifier is told, and which of the claims a design makes
+can be checked in its code. We separate claims that are true of the published
+system, claims carried from earlier work, claims that follow from stated
+premises, and guesses to be tested. Nothing has been issued to anyone.
+\end{abstract}
+
+% ===========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+A graduate in Phnom Penh applies for a job. She brings a photocopy of her
+degree, certified as a true copy, and the employer files it. Nobody checks it
+against the university, because there is no easy way to; and the employer, if
+it wants to, can ask her age, whether she is married, and for a photograph,
+because the application form has spaces for them.
+
+Two things are wrong in that scene, and they are usually treated separately.
+The first is that the document cannot be checked. The second is that the
+employer can ask for more than it needs. Technology for the first problem is
+mature: a signed credential can be checked by anyone, offline, in milliseconds.
+The second problem is usually left to law and to the employer's conscience.
+
+This paper is about the place where the two meet. When a candidate answers an
+employer with signed credentials instead of a form, the format of the request
+decides what can be asked, and the format of the answer decides what the
+employer is told. Both are design decisions, made once, and they shape every
+exchange that follows.
+
+\subsection{What already exists}
+
+We start by conceding most of the ground. Verifiable credentials are a W3C
+Recommendation~\citep{vcdm2}. Selective disclosure, in which the holder reveals
+some signed fields and withholds others, is an IETF standard, SD-JWT, which also
+specifies how a presentation is bound to the holder's key~\citep{rfc9901,rfc7800}.
+Status lists for revoking credentials without a per-credential lookup are a W3C
+Recommendation~\citep{bitstring}. The European Union's digital-identity framework
+already obliges the parties that request data from a wallet to register what they
+intend to ask for, and forbids them to ask for more~\citep{eidas2,eu2025848}. And
+Cambodia already has a national document-verification service, Verify.gov.kh,
+which places QR codes on diplomas and other official documents and checks them
+online against a record held by the platform~\citep{verifygovkh,cambodianess2026verifygov,khmertimes2026verifygov}.
+
+None of that is ours, and nothing in this paper depends on improving it.
+
+\subsection{What we claim}
+\label{sec:claims}
+
+We make four claims, and for each we say what is already known.
+
+\textbf{First: the output should be evidence, not a verdict.} A verifier that
+says \emph{verified} tells the reader that a registered key signed some bytes,
+and invites them to believe much more: that the person in front of them is the
+person named, that a two-week course and a four-year degree are equally
+weighty, that a credential checked against last month's withdrawal list is
+current today. Research on security indicators has long found that people do not
+notice or act on the indicators designers rely on~\citep{schechter2007emperor}.
+What we add is a concrete interface contract, enforced by the result types and
+by tests: the issuer first, its kind, the standing as of a dated list, the fields
+to compare, and three distinct ways of not succeeding.
+
+\textbf{Second: limits on what may be asked belong in the format.} The EU
+mechanism limits over-asking through registration: a national register records
+what each requester intends to ask, and a certificate enforces
+it~\citep{eu2025848}. That requires a registrar, a register and a legal
+framework. We put a fixed limit in the request format itself, so that a request
+for date of birth, sex, marital status, a photograph, a national identity number
+or a student number cannot be written at all, and we enforce it at three points
+that do not trust each other. The limit is wider than the grounds listed in
+Cambodia's Labour Law~\citep{khlabourlaw}, and we say where and why
+(Section~\ref{sec:known-hiring}).
+
+\textbf{Third: the trust list should say what kind of issuer each issuer is.}
+A trust list that admits an issuer usually admits it for everything. We sign each
+issuer's kind into the list --- an accredited institution may issue any credential
+type, a registered employer only employment records --- and every verifier shows
+the kind beside the name. Employment records then carry their own rules: they
+cannot hold a salary, a reason for leaving or a performance rating, and
+\emph{currently employed} is always shown as of the day it was signed.
+
+\textbf{Fourth: withdrawal should name no one, and a credential should be bound
+to its holder where it can be.} Both are carried techniques. The withdrawal lists
+use the hashed-entry design of an earlier printed-certificate
+specification~\citep{chay2026qrseal}; binding follows SD-JWT key
+binding~\citep{rfc9901}. What we add is their combination with the first three
+choices, and an account of what binding does not do.
+
+Section~\ref{sec:known} reviews what earlier work covers. Section~\ref{sec:method}
+explains the method. Section~\ref{sec:system} describes the system and what has
+been tested. Sections~\ref{sec:verdict}--\ref{sec:tiers} develop the four claims.
+Section~\ref{sec:discussion} discusses them, Section~\ref{sec:unknown} lists what
+we do not know, Section~\ref{sec:next} proposes what should happen next, and
+Section~\ref{sec:conclusion} concludes.
+
+% ===========================================================================
+\section{What Is Already Known}
+\label{sec:known}
+
+\subsection{Credentials, selective disclosure and binding}
+
+The W3C data model defines a credential as a set of claims made by an issuer
+about a subject, and a presentation as data derived from credentials and shared
+by a holder~\citep{vcdm2}. SD-JWT signs, instead of each claim, a salted hash of
+it, so that a holder can later reveal a chosen subset; the verifier can check
+each revealed claim against the signed hashes without learning the
+rest~\citep{rfc9901}. The same standard defines key binding: the issuer places
+the holder's public key in the credential, using the confirmation claim of
+RFC~7800~\citep{rfc7800}, and each presentation carries a short token signed with
+the matching private key, naming its audience and hashing the presentation it
+accompanies. ACTIK uses SD-JWT and its key binding as specified. We claim nothing
+about either.
+
+\subsection{Signed documents on paper}
+
+Signed payloads in QR codes are established: the EU Digital COVID Certificate put
+a COSE-signed, compressed, base45-encoded payload on paper at continental
+scale~\citep{eudcc2021,rfc9052}. The printed-certificate format ACTIK uses
+(Section~\ref{sec:printed}) is KH-SQR Profile B, specified and implemented in an
+earlier preprint by one of the present authors~\citep{chay2026qrseal,khsqr2026repo}.
+That work also supplies the withdrawal-list entry design we carry: an entry is a
+hash of the issuer and the document number, so a list can be public without
+listing anyone.
+
+\subsection{Verification in Cambodia}
+
+Verify.gov.kh, the national platform, gives an issued document a QR code and a
+digital code which, with condensed information from the document, are stored on a
+blockchain; opening the code shows the stored contents, and the platform checks
+that the document comes from a recognised government body~\citep{verifygovkh}.
+Press reports describe its use for grade-12 certificates and university degrees,
+including degrees of the university at which the present authors work, and its
+adoption beyond Cambodia~\citep{khmertimes2026verifygov,cambodianess2026verifygov}.
+We have not verified those figures and do not rely on them. We note only that
+national, online verification of official documents exists and is used, and that
+ACTIK is not proposed as a replacement for it (Section~\ref{sec:discussion}).
+
+\subsection{Limits on what a requester may ask}
+\label{sec:known-hiring}
+
+Two bodies of rule bear on what an employer may ask a candidate. The first is
+data protection. Under the EU framework, a party that requests attributes from a
+digital-identity wallet must register its intended use in a national register,
+must not request more than it registered, and is identified to the wallet by a
+registration certificate~\citep{eidas2,eu2025848}. This is a limit by
+registration: flexible, per requester, and dependent on a registrar.
+
+The second is labour law. Cambodia's Labour Law, in its Article~12, prohibits an
+employer from taking account of race, colour, sex, creed, religion, political
+opinion, birth, social origin, or trade-union membership and activity in hiring
+and later employment decisions~\citep{khlabourlaw}. We could not reach the
+promulgated text from the environment in which this paper was prepared, and
+quote the list from secondary legal summaries; it should be checked before
+reliance. On that list, age and marital status do not appear. ACTIK's request
+format excludes them anyway, together with a photograph, a national identity
+number, a student number, place of birth and contact details. That is a design
+choice, not a legal requirement, and Section~\ref{sec:asking} argues for it.
+
+% ===========================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{What kind of paper this is}
+
+This is a design case with a conceptual argument. In Jaakkola's terms it is
+closest to a theory adaptation: it takes ideas established for other purposes ---
+credential formats, security-indicator research, data-protection limits on
+requesters --- and applies them to a setting they were not built
+for~\citep{jaakkola2020}. It follows the method of a companion CamboVerse case by
+several of the present authors~\citep{chay2026precinct}, including its four kinds
+of claim (Section~\ref{sec:fourkinds}).
+
+\subsection{How we use the case}
+
+Our case is ACTIK, an application whose purpose is to issue digital assets and to
+let their owners manage them. A digital certificate is the first kind of asset it
+handles; employment records are the second. ACTIK is planned as the data layer of
+CamboVerse, an open-source Virtual Cambodia: under the agreed division, ACTIK holds
+identities, issued files, verification state and withdrawal, and CamboVerse
+displays what a person chooses to show~\citep{chay2026precinct}.
+
+We use ACTIK as an illustration, not as a test. Every design claim in
+Section~\ref{sec:system} corresponds to code a reader can inspect and, in most
+cases, to a test that fails if the claim stops being true~\citep{actik2026repo}.
+Nothing has been issued to a real person, no employer has used it, and no
+statement here is about how people behave with it.
+
+\subsection{What we checked before claiming anything}
+
+Before settling the claims we searched the standards and regulation named in
+Section~\ref{sec:known}. Three claims we had intended to make were
+withdrawn as a result. Key binding was not ours to claim: it is in
+SD-JWT~\citep{rfc9901}. Privacy-preserving revocation was not ours: status lists
+address it~\citep{bitstring}, and our entry design is carried from the
+printed-certificate work~\citep{chay2026qrseal}. And limiting what a requester
+may ask was not ours either: the EU framework does it by
+registration~\citep{eu2025848}. What survives is the narrower claim stated in
+Section~\ref{sec:claims}.
+
+\subsection{Four kinds of claim}
+\label{sec:fourkinds}
+
+Every substantive statement in this paper is one of four
+kinds~\citep{chay2026precinct}. A \kind{specified} claim is true of the published
+code and can be checked against it; where a test enforces it, we say so. A
+\kind{carried} claim is established in earlier work and imported. An
+\kind{analytic} claim follows from stated premises; it holds if they do. A
+\kind{conjectural} claim is a reasoned guess about how people will behave that
+nothing here establishes.
+
+The line most easily blurred to our advantage is between analytic and
+conjectural. That a request format which has no field for marital status cannot
+carry a request for it is analytic. That employers who cannot ask for marital
+status will therefore discriminate less is conjectural --- they can still ask at
+interview --- and we have asked no employer.
+
+\subsection{Who we are}
+
+We are not independent of the case. One author directs the CamboVerse Center, an
+institute at the National University of Management; the other is an engineer on
+the CamboVerse project and, according to the repository history, wrote most of
+ACTIK's original application. Parts of the system described in
+Section~\ref{sec:system} were written with the assistance of an AI model, as the
+declarations record. The university at which we work issues degrees, and its
+degrees are verified through the national platform discussed in
+Section~\ref{sec:known}~\citep{khmertimes2026verifygov}. These are affiliations
+and facts, not claims about who governs anything.
+
+This cuts both ways. It strengthens Section~\ref{sec:system}: every statement
+there can be checked against public code and reproduced with public tests. It
+weakens Sections~\ref{sec:verdict}--\ref{sec:discussion}: we have an interest in
+the design looking important. The conjectural claims are where that interest
+could distort our judgement most, and they are exactly the ones we have not
+tested.
+
+% ===========================================================================
+\section{The System, Described}
+\label{sec:system}
+
+This section describes. It does not argue. Every statement in it is
+\kind{specified}.
+
+\subsection{Roles}
+
+\begin{description}[leftmargin=0pt,itemsep=2pt]
+\item[Root.] Holds an offline signing key whose public half is built into the
+application. It signs the trust list. Approving an issuer in the database does
+not make it trusted; the Root's next signed list does.
+\item[Accredited institution.] An issuer on the trust list that may issue any
+credential type.
+\item[Registered employer.] An issuer on the trust list that may issue
+employment records only.
+\item[Holder.] A person with a wallet. The wallet is end-to-end encrypted: the
+database holds ciphertext, and only the holder's PIN or passkey opens it.
+\item[Requester.] Any signed-in account that asks holders for proof --- in
+practice, an employer recruiting.
+\end{description}
+
+\subsection{Issuing and accepting}
+
+An issuer signs an SD-JWT credential in its own browser with a key held in memory
+as a non-extractable Web Crypto key~\citep{webcrypto}; the key never leaves that
+object. The credential goes to an outbox addressed to the recipient's email. The
+database admits it only if the signed-in user owns an issuer of the right kind
+for that credential type. Nothing reaches the recipient's wallet until they
+accept it, and they may decline, which deletes the offer. On acceptance the
+holder's application verifies the credential against the trust list and the
+issuer's withdrawal list, and stores it encrypted.
+
+\subsection{The trust list and issuer kinds}
+
+The trust list is a statement signed by the Root, valid for at most 31 days,
+listing each issuer's decentralised identifier, name, kind and keys, with each
+key's validity window and status. A verifier refuses a list signed by any other
+key, an expired list, or a list older than one it has already seen. A key that
+has been retired continues to vouch for what it signed before retirement; a
+revoked key vouches for nothing. A registered employer that signs any credential
+other than an employment record is refused with the reason
+\code{TYPE\_NOT\_ALLOWED\_FOR\_ISSUER}, in the application and on printed codes.
+The build step that the Root runs prints each issuer's kind for review and
+refuses to sign a kind it does not recognise.
+
+\subsection{Withdrawal}
+
+Each issuer signs its own withdrawal list with a key the trust list accepts for
+it. An entry is the SHA-256 hash of a domain tag, the issuer and either the
+document number or the credential's identifier, with one of two fixed reasons
+--- \emph{withdrawn} or \emph{replaced by a corrected credential} --- and a date.
+The database refuses a list with any other field, so a document number or a
+free-text explanation cannot be published by mistake. A verifier reports a
+credential's standing as \emph{clear} against a named list version and date,
+\emph{unchecked} if the issuer publishes no list or its list has lapsed, or
+\emph{withdrawn}, with the reason.
+
+\subsection{Holder binding}
+
+The first time a wallet is unlocked, the application makes a holder key pair. The
+private half is encrypted with the wallet's own key before it is stored, and is
+held in memory as a non-extractable key. When a recipient already has a wallet,
+the issuer writes the holder's public key into the credential as a confirmation
+claim~\citep{rfc7800}. Every presentation of a bound credential must then carry a
+key-binding token signed by that key, naming its audience --- one share link or
+one proof request --- and hashing the presentation~\citep{rfc9901}. A verifier
+refuses a bound credential presented without the token, with a token from any
+other key, with a token dated in the future or not matching the disclosures, or
+with a token made for another audience. A credential issued before the recipient
+had a wallet is unbound, still verifies, and is labelled as unbound.
+
+\subsection{Sharing and verifying}
+
+A holder can share a credential through a link. The share discloses a fixed set
+of fields --- the holder's name, the issuer, the document number and date, and the
+substance of the credential --- plus any optional fields the holder selects, and
+can be limited to a single view, enforced by the database. The verifier's page
+checks the presentation on the verifier's device and shows the issuer first, its
+kind, the standing, the four fields to compare with any paper document, and
+whether the presentation was bound.
+
+\subsection{Proof requests}
+\label{sec:proofrequests}
+
+A requester writes a request naming up to five credential types, each with
+optional extra fields from a short list for that type, and an expiry of at most
+90 days, and shares its link. Table~\ref{tab:allowlist} gives the list. A request
+cannot name any field outside it. A candidate opens the link, signs in, and sees
+the matching credentials in their wallet, each already checked; a withdrawn one
+cannot be chosen. The candidate sees exactly what the requester will see before
+sending, and chooses the contact details they leave. The answer can be withdrawn
+by the candidate, never edited, and is visible only to the candidate and the
+requester. Nobody can list requests or browse candidates.
+
+\begin{widetable}
+\centering\small
+\caption{What a proof request can ask for. Every answer discloses the fields in
+the middle column; a request may add those in the right column. Nothing else can
+be requested. (\kind{specified}; enforced by \code{test-proof.ts} and by the
+database guard.)}
+\label{tab:allowlist}
+\begin{tabularx}{\linewidth}{@{}lXl@{}}
+\toprule
+Credential type & Always disclosed & May also be asked \\
+\midrule
+Academic degree & name, institution, degree, graduation date, certificate number & major, GPA \\
+Professional certification & name, institution, certification, issuing body, date, licence number, expiry & --- \\
+Certificate of completion & name, institution, type, programme, completion date & duration, department or role \\
+Attendance or participation & name, institution, type, event, date, organiser & role \\
+Merit or excellence award & name, institution, achievement, date awarded & basis of award \\
+Appreciation or service & name, institution, type, reason, date & capacity \\
+Employment record & name, employer, job title, employment type, start, status, end & department, role \\
+\midrule
+\multicolumn{3}{@{}p{\linewidth}@{}}{\emph{Never requestable:} date of birth or age, sex or
+gender, marital status, photograph, national identity number, student number,
+place of birth, religion or ethnicity, email or phone number.}\\
+\bottomrule
+\end{tabularx}
+\end{widetable}
+
+The limit is enforced three times. The candidate's application discloses only
+allowed fields, whatever the request says. The database decodes every disclosure
+in every answer and refuses an answer that carries any other claim, or a
+credential of the wrong type. The requester's application refuses to display an
+answer that discloses anything else --- not even its allowed part.
+
+\subsection{Employment records}
+
+An employment record carries the holder's name, the employer, a job title, an
+employment type, a start date and a status --- \emph{current} or \emph{ended},
+with an end date --- and optionally a department and a one-line role. The issuing
+form has no field for salary, reason for leaving, performance or discipline, and
+no free-text note or attached file; the database decodes each record and refuses
+any claim outside that set. \emph{Current} is displayed everywhere as
+\emph{current, as of} the date the employer signed it. When a job ends, the
+employer issues a new record and withdraws the old one as replaced.
+
+\subsection{Printed certificates}
+\label{sec:printed}
+
+For degrees and professional certifications that carry a document number, the
+issuer also signs a printed code in the KH-SQR Profile B format: CBOR claims in a
+COSE signature, compressed and base45-encoded behind a \code{KH1:}
+prefix~\citep{chay2026qrseal,rfc9052}. The code is delivered to the holder with
+the credential, checked on acceptance, and kept in the wallet for reprinting.
+ACTIK's scanner verifies it offline against the same trust and withdrawal lists.
+The vendored implementation passes all thirteen Profile B verification vectors of
+the original specification.
+
+\subsection{The seam with CamboVerse}
+
+A holder can export a credential as an exhibit for a CamboVerse personal museum.
+The exhibit carries the SHA-256 of the original file, a picture the holder has
+cropped and covered, reduced and re-encoded on their device, the printed code if
+the holder chooses, and the withdrawal-list hashes under which the credential
+would appear. It carries no account identity, no original file and no
+\emph{verified} flag; its visibility defaults to private, and CamboVerse is to show
+the stricter of the exhibit's and the room's setting.
+
+\subsection{What is tested and measured}
+\label{sec:tested}
+
+Table~\ref{tab:tests} lists the automated suites. Database rules were exercised
+against a local PostgreSQL~16 instance with the platform's authentication schema
+stubbed, and interface behaviour in headless Chromium against the built
+application with a stand-in for the hosted database; neither is the hosted
+service. Table~\ref{tab:measure} reports sizes and timings produced by a script in
+the repository.
+
+\begin{widetable}
+\centering\small
+\caption{Automated test suites (\code{npm test}). Counts are of assertions on the
+cited branch~\citep{actik2026repo}.}
+\label{tab:tests}
+\begin{tabularx}{\linewidth}{@{}lrX@{}}
+\toprule
+Suite & Assertions & What it holds to \\
+\midrule
+\code{test-sdjwt.ts} & 21 & issuance, selective disclosure, signature and expiry checks \\
+\code{test-claim.ts} & 11 & nothing enters a wallet unless the trust list's key signed it \\
+\code{test-trust.ts} & 48 & Root-signed trust list, rollback, key windows; withdrawal lists that name no one \\
+\code{test-printed.ts} & 48 & the thirteen Profile B vectors; printed codes on the trust layer \\
+\code{test-museum.ts} & 19 & exhibit export carries no original file and no verdict \\
+\code{test-proof.ts} & 34 & what can be asked, what is disclosed, how an answer is checked \\
+\code{test-employment.ts} & 21 & issuer kinds; what an employment record may say \\
+\code{test-binding.ts} & 15 & key binding: missing, foreign, replayed and tampered proofs \\
+\midrule
+Total & 217 & \\
+\bottomrule
+\end{tabularx}
+\end{widetable}
+
+\begin{widetable}
+\centering\small
+\caption{Sizes and timings (\code{npm run measure}), with fresh keys and fictional
+names. Timings are of Node.js~22 on a four-core 2.8\,GHz server processor, not of
+a phone, and vary by about 0.2\,ms between runs; they are illustration, not a
+claim about the devices the design targets.}
+\label{tab:measure}
+\begin{tabularx}{\linewidth}{@{}Xr@{}}
+\toprule
+Quantity & Value \\
+\midrule
+Degree credential, all claims (bytes) & 1{,}909 \\
+Default share presentation (bytes) & 1{,}702 \\
+Key-binding token added to it (bytes) & 366 \\
+Trust list with 100 issuers (bytes) & 34{,}886 \\
+Withdrawal list with 1{,}000 entries (bytes) & 118{,}135 \\
+Printed code, Khmer holder name (characters) & 417 \\
+Verify a bound share against a 1{,}000-entry list, median / 95th percentile (ms) & 1.7 / 2.4 \\
+Open a 100-issuer trust list, median / 95th percentile (ms) & 1.2 / 1.7 \\
+Verify a printed code, median / 95th percentile (ms) & 9.0 / 12.3 \\
+Application shell cached for offline use (KiB) & 1{,}392 \\
+\bottomrule
+\end{tabularx}
+\end{widetable}
+
+\subsection{What the system does not show}
+
+There is no deployment. No credential has been issued to a real person, no
+employer has written a request, and no candidate has answered one. The browser
+checks ran against a stand-in database, not the hosted service. No timing has
+been taken on the low-cost phones the design targets. The Root role has been
+exercised only in a rehearsal of its key ceremony; nobody holds it.
+
+% ===========================================================================
+\section{Evidence, Not a Verdict}
+\label{sec:verdict}
+
+\subsection{What a verdict hides}
+
+A signature check establishes one fact: a key the verifier trusts signed these
+bytes. Everything else a reader wants to know lies outside it. The paper document
+may be a forgery carrying a genuine code copied from another certificate. The
+person presenting may not be the person named. The issuer may have withdrawn the
+credential after the verifier's last list. The issuer may be a three-person
+company whose records weigh little, or a university. A single \emph{verified}
+mark collapses all of these into one bit.
+
+\textbf{Proposition 1} (\kind{analytic}). \emph{If a verification interface
+reports a single success state, then a credential copied onto a forged document,
+a credential presented by someone other than its holder, a credential withdrawn
+after the last list, and a credential from a low-weight issuer are reported
+identically to a credential with none of those defects.} It follows from the
+premise that the signature check is the same in all five cases.
+
+\subsection{What ACTIK reports instead}
+
+ACTIK's result types make the verdict hard to write. A successful check returns a
+record, not a flag: the issuer and its kind from the signed list, the standing
+with its list version and date, the four fields a reader must compare with any
+document (name, document number, issuing organisation, date), and whether the
+presentation was bound to its holder (\kind{specified}). A failure is one of three
+distinct outcomes: \emph{refused}, with a stable reason; \emph{could not check},
+when the verifier's own trust state is at fault and the credential is not; and
+\emph{withdrawn}, naming the issuer's decision (\kind{specified}). Security
+indicator research suggests that a bare success mark is not read the way
+designers hope~\citep{schechter2007emperor} (\kind{carried}).
+
+\textbf{Proposition 2} (\kind{conjectural}). \emph{Readers shown the issuer,
+its kind and the dated standing first will distinguish a short course from a
+degree, and an unchecked standing from a clear one, more often than readers shown
+a single success mark.} Nothing here tests it.
+
+% ===========================================================================
+\section{Asking Less, by Design}
+\label{sec:asking}
+
+\subsection{Limits by registration and limits by format}
+
+A limit on over-asking can live in two places. It can live in a register: each
+requester declares what it will ask, and the wallet refuses more. That is the EU
+mechanism~\citep{eu2025848} (\kind{carried}). Or it can live in the format: the
+request language has no way to express the forbidden field. ACTIK does the second
+(\kind{specified}).
+
+\textbf{Proposition 3} (\kind{analytic}). \emph{A limit written into the request
+format binds every requester without a registrar, at the cost of being the same
+for every requester.} A register can allow a bank to ask what an employer cannot.
+A format cannot. We accept that cost because the only requester ACTIK is built
+for is an employer judging qualifications, and because Cambodia has no register
+of requesters to rely on.
+
+\subsection{Why three enforcement points}
+
+A limit enforced only in the candidate's application is defeated by a modified
+application; one enforced only in the database is defeated by a misconfigured
+database; one enforced only in the requester's application is defeated by
+reading the database directly. ACTIK enforces the allowlist at all three
+(\kind{specified}). This is an instance of a more general observation made in an
+earlier Cambodia case by several of the present authors: a control enforced in
+one layer does not travel to claims made in another~\citep{chay2026stages}
+(\kind{carried}, self-cited).
+
+\subsection{Why wider than the law}
+
+The excluded fields are wider than the grounds in Article~12 of the Labour
+Law~\citep{khlabourlaw}: age, marital status and a photograph are not on that list
+as we have it. We exclude them because each is routinely asked for in job
+advertisements, none bears on whether a credential is genuine, and a photograph
+discloses sex, apparent age and ethnicity at once. The exclusion of a student
+number and a national identity number has a different reason: they are
+identifiers that join records across systems, and a qualification can be judged
+without them.
+
+\textbf{Proposition 4} (\kind{conjectural}). \emph{Employers who receive
+candidates' qualifications as signed answers without age, sex, marital status or
+a photograph will shortlist on qualifications more than employers who receive
+paper applications.} The opposing conjecture is as reasonable: that employers
+will ask the excluded questions at interview, and that the format changes the
+order in which bias acts, not whether it acts. The name, which the format must
+disclose so that identity can be checked, itself carries signals of sex and
+ethnicity. We have not tested either conjecture.
+
+% ===========================================================================
+\section{Who May Say What}
+\label{sec:tiers}
+
+\subsection{Issuer kinds in the signed list}
+
+A trust list that admits an issuer usually admits its key for any statement. If
+employers are to issue employment records, that is a problem: a key admitted so
+that a small company can confirm its staff should not let it confirm a degree.
+ACTIK signs each issuer's kind into the list and refuses any other credential
+type from an employer (\kind{specified}).
+
+\textbf{Proposition 5} (\kind{analytic}). \emph{If issuer kinds are recorded only
+in a database, then whoever can write that database can promote an issuer; if
+they are signed into the list, only the Root can.} It follows from the premise
+that verifiers trust the Root's signature and not the database.
+
+\subsection{Records people will carry}
+
+An employment record is a statement about a person made by someone with power
+over them. ACTIK's record cannot carry salary, reason for leaving, performance or
+discipline, and the employee must accept it before it reaches their wallet
+(\kind{specified}).
+
+\textbf{Proposition 6} (\kind{conjectural}). \emph{Employees will accept and
+present employment records more readily when the format guarantees that a record
+cannot carry anything that could be used against them.} The cost is that a record
+says less than a reference letter does. We think that is the right side to err
+on, and we have not asked anyone.
+
+\subsection{``Current'' has a date}
+
+A record saying \emph{currently employed} is true on the day it is signed and
+becomes false without anyone touching it. ACTIK never displays it without that
+date (\kind{specified}), and asks employers to replace and withdraw a record when
+the job ends. A verifier is told how fresh the withdrawal list it checked is, and
+offline verifiers can be up to the list's refresh interval behind the issuer
+(\kind{analytic}).
+
+\subsection{Withdrawal and binding}
+
+The withdrawal list names no one: each entry is a hash, so a reader learns
+nothing unless they already hold the document number or credential identifier it
+was computed from (\kind{carried}~\citep{chay2026qrseal}). Where document numbers
+are sequential, a reader can hash candidates and learn \emph{that} a number was
+withdrawn, never whose it was or why (\kind{analytic}). Binding removes two
+attacks: presenting a copied credential, and replaying an answer made for one
+requester to another (\kind{specified}, tested). It does not remove collusion: a
+holder who shares their PIN, or hands over an unlocked phone, can have someone
+else present for them (\kind{analytic}). That is why the name is still shown and
+an identity check at interview is still advised.
+
+% ===========================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What the paper adds}
+
+The parts are known; the paper adds an arrangement and an account of it. A
+verifier contract without a verdict, enforced by types and tests. A fixed limit
+on what may be asked, written into the request format and enforced at three
+points, suited to a setting without a register of requesters. Issuer kinds signed
+into the trust list, and an employment record designed so that it cannot be used
+against its holder. And a statement, for each, of which claims are true of the
+code and which are guesses.
+
+\subsection{Relation to the national platform}
+
+Verify.gov.kh answers a question ACTIK does not: whether a document issued by a
+recognised government body matches the record the platform holds, checked online
+against that record~\citep{verifygovkh}. ACTIK answers different questions: what
+a holder chooses to show, from private as well as public issuers, checked offline
+against signed lists, with the limits on asking described here. The two are
+complementary. A credential verified on the national platform could be one input
+to an issuer deciding to sign an ACTIK credential; we propose no integration and
+claim none.
+
+\subsection{The ecosystem}
+
+Within CamboVerse, ACTIK is the layer that holds data and CamboVerse the layer
+that shows it, joined by a portable file the holder exports rather than a live
+interface. This keeps documents and personal data out of the display layer and
+means that the display layer never needs to know who looks at whose exhibit. The
+same arrangement --- a holder-controlled data layer, a display layer that verifies
+what it is given, and a file between them --- is available to any platform that
+wants to show people's achievements without holding them (\kind{analytic}).
+
+% ===========================================================================
+\section{What We Do Not Know}
+\label{sec:unknown}
+
+We would rather list the paper's limits than have them found.
+
+There is no empirical content about people. Propositions~2, 4 and~6 are
+conjectures. Propositions~1, 3 and~5 follow from stated premises and are not
+thereby true of the world.
+
+There is no deployment. The database rules were tested against a local instance
+with a stubbed authentication schema, and the interface against a stand-in for
+the hosted database. Neither is evidence about the hosted service.
+
+No measurement was taken on a low-cost phone. Table~\ref{tab:measure} reports a
+server processor. The design targets phones on mobile networks, and a 1{,}000-entry
+withdrawal list is about 118\,KB, which grows linearly with withdrawals; we have not
+measured what that costs on the devices that matter.
+
+The Root is a role nobody holds. Who should hold it, how institutions and
+employers are admitted, and who republishes the list every month are governance
+questions this paper does not answer. With many issuers, a verifier is in the end
+trusting whoever admits them.
+
+The labour-law list in Section~\ref{sec:known-hiring} is quoted from secondary
+summaries. Holder binding covers only credentials issued after the holder had a
+wallet; earlier ones stay unbound. And the Khmer text of the interface has not yet
+been reviewed by native speakers.
+
+% ===========================================================================
+\section{What Should Happen Next}
+\label{sec:next}
+
+Four studies would move this materially, in the order we would run them.
+
+First, a measurement on two or three low-cost Android phones on a mobile network:
+time to open the trust list, verify a bound share, verify a printed code, and
+fetch a withdrawal list of realistic size. It can be run now, needs no
+participants, and would replace Table~\ref{tab:measure}'s server figures with the
+ones that matter.
+
+Second, a reading study of the verification screen: participants shown either
+ACTIK's evidence layout or a single success mark, across a short course, a degree,
+a withdrawn credential and an unchecked one, asked what they would conclude. It
+tests Proposition~2 directly.
+
+Third, structured interviews with a small number of employers and registrars about
+the request format and employment records: what they would ask that the format
+forbids, and whether employees would accept records under these rules. It bears on
+Propositions~4 and~6 without claiming to test them.
+
+Fourth, a pilot with one issuer and one employer who already hires its graduates,
+once the governance of the Root role is settled. Only a pilot can say whether any
+of this changes who gets hired.
+
+% ===========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+A certificate check that says \emph{verified} answers a narrower question than it
+appears to, and a request for proof that can ask anything will be used to ask too
+much. Both are settled by format before anyone looks at a credential. ACTIK's
+answer is to return evidence instead of a verdict, to write the limits on asking
+into the request itself, to sign into the trust list what kind of issuer each
+issuer is, and to bind credentials to their holders where it can. None of the
+mechanisms is new. Their arrangement is, and so is the discipline of saying, for
+each claim, whether the code makes it true or whether it is a hope. The code is
+public; the hopes are untested.
+
+% ===========================================================================
+\section*{Declarations}
+
+\paragraph{Conflict of interest.} The authors declare no commercial or financial
+relationships that could be construed as a potential conflict of interest. Both
+authors hold appointments at the National University of Management. The first
+author directs the CamboVerse Center, an institute at that University; the second
+is an engineer on the CamboVerse project. These are affiliations. The University
+issues degrees and uses the national verification platform discussed in
+Section~\ref{sec:known}. Participation here is as individual researchers; the
+paper is not University output, was not reviewed or approved under any University
+process, and should not be cited as a University position.
+
+\paragraph{Funding.} This research received no external funding.
+
+\paragraph{Author contributions.} \emph{To be confirmed by the authors before
+posting.} SC conceived the study and the claims, and drafted the manuscript. MV
+built the ACTIK application on which Section~\ref{sec:system} reports, as recorded
+in the repository history, and verified the description of it. Both authors
+reviewed and approved the submitted version and accept responsibility for its
+content.
+
+\paragraph{Relationship to prior work.} The printed-certificate format and the
+withdrawal-list entry design are carried from a preprint by the first
+author~\citep{chay2026qrseal}; the method, including the four kinds of claim, from
+a companion CamboVerse case by several of the present
+authors~\citep{chay2026precinct}; and the observation about controls in layers
+from a further companion paper~\citep{chay2026stages}. None of them is a source of
+evidence for the claims made here.
+
+\paragraph{Data and code availability.} No data about people were generated or
+analysed. The source code, tests, database schema and measurement script are
+published at \url{https://github.com/Actik-Cam/ACTIK}~\citep{actik2026repo}. Every
+\kind{specified} claim in Section~\ref{sec:system} can be checked against it, the
+counts in Table~\ref{tab:tests} are reproduced by \code{npm test}, and the figures
+in Table~\ref{tab:measure} by \code{npm run measure}. Test fixtures use fictional
+people; some fixtures and documentation name real institutions as illustrations
+only, which implies no relationship with them.
+
+\paragraph{Generative AI disclosure.} The authors used Anthropic's Claude during
+this work: to implement parts of the system described in Section~\ref{sec:system}
+(the trust layer, withdrawal lists, printed certificates, proof requests,
+employment records, holder binding and their tests, as recorded in the repository
+history), to search for prior art, to verify reference metadata, and to draft and
+typeset this manuscript. The search for prior art withdrew three claims we had intended to make
+(Section~\ref{sec:method}). The authors reviewed the AI-assisted
+code and text, checked the cited sources, and take full responsibility for the
+content of this paper.
+
+\paragraph{Disclaimer.} This is a preprint and has not been peer reviewed.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

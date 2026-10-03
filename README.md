@@ -178,6 +178,13 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
 
+## Paper
+
+`paper/` holds a preprint describing this design and what has and has not been
+tested: *Proof Without a Verdict* (`make -C paper` builds `main.pdf` and
+`main-twocol.pdf`). Its test counts come from `npm test`, and its sizes and
+timings from `npm run measure`.
+
 ## Holder binding
 
 Every wallet has its own key, kept encrypted with the wallet. When the

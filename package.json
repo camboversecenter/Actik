@@ -15,7 +15,8 @@
     "test:museum": "tsx test-museum.ts",
     "test:proof": "tsx test-proof.ts",
     "test:employment": "tsx test-employment.ts",
-    "test:binding": "tsx test-binding.ts"
+    "test:binding": "tsx test-binding.ts",
+    "measure": "tsx scripts/measure.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-khmer": "^5.3.0",
