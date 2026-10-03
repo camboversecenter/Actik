@@ -96,6 +96,15 @@ export function messageForRefusal(reason: string): string {
       return 'This credential is dated in the future. Check the date on this device, then try again.'
     case 'CREDENTIAL_REVOKED':
       return 'The institution has withdrawn this credential. That was its decision, not a fault in the code.'
+    case 'UNKNOWN_KID':
+      return 'This was signed with a key the trust registry does not list. It did not verify.'
+    case 'ISSUER_KEY_MISMATCH':
+      return 'The key that signed this belongs to a different institution from the one it names. It did not verify.'
+    case 'URL_PAYLOAD_REJECTED':
+      return 'This code opens a website. Actik certificates never do — this is not one of them. ' +
+        'Do not open it, and do not enter any details on a site it leads to.'
+    case 'PREFIX_INVALID':
+      return 'This is not an Actik printed certificate code.'
     case 'ISSUER_MISMATCH':
       return 'This names a different issuer from the one it was sent under, so it cannot be trusted.'
     case 'NO_CREDENTIAL':

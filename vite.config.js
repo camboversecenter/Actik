@@ -12,32 +12,34 @@ export default defineConfig({
             'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
             'X-XSS-Protection': '1; mode=block',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
-            'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=()'
+            'Permissions-Policy': 'geolocation=(), microphone=(), camera=(self), payment=()'
         }
     },
     plugins: [
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            includeAssets: ['favicon.svg'],
+            includeAssets: ['apple-touch-icon.png'],
             manifest: {
-                name: 'Actik — Digital Certificates',
+                name: 'Actik — Digital Proof of Ownership',
                 short_name: 'Actik',
-                description: 'Issue, hold, and verify digital certificates in Cambodia.',
-                theme_color: '#1b3a2f',
-                background_color: '#f6f3ec',
+                description: 'Proof of ownership — starting with verifiable certificates.',
+                theme_color: '#097bb7',
+                background_color: '#fafaf9',
                 display: 'standalone',
                 start_url: '/',
                 icons: [
                     { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
                     { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
-                    { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+                    { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
                 ],
             },
             workbox: {
                 // Cache the app shell so it loads offline. Verification + sharing still
                 // need the network (Supabase, issuer-key resolution).
-                globPatterns: ['**/*.{js,css,html,svg,png}'],
+                // woff2: the bundled Khmer font, so printed certificates print and scan
+                // correctly offline.
+                globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
             },
         }),
     ],

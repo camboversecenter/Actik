@@ -577,6 +577,54 @@ const translations = {
       final_cta_button: 'Sign in',
       footer_rights: '© 2026 Actik. All rights reserved.'
     },
+    print: {
+      title: 'Printable certificate',
+      toolbar_hint: 'Print on A4, landscape. Use “Save as PDF” in the print dialog to keep a file.',
+      print_button: 'Print',
+      certifies: 'This certifies that',
+      has_been_awarded: 'has been awarded',
+      signed_fields: 'Signed into the code — the verifier’s screen must show exactly these',
+      field_holder: 'Holder',
+      field_document_id: 'Document number',
+      field_institution: 'Issuing institution',
+      field_issue_date: 'Issue date',
+      scan_caption: 'Verify with the Actik app.',
+      no_website: 'This code does not open a website. If a scanner offers to open one, this is not a genuine certificate.',
+      offer_title: 'Printed certificate',
+      offer_desc: 'A copy whose QR code carries the signed credential itself — verified in the Actik app, with no website involved.',
+      offer_button: 'Open printable certificate',
+      unavailable_no_number: 'Not available for this credential: a printed certificate needs a document number (certificate or licence number) for the verifier to compare with the paper.',
+      unavailable_error: 'The printable certificate could not be prepared:',
+    },
+    scan: {
+      tagline: 'Verify a printed certificate',
+      title: 'Verify a printed certificate',
+      intro: 'Scan the QR code on an Actik certificate. It is checked here, in this app — a genuine certificate never sends you to a website.',
+      mode_camera: 'Camera',
+      mode_photo: 'Photo',
+      mode_paste: 'Paste',
+      start_camera: 'Start camera',
+      camera_error: 'The camera could not be opened. Allow camera access, or use a photo of the code instead.',
+      choose_photo: 'Choose a photo of the QR code',
+      photo_hint: 'A clear, straight photo of the code on the paper.',
+      no_code_found: 'No QR code could be read from that image. Try a closer, sharper photo.',
+      verify_button: 'Verify',
+      checking: 'Checking…',
+      scan_another: 'Scan another',
+      url_title: 'This code opens a website',
+      other_title: 'Not an Actik certificate code',
+      other_desc: 'This app could not find an Actik credential in this code. That does not make it a forgery — it is simply not something this app checks.',
+      rejected_title: 'This certificate did not verify',
+      do_not_accept: 'Do not accept this certificate as proof.',
+      signed_by: 'A key that the signed trust registry lists for {issuer} signed the fields below. That is what was checked.',
+      retired_key_note: '(It was signed with a key the institution has since retired, before it was retired.)',
+      compare_desc: 'Compare each of these with the paper in front of you. A genuine code copied onto a forged certificate still verifies — this comparison is what catches it.',
+      type_to_compare: 'Type what the paper says, to compare exactly',
+      matches_typed: 'matches what you typed',
+      differs_typed: 'differs — you typed “{value}”',
+      mismatch_warning: '{count} field(s) differ from the paper. Do not accept this certificate.',
+      trust_list_version: 'signed trust list v{version}',
+    },
     verify: {
       tagline: 'Proof of ownership',
       result_label: 'Verification result',
@@ -1193,6 +1241,54 @@ const translations = {
       final_cta_desc: 'ចូលគណនីជាមួយ Google — ចំណាយពេលតិចជាងមួយនាទី។',
       final_cta_button: 'ចូលគណនី',
       footer_rights: '© 2026 Actik។ រក្សាសិទ្ធិគ្រប់យ៉ាង។'
+    },
+    print: {
+      title: 'វិញ្ញាបនបត្រសម្រាប់បោះពុម្ព', // TODO(km-review)
+      toolbar_hint: 'បោះពុម្ពលើក្រដាស A4 ផ្តេក។ ប្រើ “Save as PDF” ក្នុងប្រអប់បោះពុម្ព ដើម្បីរក្សាទុកជាឯកសារ។', // TODO(km-review)
+      print_button: 'បោះពុម្ព', // TODO(km-review)
+      certifies: 'សូមបញ្ជាក់ថា', // TODO(km-review)
+      has_been_awarded: 'ត្រូវបានប្រគល់', // TODO(km-review)
+      signed_fields: 'បានចុះហត្ថលេខាក្នុងកូដ — អេក្រង់អ្នកផ្ទៀងផ្ទាត់ត្រូវបង្ហាញដូចនេះទាំងស្រុង', // TODO(km-review)
+      field_holder: 'ម្ចាស់', // TODO(km-review)
+      field_document_id: 'លេខឯកសារ', // TODO(km-review)
+      field_institution: 'ស្ថាប័នចេញ', // TODO(km-review)
+      field_issue_date: 'កាលបរិច្ឆេទចេញ', // TODO(km-review)
+      scan_caption: 'ផ្ទៀងផ្ទាត់ដោយកម្មវិធី Actik។', // TODO(km-review)
+      no_website: 'កូដនេះមិនបើកគេហទំព័រទេ។ ប្រសិនបើកម្មវិធីស្កេនស្នើឱ្យបើកគេហទំព័រ នេះមិនមែនជាវិញ្ញាបនបត្រពិតទេ។', // TODO(km-review)
+      offer_title: 'វិញ្ញាបនបត្របោះពុម្ព', // TODO(km-review)
+      offer_desc: 'ច្បាប់ចម្លងដែលកូដ QR ផ្ទុកវិញ្ញាបនបត្រដែលបានចុះហត្ថលេខាផ្ទាល់ — ផ្ទៀងផ្ទាត់ក្នុងកម្មវិធី Actik ដោយមិនពាក់ព័ន្ធនឹងគេហទំព័រ។', // TODO(km-review)
+      offer_button: 'បើកវិញ្ញាបនបត្រសម្រាប់បោះពុម្ព', // TODO(km-review)
+      unavailable_no_number: 'មិនមានសម្រាប់វិញ្ញាបនបត្រនេះទេ៖ វិញ្ញាបនបត្របោះពុម្ពត្រូវការលេខឯកសារ ដើម្បីឱ្យអ្នកផ្ទៀងផ្ទាត់ប្រៀបធៀបជាមួយក្រដាស។', // TODO(km-review)
+      unavailable_error: 'មិនអាចរៀបចំវិញ្ញាបនបត្រសម្រាប់បោះពុម្ពបានទេ៖', // TODO(km-review)
+    },
+    scan: {
+      tagline: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្របោះពុម្ព', // TODO(km-review)
+      title: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្របោះពុម្ព', // TODO(km-review)
+      intro: 'ស្កេនកូដ QR លើវិញ្ញាបនបត្រ Actik។ វាត្រូវបានពិនិត្យនៅទីនេះ ក្នុងកម្មវិធីនេះ — វិញ្ញាបនបត្រពិតមិនដែលនាំអ្នកទៅគេហទំព័រទេ។', // TODO(km-review)
+      mode_camera: 'កាមេរ៉ា', // TODO(km-review)
+      mode_photo: 'រូបថត', // TODO(km-review)
+      mode_paste: 'បិទភ្ជាប់', // TODO(km-review)
+      start_camera: 'បើកកាមេរ៉ា', // TODO(km-review)
+      camera_error: 'មិនអាចបើកកាមេរ៉ាបានទេ។ សូមអនុញ្ញាតកាមេរ៉ា ឬប្រើរូបថតកូដជំនួស។', // TODO(km-review)
+      choose_photo: 'ជ្រើសរើសរូបថតកូដ QR', // TODO(km-review)
+      photo_hint: 'រូបថតច្បាស់ និងត្រង់នៃកូដលើក្រដាស។', // TODO(km-review)
+      no_code_found: 'មិនអាចអានកូដ QR ពីរូបភាពនោះបានទេ។ សូមថតឱ្យជិត និងច្បាស់ជាងនេះ។', // TODO(km-review)
+      verify_button: 'ផ្ទៀងផ្ទាត់', // TODO(km-review)
+      checking: 'កំពុងពិនិត្យ…', // TODO(km-review)
+      scan_another: 'ស្កេនមួយទៀត', // TODO(km-review)
+      url_title: 'កូដនេះបើកគេហទំព័រ', // TODO(km-review)
+      other_title: 'មិនមែនជាកូដវិញ្ញាបនបត្រ Actik ទេ', // TODO(km-review)
+      other_desc: 'កម្មវិធីនេះរកមិនឃើញវិញ្ញាបនបត្រ Actik ក្នុងកូដនេះទេ។ នោះមិនមែនមានន័យថាវាក្លែងក្លាយទេ — គ្រាន់តែមិនមែនជាអ្វីដែលកម្មវិធីនេះពិនិត្យ។', // TODO(km-review)
+      rejected_title: 'វិញ្ញាបនបត្រនេះផ្ទៀងផ្ទាត់មិនបាន', // TODO(km-review)
+      do_not_accept: 'កុំទទួលយកវិញ្ញាបនបត្រនេះជាភស្តុតាង។', // TODO(km-review)
+      signed_by: 'សោដែលបញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខាបញ្ជាក់ថាជារបស់ {issuer} បានចុះហត្ថលេខាលើព័ត៌មានខាងក្រោម។ នោះជាអ្វីដែលបានពិនិត្យ។', // TODO(km-review)
+      retired_key_note: '(វាត្រូវបានចុះហត្ថលេខាដោយសោដែលស្ថាប័នបានឈប់ប្រើ មុនពេលឈប់ប្រើ។)', // TODO(km-review)
+      compare_desc: 'ប្រៀបធៀបនីមួយៗជាមួយក្រដាសនៅចំពោះមុខអ្នក។ កូដពិតដែលចម្លងទៅលើវិញ្ញាបនបត្រក្លែងក្លាយនៅតែផ្ទៀងផ្ទាត់បាន — ការប្រៀបធៀបនេះទើបចាប់បាន។', // TODO(km-review)
+      type_to_compare: 'វាយអ្វីដែលក្រដាសសរសេរ ដើម្បីប្រៀបធៀបឱ្យជាក់លាក់', // TODO(km-review)
+      matches_typed: 'ត្រូវនឹងអ្វីដែលអ្នកវាយ', // TODO(km-review)
+      differs_typed: 'ខុសគ្នា — អ្នកបានវាយ “{value}”', // TODO(km-review)
+      mismatch_warning: 'មាន {count} ចំណុចខុសពីក្រដាស។ កុំទទួលយកវិញ្ញាបនបត្រនេះ។', // TODO(km-review)
+      trust_list_version: 'បញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខា v{version}', // TODO(km-review)
     },
     verify: {
       tagline: 'ភស្តុតាងនៃកម្មសិទ្ធិ', // TODO(km-review)

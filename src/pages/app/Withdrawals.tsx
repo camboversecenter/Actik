@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Loader2, ArrowLeft } from 'lucide-react'
+import { longDate } from '../../lib/dates'
 import { supabase } from '../../lib/supabase'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 import { getIssuerKey, subscribeIssuerKey } from '../../lib/issuerKeyStore'
@@ -22,7 +23,7 @@ import {
 } from '../../lib/withdrawal'
 import type { OpenedRevocations, RevocationEntry } from '../../lib/revocation'
 
-const fmt = (t: number) => new Date(t * 1000).toLocaleDateString()
+const fmt = (t: number) => longDate(t)
 
 export default function Withdrawals() {
   const navigate = useNavigate()
@@ -86,9 +87,14 @@ export default function Withdrawals() {
 
   const withdraw = (r: IssuedRecord) => {
     const now = Math.floor(Date.now() / 1000)
-    const entry: RevocationEntry = r.jti
-      ? { jti: r.jti, reason: reason.trim(), revokedAt: now }
-      : { documentId: r.documentId ?? undefined, reason: reason.trim(), revokedAt: now }
+    // Name it both ways when we can: the jti withdraws the in-app credential,
+    // the document number withdraws its printed copy, which carries no jti.
+    const entry: RevocationEntry = {
+      ...(r.jti ? { jti: r.jti } : {}),
+      ...(r.documentId ? { documentId: r.documentId } : {}),
+      reason: reason.trim(),
+      revokedAt: now,
+    }
     publish([entry], `Withdrawn. Verifiers will refuse “${r.title}” as soon as they next check your list.`)
   }
 

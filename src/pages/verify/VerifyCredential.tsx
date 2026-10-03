@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { longDate } from '../../lib/dates'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 
 import { readDisclosures, type CredentialAssertion } from '../../lib/sdjwt'
@@ -955,7 +956,7 @@ export default function VerifyCredential() {
                     {t('verify.standing_clear_desc')
                       .replace('{issuer}', checked.issuer.name)
                       .replace('{version}', String(checked.standing.listVersion))
-                      .replace('{date}', new Date(checked.standing.listIssuedAt * 1000).toLocaleDateString())}
+                      .replace('{date}', longDate(checked.standing.listIssuedAt))}
                   </div>
                 ) : (
                   <div className="border border-amber-200 rounded-[11px] p-4 bg-amber-50/60 text-sm text-amber-900">
@@ -963,7 +964,7 @@ export default function VerifyCredential() {
                     {checked.standing.why === 'expired'
                       ? t('verify.standing_lapsed_desc')
                           .replace('{issuer}', checked.issuer.name)
-                          .replace('{date}', new Date((checked.standing.listExpiredAt ?? 0) * 1000).toLocaleDateString())
+                          .replace('{date}', longDate(checked.standing.listExpiredAt ?? 0))
                       : t('verify.standing_none_desc').replace('{issuer}', checked.issuer.name)}
                   </div>
                 )
@@ -1258,7 +1259,7 @@ export default function VerifyCredential() {
                   <p className="text-sm text-stone-700 mt-2 max-w-sm mx-auto leading-relaxed">
                     <span className="font-semibold">{t('verify.withdrawn_reason')}</span> {withdrawal.reason}
                     <span className="block text-xs text-stone-500 mt-0.5">
-                      {new Date(withdrawal.revokedAt * 1000).toLocaleDateString()}
+                      {longDate(withdrawal.revokedAt)}
                     </span>
                   </p>
                 )}

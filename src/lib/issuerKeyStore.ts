@@ -18,13 +18,15 @@
 // unlocks again (IssuerKeyUnlock), which is the intended cost.
 
 import type { JWK } from 'jose'
-import { importSigningKey, keyId } from './trustList'
+import { importSigningKey, keyId, publicOnly } from './trustList'
 
 export interface HeldIssuerKey {
   /** Signs; cannot be exported. */
   key: CryptoKey
   /** RFC 7638 thumbprint — the kid written into every credential it signs. */
   kid: string
+  /** The public half only. Printed codes derive their shorter key id from it. */
+  publicJwk: JWK
   did: string
 }
 
@@ -39,6 +41,7 @@ export async function holdIssuerKey(privateJwk: JWK, did: string): Promise<HeldI
   const next: HeldIssuerKey = {
     key: await importSigningKey(privateJwk),
     kid: await keyId(privateJwk),
+    publicJwk: publicOnly(privateJwk),
     did,
   }
   held = next

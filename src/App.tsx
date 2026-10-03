@@ -9,6 +9,7 @@ import IssueCredential from './pages/app/IssueCredential'
 import Wallet from './pages/app/Wallet'
 import VaultSetup from './pages/app/VaultSetup'
 import ShareCredential from './pages/app/ShareCredential'
+import ScanCertificate from './pages/scan/ScanCertificate'
 import VerifyCredential from './pages/verify/VerifyCredential'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Notifications from './pages/app/Notifications'
@@ -430,6 +431,9 @@ export default function App() {
 
         {/* Public verification route */}
         <Route path="/verify/:token" element={<VerifyCredential />} />
+
+        {/* Printed certificates: scanned and verified in this app, never in a browser */}
+        <Route path="/scan" element={<ScanCertificate />} />
 
         {/* Global fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />

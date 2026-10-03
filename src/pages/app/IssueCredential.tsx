@@ -5,6 +5,8 @@ import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
+import { issuePrintedCredential, printedDocumentHash, PrintRefused } from '../../lib/printedCredential'
+import PrintableCertificate from '../../components/PrintableCertificate'
 import CredentialCard from '../../components/CredentialCard'
 import Banner from '../../components/ui/Banner'
 import {
@@ -88,6 +90,19 @@ export default function IssueCredential() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [issueSuccess, setIssueSuccess] = useState<boolean>(false)
+  // The printed-lane copy, signed at the same moment as the in-app credential
+  // while the key is in memory. Nothing about it is stored: the registrar
+  // prints it now, and the four fields it carries are printed beside it.
+  const [printed, setPrinted] = useState<{
+    payload: string
+    title: string
+    holder: string
+    documentId: string
+    institution: string
+    issueDate: string
+  } | null>(null)
+  const [printUnavailable, setPrintUnavailable] = useState<string | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
   const [showConfirm, setShowConfirm] = useState<boolean>(false)
 
   // Draft autosave — client-side only (localStorage), no new Supabase table.
@@ -507,6 +522,59 @@ export default function IssueCredential() {
         throw res.error
       }
 
+      // The printed copy. A failure here never undoes the issuance above — the
+      // credential is already in the holder's inbox — it only means there is
+      // no printable copy to offer.
+      setPrinted(null)
+      setPrintUnavailable(null)
+      const documentNumber =
+        selectedType === 'academic_degree' ? certificateId.trim()
+        : selectedType === 'professional_certification' ? licenseNumber.trim()
+        : ''
+      const printedDate =
+        selectedType === 'academic_degree' ? graduationDate
+        : selectedType === 'professional_certification' ? dateCertified
+        : ''
+      const printedTitle =
+        selectedType === 'academic_degree' ? formatDegreeTitle(degreeTitle) : certName.trim()
+      if (!documentNumber) {
+        setPrintUnavailable('no_number')
+      } else {
+        try {
+          let documentHash: string | undefined
+          if (photoDataUrl) {
+            const b64 = photoDataUrl.slice(photoDataUrl.indexOf(',') + 1)
+            const bin = atob(b64)
+            const bytes = new Uint8Array(bin.length)
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+            documentHash = await printedDocumentHash(bytes)
+          }
+          const fields = {
+            holder: fullName.trim(),
+            documentId: documentNumber,
+            institution: issuerInfo.name,
+            issueDate: printedDate,
+          }
+          const payload = await issuePrintedCredential({
+            signingKey: signingKey.key,
+            publicJwk: signingKey.publicJwk,
+            claims: {
+              issuer: issuerInfo.did,
+              issuedAt: Math.floor(Date.now() / 1000),
+              documentType: selectedType ?? "",
+              documentId: fields.documentId,
+              subjectName: fields.holder,
+              issuingOrganisation: fields.institution,
+              issueDate: fields.issueDate,
+              ...(documentHash ? { documentHash } : {}),
+            },
+          })
+          setPrinted({ payload, title: printedTitle, ...fields })
+        } catch (e) {
+          setPrintUnavailable(e instanceof PrintRefused ? e.message : e instanceof Error ? e.message : String(e))
+        }
+      }
+
       clearDraft()
       setIssueSuccess(true)
       setIsSubmitting(false)
@@ -555,6 +623,9 @@ export default function IssueCredential() {
     setErrors({})
     setSubmitError(null)
     setIssueSuccess(false)
+    setPrinted(null)
+    setPrintUnavailable(null)
+    setShowPrint(false)
     setShowConfirm(false)
   }
 
@@ -697,6 +768,32 @@ export default function IssueCredential() {
               <span>{t('dashboard.issue_success_pending')}</span>
             )}
           </div>
+
+          {/* The printed lane: a copy whose QR carries the credential itself. */}
+          <div className="border border-stone-200 rounded-lg p-4 mb-6 text-left">
+            <div className="text-sm font-semibold text-stone-900">{t('print.offer_title')}</div>
+            {printed ? (
+              <>
+                <p className="text-xs text-stone-500 mt-1 leading-relaxed">{t('print.offer_desc')}</p>
+                <button
+                  type="button"
+                  onClick={() => setShowPrint(true)}
+                  className="mt-3 w-full border border-indigo-200 bg-indigo-50 text-indigo-700 font-semibold h-11 rounded-lg text-sm"
+                >
+                  {t('print.offer_button')}
+                </button>
+              </>
+            ) : (
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                {printUnavailable === 'no_number'
+                  ? t('print.unavailable_no_number')
+                  : `${t('print.unavailable_error')} ${printUnavailable ?? ''}`}
+              </p>
+            )}
+          </div>
+          {showPrint && printed && (
+            <PrintableCertificate {...printed} onClose={() => setShowPrint(false)} />
+          )}
 
           <div className="flex flex-col gap-3">
             <button 

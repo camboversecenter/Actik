@@ -120,6 +120,45 @@ npm run preview
 > WebAuthn/passkeys and the vault require a **secure context** — `localhost` is
 > fine; otherwise serve over HTTPS.
 
+## Printed certificates
+
+Actik has two lanes, with one trust layer underneath both:
+
+| | In-app share | Printed certificate |
+|---|---|---|
+| The QR carries | a link to `/verify/<id>` | the signed credential itself (`KH1:…`) |
+| Verified | in a browser, online | in the Actik app, at `/scan` |
+| Selective disclosure | yes (SD-JWT) | no — four fields, printed and signed |
+
+After issuing a **degree** (with a certificate number) or a **professional
+certification** (with a licence number), the success screen offers a printable
+certificate. Its QR code is QRSeal's Profile B: the holder name, document
+number, issuing institution and issue date are signed into it and printed
+beside it, verbatim. Credentials without a document number cannot be printed —
+the verifier would have nothing on the paper to compare.
+
+**Verifying.** Open `/scan` in the Actik app (camera, a photo of the code, or
+paste). The scanner refuses every link except this app's own `/verify/…` pages,
+so a lookalike QR on a forged certificate cannot send anyone to a website. A
+verified certificate shows the four signed fields to compare with the paper — a
+genuine code copied onto a forged certificate still verifies, and only that
+comparison catches it — plus its standing against the institution's withdrawal
+list. Withdrawing a credential in the app withdraws its printed copy too.
+
+**What is QRSeal and what is Actik.** The wire format, signature check, issuer
+binding and reason strings are QRSeal's, vendored unmodified in `src/khsqr/`
+and checked against QRSeal's own conformance vectors (`npm run test:printed`).
+Which keys are trusted and which credentials are withdrawn come from Actik's
+Root-signed trust list and withdrawal lists. One deliberate difference: QRSeal
+stops trusting a key once it expires; Actik keeps trusting a *retired* key for
+what it signed before retirement, so rotating a key does not void every printed
+certificate. A suspected compromise must therefore be a key **revocation**.
+
+**Hosting.** The scanner needs the camera: serve the app with
+`Permissions-Policy: camera=(self)` (not `camera=()`). The Khmer font is bundled
+(`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
+the scanner works offline.
+
 ## Try the full flow
 
 1. Sign up as `issuer@example.com`, go to **Issue**, register an issuer

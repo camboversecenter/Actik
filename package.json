@@ -9,12 +9,15 @@
     "preview": "vite preview",
     "test:sdjwt": "tsx test-sdjwt.ts",
     "test:claim": "tsx test-claim.ts",
-    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust",
-    "test:trust": "tsx test-trust.ts"
+    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed",
+    "test:trust": "tsx test-trust.ts",
+    "test:printed": "tsx test-printed.ts"
   },
   "dependencies": {
+    "@fontsource/noto-sans-khmer": "^5.3.0",
     "@supabase/supabase-js": "^2.45.0",
     "jose": "^5.9.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.17.0",
     "pdf-lib": "^1.17.1",
     "pica": "^10.0.1",
