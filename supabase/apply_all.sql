@@ -505,11 +505,25 @@ create policy "own issuer secrets" on public.issuer_secrets
   for all to authenticated
   using (auth.uid() = owner) with check (auth.uid() = owner);
 
--- pending_credentials: any authenticated user may issue one; the recipient
--- reads and deletes rows addressed to their email.
+-- pending_credentials: the issuer's outbox. Only the owner of an accredited
+-- issuer row may write under that row's DID — this used to be
+-- `with check (true)`, so anyone with an account could put a credential in
+-- anybody's wallet under any institution's name, and the wallet card, which
+-- renders the plain columns, had no way to tell. `issuer_did` unqualified is
+-- the new row's column; `issuers` has no column of that name.
+-- The recipient reads and deletes rows addressed to their email.
 drop policy if exists "issue pending" on public.pending_credentials;
 create policy "issue pending" on public.pending_credentials
-  for insert to authenticated with check (true);
+  for insert to authenticated
+  with check (
+    exists (
+      select 1
+      from public.issuers i
+      where i.did = issuer_did
+        and i.accredited
+        and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+    )
+  );
 
 drop policy if exists "read my pending" on public.pending_credentials;
 create policy "read my pending" on public.pending_credentials
