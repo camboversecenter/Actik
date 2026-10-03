@@ -1,3 +1,4 @@
+import type { JWK } from 'jose'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -107,6 +108,9 @@ export default function IssueCredential() {
   const [checkingStudent, setCheckingStudent] = useState(false)
   const [studentFoundStatus, setStudentFoundStatus] = useState<'found' | 'not_found' | 'error' | null>(null)
   const [studentUserId, setStudentUserId] = useState<string | null>(null)
+  // The recipient's wallet key, when they have one: the credential is bound to
+  // it, so only their wallet can present it (src/lib/holderKey.ts).
+  const [holderJwk, setHolderJwk] = useState<JWK | null>(null)
 
   // Form Validation & Errors
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -344,6 +348,7 @@ export default function IssueCredential() {
     setCheckingStudent(true)
     setStudentFoundStatus(null)
     setStudentUserId(null)
+    setHolderJwk(null)
 
     try {
       // Uses a security-definer RPC instead of a direct `profiles` select so the
@@ -358,6 +363,9 @@ export default function IssueCredential() {
       } else if (data && data.length > 0) {
         setStudentUserId(data[0].student_id)
         setStudentFoundStatus('found')
+        const { data: key } = await supabase.rpc('holder_public_key', { p_email: emailVal })
+        const jwk = Array.isArray(key) ? key[0]?.public_jwk : key?.public_jwk
+        setHolderJwk(jwk && typeof jwk === 'object' ? (jwk as JWK) : null)
       } else {
         setStudentFoundStatus('not_found')
       }
@@ -529,6 +537,7 @@ export default function IssueCredential() {
         signingKey: signingKey.key,
         kid: signingKey.kid,
         jti: credentialJti,
+        holderPublicJwk: holderJwk ?? undefined,
         subject: claims,
         vct: `https://actik.kh/credentials/${selectedType}`,
         expiresInSec: 365 * 24 * 60 * 60 * 5
@@ -1007,6 +1016,10 @@ export default function IssueCredential() {
             <div>
               <span className="text-xs text-gray-400 block font-medium">{label('dashboard.issuing_institution')}</span>
               <strong className="text-gray-900">{issuerInfo?.name}</strong>
+            </div>
+            <div>
+              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.holder_binding')}</span>
+              <strong className="text-gray-900">{holderJwk ? t('dashboard.bound_to_wallet') : t('dashboard.not_bound')}</strong>
             </div>
             {reviewRows.map((row, i) => (
               <div key={i}>

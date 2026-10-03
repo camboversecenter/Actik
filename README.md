@@ -178,6 +178,16 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
 
+## Holder binding
+
+Every wallet has its own key, kept encrypted with the wallet. When the
+recipient already has a wallet, the issuer binds the credential to that key,
+and every share link or proof-request answer then carries a proof from it, made
+for that one recipient. A copy in someone else's hands, or an answer replayed to
+another employer, is refused. Unbound credentials (issued before a wallet
+existed) still verify and are labelled "check ID". Details:
+[`docs/HOLDER_BINDING.md`](docs/HOLDER_BINDING.md).
+
 ## Employment records
 
 Proof of work: a **registered employer** — a trust-list tier signed by the Root,

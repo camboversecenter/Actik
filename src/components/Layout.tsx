@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../lib/i18n'
 import { Session } from '@supabase/supabase-js'
 import { getIssuerKey, subscribeIssuerKey, forgetIssuerKey } from '../lib/issuerKeyStore'
+import { forgetHolderKey } from '../lib/holderKey'
 import { supabase } from '../lib/supabase'
 import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
@@ -132,6 +133,7 @@ export default function Layout() {
   const handleSignOut = async () => {
     // The signing key must not outlive the session that unlocked it.
     forgetIssuerKey()
+    forgetHolderKey()
     await supabase.auth.signOut()
     navigate('/auth/login', { replace: true })
   }

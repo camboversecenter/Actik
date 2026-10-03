@@ -104,7 +104,7 @@ const shown = displayClaim(t, 'employment_status', 'current', checked.assertion.
 assert(shown.startsWith('Current, as of ') && shown.length > 'Current, as of '.length,
   '"current" is always shown with the date the employer signed it')
 assert(displayClaim(t, 'employment_type', 'full_time', null) === 'Full-time', 'the employment type reads as words')
-const req = { requirements: [{ type: 'employment_record', extras: ['department'], note: 'two years in accounting' }] }
+const req = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [{ type: 'employment_record', extras: ['department'], note: 'two years in accounting' }] }
 const answer = buildAnswer(req.requirements[0], record)
 const names = disclosedNames(answer)
 assert(names.includes('job_title') && names.includes('department') && !names.includes('role_description'),

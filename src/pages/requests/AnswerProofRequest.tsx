@@ -18,11 +18,13 @@ import { peekJwt, readDisclosures } from '../../lib/sdjwt'
 import {
   allowedClaims,
   buildAnswer,
+  buildBoundAnswer,
   claimedType,
   type AnswerItem,
   type ProofRequest,
 } from '../../lib/proofRequest'
 import { getProofRequest, submitAnswer } from '../../lib/proofRequestApi'
+import { ensureHolderKey } from '../../lib/holderKey'
 import { RequestSummary } from './ProofRequestPublic'
 import { displayClaim } from '../../lib/claimDisplay'
 
@@ -43,7 +45,7 @@ export default function AnswerProofRequest() {
   const { id = '' } = useParams<{ id: string }>()
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, decryptPayload } = useZkVault()
+  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, decryptPayload, encryptPayload } = useZkVault()
 
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [request, setRequest] = useState<ProofRequest | null | undefined>(undefined)
@@ -119,14 +121,16 @@ export default function AnswerProofRequest() {
     })()
   }, [isUnlocked, user, request, candidates, decryptPayload, t])
 
-  const items: AnswerItem[] = useMemo(() => {
+  // What will be sent: one chosen, usable credential per requirement.
+  const chosen = useMemo(() => {
     if (!request || !candidates) return []
-    const out: AnswerItem[] = []
+    const out: Array<{ requirement: number; sdjwt: string }> = []
     request.requirements.forEach((r, i) => {
       const c = candidates.find((x) => x.id === choice[i])
       if (!c?.check?.usable) return
       try {
-        out.push({ requirement: i, presentation: buildAnswer(r, c.sdjwt) })
+        buildAnswer(r, c.sdjwt)
+        out.push({ requirement: i, sdjwt: c.sdjwt })
       } catch {
         // buildAnswer refuses a credential it cannot send; it is then simply not sent
       }
@@ -139,6 +143,17 @@ export default function AnswerProofRequest() {
     setSending(true)
     setError(null)
     try {
+      // A credential bound to this wallet is sent with the wallet's proof,
+      // signed for this request only.
+      const needsKey = chosen.some((c) => peekJwt(c.sdjwt).bound)
+      const holder = needsKey && user ? await ensureHolderKey(user.id, encryptPayload, (p) => decryptPayload(p)) : null
+      const items: AnswerItem[] = []
+      for (const c of chosen) {
+        items.push({
+          requirement: c.requirement,
+          presentation: await buildBoundAnswer(request.requirements[c.requirement], c.sdjwt, request.id, holder?.key ?? null),
+        })
+      }
       await submitAnswer(request.id, contact, items)
       setSent(true)
     } catch (e) {
@@ -256,10 +271,10 @@ export default function AnswerProofRequest() {
           {error && <div className="rounded-lg p-3 bg-rose-50 text-rose-800 border border-rose-200 text-sm">{error}</div>}
 
           <button
-            type="button" onClick={send} disabled={sending || items.length === 0 || contact.trim().length < 3}
+            type="button" onClick={send} disabled={sending || chosen.length === 0 || contact.trim().length < 3}
             className="w-full h-12 rounded-xl bg-indigo-600 text-white font-semibold text-sm disabled:opacity-50"
           >
-            {sending ? t('proof.sending') : t('proof.send_answer', { count: items.length })}
+            {sending ? t('proof.sending') : t('proof.send_answer', { count: chosen.length })}
           </button>
           <p className="text-xs text-stone-500 leading-relaxed">{t('proof.answer_privacy')}</p>
         </>

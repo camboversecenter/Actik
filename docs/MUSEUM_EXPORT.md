@@ -220,6 +220,14 @@ carries no identity. This is D5 and needs both sides. The recommendation:
 This needs a server-side key ACTIK does not have yet. It was not built here
 because it should be decided with CamboVerse, not guessed.
 
+*Update:* holder binding now exists (docs/HOLDER_BINDING.md). Every wallet has
+a holder key, and credentials issued to it carry that key. That offers a
+simpler route than a server signer: the holder's wallet could sign the
+statement that a room's key belongs to the holder of these credentials, and a
+viewer could check that the exhibit's credential is bound to the same key. No
+server key, and ACTIK still learns nothing about who views a room. Still to be
+decided with CamboVerse.
+
 **4. Does ACTIK issue QRSeal credentials, and with `dh`?**
 Yes. At issuance, for degrees and professional certifications that carry a
 document number, ACTIK signs a QRSeal Profile B code, using the vendored

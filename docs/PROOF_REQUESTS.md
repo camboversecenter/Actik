@@ -57,10 +57,13 @@ The allowlist is enforced three times:
 3. the employer's app refuses to display an answer that discloses anything
    else — not even its allowed part.
 
-The candidate's **name is always shown**, because a credential proves who it
-was issued to, not who is presenting it. The employer is told to check the
-person's ID at interview. Binding a credential to its holder cryptographically
-is not built yet (it is the same open question as the museum's D5).
+The candidate's **name is always shown**, so the employer can check the
+person's ID at interview. A credential issued to someone who already had an
+Actik wallet is also **bound** to that wallet's key (docs/HOLDER_BINDING.md):
+its answer must carry the wallet's proof, made for this request, so it cannot
+have been sent by someone holding a copy, or replayed from another request. The
+review says which answers are bound; for unbound ones, the ID check is all
+there is.
 
 ## Who sees what
 

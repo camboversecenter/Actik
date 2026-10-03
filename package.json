@@ -9,12 +9,13 @@
     "preview": "vite preview",
     "test:sdjwt": "tsx test-sdjwt.ts",
     "test:claim": "tsx test-claim.ts",
-    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed && npm run test:museum && npm run test:proof && npm run test:employment",
+    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed && npm run test:museum && npm run test:proof && npm run test:employment && npm run test:binding",
     "test:trust": "tsx test-trust.ts",
     "test:printed": "tsx test-printed.ts",
     "test:museum": "tsx test-museum.ts",
     "test:proof": "tsx test-proof.ts",
-    "test:employment": "tsx test-employment.ts"
+    "test:employment": "tsx test-employment.ts",
+    "test:binding": "tsx test-binding.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-khmer": "^5.3.0",

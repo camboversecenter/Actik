@@ -20,14 +20,16 @@
 //   - A search over people. A request is answered by candidates who choose to;
 //     employers never browse wallets (they are end-to-end encrypted anyway).
 //
-// What it does not prove: that the person answering is the person named. The
-// candidate's name is always disclosed so the employer can check their ID at
-// interview; binding a credential to its holder cryptographically is not built.
+// Who is answering: a bound credential (issued with the holder's wallet key,
+// see holderKey.ts) must come with that wallet's proof, made for this request,
+// so a copy cannot be sent by someone else or replayed to another request. An
+// unbound one proves only who it was issued to — the candidate's name is
+// always disclosed so the employer can check their ID at interview.
 //
 // Pure: no network, no storage.
 
 import { ALWAYS_REVEALED } from './disclosure'
-import { present, peekJwt, credentialTypeFromVct } from './sdjwt'
+import { present, peekJwt, credentialTypeFromVct, addKeyBinding } from './sdjwt'
 import {
   checkCredential,
   CredentialRefused,
@@ -155,7 +157,10 @@ function b64uText(s: string): string {
 /** Disclosure names in a presentation, without verifying it. */
 export function disclosedNames(presentation: string): string[] {
   const names: string[] = []
-  for (const d of presentation.split('~').slice(1)) {
+  const parts = presentation.split('~')
+  // A key-bound presentation ends with its KB-JWT instead of `~`: not a disclosure.
+  const middle = parts.length > 1 && parts[parts.length - 1] !== '' ? parts.slice(1, -1) : parts.slice(1)
+  for (const d of middle) {
     if (!d) continue
     try {
       const decoded = JSON.parse(b64uText(d))
@@ -196,6 +201,29 @@ export function buildAnswer(r: Requirement, sdjwt: string): string {
   return presentation
 }
 
+/** What a key-binding proof names as its audience when answering this request. */
+export function proofAudience(requestId: string): string {
+  return `actik:proof-request:${requestId}`
+}
+
+/**
+ * buildAnswer, plus the holder's proof when the credential is bound to a
+ * holder key: signed for this request only, so the answer cannot be replayed
+ * to another. An unbound credential is sent as it is.
+ */
+export async function buildBoundAnswer(
+  r: Requirement,
+  sdjwt: string,
+  requestId: string,
+  holderKey: CryptoKey | null
+): Promise<string> {
+  const presentation = buildAnswer(r, sdjwt)
+  const bound = !!(JSON.parse(b64uText(sdjwt.split('~')[0].split('.')[1])) as { cnf?: unknown }).cnf
+  if (!bound) return presentation
+  if (!holderKey) throw new AnswerRefused('This credential is bound to your wallet key, which is not unlocked.')
+  return addKeyBinding(presentation, holderKey, { audience: proofAudience(requestId), nonce: crypto.randomUUID() })
+}
+
 export interface AnswerItem {
   requirement: number
   presentation: string
@@ -218,7 +246,7 @@ export type CheckedAnswer =
  * arrive already opened; nothing here touches the network.
  */
 export async function checkAnswer(
-  request: Pick<ProofRequest, 'requirements'>,
+  request: Pick<ProofRequest, 'id' | 'requirements'>,
   item: AnswerItem,
   trust: TrustState,
   revocationsFor: (issuerDid: string) => RevocationState,
@@ -238,7 +266,11 @@ export async function checkAnswer(
   const issuerDid = peekJwt(item.presentation).iss
   let checked: CheckedCredential
   try {
-    checked = await checkCredential(item.presentation, issuerDid, trust, issuerDid ? revocationsFor(issuerDid) : { list: null, failure: null }, now)
+    checked = await checkCredential(
+      item.presentation, issuerDid, trust, issuerDid ? revocationsFor(issuerDid) : { list: null, failure: null }, now,
+      // A bound credential must be presented by its holder, to this request.
+      { holderProof: { audience: proofAudience(request.id) } }
+    )
   } catch (e) {
     if (e instanceof CredentialRefused) {
       return {

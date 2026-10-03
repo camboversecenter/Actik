@@ -13,7 +13,7 @@
 //   4. the issuer binding       — the token names the issuer it was sent under
 //   5. the issuer's withdrawals — clear, unchecked, or revoked
 
-import { verify, peekJwt, VerificationRejected, type CredentialAssertion } from './sdjwt'
+import { verify, peekJwt, checkKeyBinding, VerificationRejected, type CredentialAssertion } from './sdjwt'
 import {
   candidateKeys,
   TrustRejected,
@@ -68,6 +68,16 @@ export interface CheckedCredential {
   /** clear or unchecked. A revoked credential never gets this far — it is refused. */
   standing: Exclude<CredentialStatus, { status: 'revoked' }>
   trustListVersion: number
+  /**
+   * Whether the presenter proved they hold the wallet this was issued to.
+   *   bound      — the issuer bound it to a holder key, and this presentation
+   *                carries a key-binding proof for this audience
+   *   unbound    — issued without a holder key (before binding existed, or to
+   *                someone with no wallet yet): only an ID check ties it to a person
+   *   not_asked  — bound, but this check was not about presenting it (claiming,
+   *                exporting from one's own wallet)
+   */
+  holder: { binding: 'bound'; audience: string } | { binding: 'unbound' } | { binding: 'not_asked' }
 }
 
 export function messageForRefusal(reason: string): string {
@@ -106,6 +116,12 @@ export function messageForRefusal(reason: string): string {
         'Do not open it, and do not enter any details on a site it leads to.'
     case 'PREFIX_INVALID':
       return 'This is not an Actik printed certificate code.'
+    case 'HOLDER_PROOF_MISSING':
+      return 'This credential is bound to its holder’s wallet, but it was presented without proof from that wallet. Whoever sent it may not be the person it was issued to.'
+    case 'HOLDER_PROOF_INVALID':
+      return 'The proof that this came from its holder’s wallet does not check out. Whoever sent it may not be the person it was issued to.'
+    case 'HOLDER_PROOF_WRONG_AUDIENCE':
+      return 'This was presented to someone else, and has been copied here. Ask the holder to send it to you directly.'
     case 'TYPE_NOT_ALLOWED_FOR_ISSUER':
       return 'This issuer is registered as an employer, which may issue employment records only — not this kind of credential. It did not verify.'
     case 'ISSUER_MISMATCH':
@@ -140,7 +156,8 @@ export async function checkCredential(
   issuerDid: string | null | undefined,
   trust: TrustState,
   revocations: RevocationState,
-  now: number
+  now: number,
+  options: { holderProof?: { audience: string } } = {}
 ): Promise<CheckedCredential> {
   if (!sdjwt) refuse('NO_CREDENTIAL')
   if (!issuerDid) refuse('NO_ISSUER')
@@ -203,12 +220,25 @@ export async function checkCredential(
   const standing = await credentialStatus(assertion, revocations.list, now)
   if (standing.status === 'revoked') throw new CredentialWithdrawn(standing.reason, standing.revokedAt)
 
+  // 6. Is it being presented by the holder it was issued to?
+  let holder: CheckedCredential['holder'] = { binding: 'unbound' }
+  if (assertion.holderKey) {
+    if (!options.holderProof) {
+      holder = { binding: 'not_asked' }
+    } else {
+      const problem = await checkKeyBinding(sdjwt, assertion.holderKey, options.holderProof.audience, now)
+      if (problem) refuse(problem)
+      holder = { binding: 'bound', audience: options.holderProof.audience }
+    }
+  }
+
   return {
     assertion,
     issuer: list.issuers.get(issuerDid)!,
     key,
     standing,
     trustListVersion: list.version,
+    holder,
   }
 }
 

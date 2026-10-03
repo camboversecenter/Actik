@@ -11,6 +11,7 @@ import {
   CredentialWithdrawn,
   type CheckedCredential,
 } from '../../lib/credentialCheck'
+import { shareAudience } from '../../lib/sdjwt'
 import { displayClaim } from '../../lib/claimDisplay'
 import type { WithdrawalReason } from '../../lib/revocation'
 import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
@@ -507,7 +508,10 @@ export default function VerifyCredential() {
             issuerDID,
             trust,
             revocations,
-            Math.floor(Date.now() / 1000)
+            Math.floor(Date.now() / 1000),
+            // A credential bound to its holder's wallet must come with that
+            // wallet's proof, signed for this very link.
+            { holderProof: { audience: shareAudience(shareRecord.id) } }
           )
         } catch (e) {
           if (!(e instanceof CredentialRefused)) throw e
@@ -980,6 +984,12 @@ export default function VerifyCredential() {
                       : t('verify.standing_none_desc').replace('{issuer}', checked.issuer.name)}
                   </div>
                 )
+              )}
+
+              {checked && (
+                <div className="border border-stone-200 rounded-[11px] p-4 bg-white text-sm text-stone-700">
+                  {checked.holder.binding === 'bound' ? t('proof.holder_bound') : t('proof.holder_unbound')}
+                </div>
               )}
 
               {/* The transplant check. A genuine code photographed off a real

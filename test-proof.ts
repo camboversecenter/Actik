@@ -98,7 +98,7 @@ assert(wrong instanceof AnswerRefused, 'a credential of the wrong kind is not se
 assert(claimedType(degree) === 'academic_degree', 'the type is read from the credential')
 
 console.log('\nchecking an answer')
-const request = { requirements: [wantDegree, { type: 'professional_certification', extras: [], note: '' }] }
+const request = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [wantDegree, { type: 'professional_certification', extras: [], note: '' }] }
 const ok = await checkAnswer(request, { requirement: 0, presentation: answer }, trust, revFor, now)
 assert(ok.kind === 'checked' && ok.checked.issuer.name === 'National University of Management',
   'a genuine answer is checked, and names the institution from the signed trust list')

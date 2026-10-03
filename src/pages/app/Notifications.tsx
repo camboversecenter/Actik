@@ -6,6 +6,7 @@ import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { ensureHolderKey, isOwnHolderKey } from '../../lib/holderKey'
 
 interface PendingCredential {
   id: string
@@ -40,7 +41,8 @@ export default function Notifications() {
     checkVaultStatus, 
     unlockWithPin, 
     unlockWithPasskey, 
-    encryptPayload 
+    encryptPayload,
+    decryptPayload
   } = useZkVault()
 
   // State
@@ -270,6 +272,15 @@ export default function Notifications() {
       // into the holder's wallet looking exactly like one that did.
       const checked = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
       const { assertion } = checked
+
+      // A credential bound to a holder key must be bound to *this* wallet's
+      // key — otherwise only someone else could ever present it.
+      if (assertion.holderKey) {
+        const own = await ensureHolderKey(currentUser.id, encryptPayload, (p) => decryptPayload(p))
+        if (!(await isOwnHolderKey(own, assertion.holderKey))) {
+          throw new ClaimRefused('HOLDER_KEY_MISMATCH', t('wallet.holder_key_mismatch'))
+        }
+      }
 
       // The printed copy, if the institution signed one, goes into the vault
       // beside the credential — but only if it checks out on its own and names

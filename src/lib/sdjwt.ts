@@ -72,6 +72,13 @@ export interface IssueParams {
   vct: string
   /** Optional credential lifetime in seconds (sets `exp`). */
   expiresInSec?: number
+  /**
+   * The holder's public key, when the recipient has one. Written into the
+   * signed payload as `cnf`, it binds the credential to that holder: every
+   * presentation must then carry a key-binding JWT signed with the matching
+   * private key, which only the holder's wallet can unlock.
+   */
+  holderPublicJwk?: JWK
 }
 
 async function makeDisclosure(name: string, value: unknown) {
@@ -98,7 +105,10 @@ export async function issueSdJwt(p: IssueParams): Promise<string> {
   // `jti` names this one credential, so that the issuer can later withdraw
   // exactly it (revocation.ts) and nothing else. It sits in the signed
   // payload, not in a disclosure, so it travels with every presentation.
-  let builder = new SignJWT({ _sd: sd, _sd_alg: 'sha-256', vct: p.vct })
+  const cnf = p.holderPublicJwk
+    ? { jwk: { kty: p.holderPublicJwk.kty, crv: p.holderPublicJwk.crv, x: p.holderPublicJwk.x, y: p.holderPublicJwk.y } }
+    : undefined
+  let builder = new SignJWT({ _sd: sd, _sd_alg: 'sha-256', vct: p.vct, ...(cnf ? { cnf } : {}) })
     .setProtectedHeader(p.kid ? { alg: 'ES256', typ: 'dc+sd-jwt', kid: p.kid } : { alg: 'ES256', typ: 'dc+sd-jwt' })
     .setIssuer(p.issuerDid)
     .setIssuedAt(now)
@@ -112,14 +122,23 @@ export async function issueSdJwt(p: IssueParams): Promise<string> {
 interface ParsedSdJwt {
   jwt: string
   disclosures: string[]
+  /** The key-binding JWT, when the presentation ends with one instead of `~`. */
+  keyBinding: string | null
+  /** The presentation without its key-binding JWT: what `sd_hash` covers. */
+  withoutKeyBinding: string
 }
 
 function parseSdJwt(sdjwt: string): ParsedSdJwt {
   const parts = sdjwt.split('~')
   const jwt = parts[0]
-  // Drop the (possibly empty) trailing element after the final `~`.
-  const disclosures = parts.slice(1).filter((x) => x.length > 0)
-  return { jwt, disclosures }
+  // A presentation is `<jwt>~<d>~...~` and, when key-bound, `<jwt>~<d>~...~<kb-jwt>`:
+  // a non-empty last element (with more than one element) is the KB-JWT.
+  const last = parts.length > 1 ? parts[parts.length - 1] : ''
+  const keyBinding = last.length > 0 ? last : null
+  const middle = keyBinding ? parts.slice(1, -1) : parts.slice(1)
+  const disclosures = middle.filter((x) => x.length > 0)
+  const withoutKeyBinding = keyBinding ? sdjwt.slice(0, sdjwt.length - keyBinding.length) : sdjwt
+  return { jwt, disclosures, keyBinding, withoutKeyBinding }
 }
 
 /**
@@ -127,7 +146,7 @@ function parseSdJwt(sdjwt: string): ParsedSdJwt {
  * Only for choosing which trusted key to verify with: every value here is
  * re-checked against the verified payload afterwards, never acted on directly.
  */
-export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null; iss: string | null; jti: string | null } {
+export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null; iss: string | null; jti: string | null; bound: boolean } {
   try {
     const [h, p] = sdjwt.split('~')[0].split('.')
     const header = fromB64uJSON<Record<string, unknown>>(h)
@@ -137,9 +156,10 @@ export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null
       iat: typeof payload.iat === 'number' ? payload.iat : null,
       iss: typeof payload.iss === 'string' ? payload.iss : null,
       jti: typeof payload.jti === 'string' ? payload.jti : null,
+      bound: !!payload.cnf,
     }
   } catch {
-    return { kid: null, iat: null, iss: null, jti: null }
+    return { kid: null, iat: null, iss: null, jti: null, bound: false }
   }
 }
 
@@ -163,6 +183,7 @@ export function readDisclosures(sdjwt: string): DecodedDisclosure[] {
  * disclosure. The issuer signature is untouched and still verifies.
  */
 export function present(fullSdJwt: string, revealNames: string[]): string {
+  // Any key binding on the input is dropped: it covered a different set of disclosures.
   const { jwt, disclosures } = parseSdJwt(fullSdJwt)
   const keep = disclosures.filter((d) => {
     const [, name] = fromB64uJSON<[string, string, unknown]>(d)
@@ -245,10 +266,14 @@ export class CredentialAssertion {
   readonly mustMatchPrintedDocument: PrintedDocumentFields
   /** The credential's type, from its signed `vct` (e.g. "academic_degree"); null if it has none. */
   readonly credentialType: string | null
+  /** The holder key the issuer bound this credential to (`cnf.jwk`); null when unbound. */
+  readonly holderKey: JWK | null
 
   constructor(issuer: string, payload: Record<string, unknown>, claims: Claims) {
     this.issuer = issuer
     this.credentialType = credentialTypeFromVct(payload.vct)
+    const cnf = payload.cnf as { jwk?: JWK } | undefined
+    this.holderKey = cnf && cnf.jwk && typeof cnf.jwk === 'object' ? cnf.jwk : null
     this.jti = typeof payload.jti === 'string' ? payload.jti : null
     this.issuedAt = typeof payload.iat === 'number' ? payload.iat : null
     this.expiresAt = typeof payload.exp === 'number' ? payload.exp : null
@@ -351,4 +376,67 @@ export async function verify(
   }
 
   return new CredentialAssertion(String(payload.iss ?? ''), payload, claims)
+}
+
+// ---------------------------------------------------------------------------
+// Key binding (SD-JWT KB-JWT)
+// ---------------------------------------------------------------------------
+// A bound credential is presented with a short JWT signed by the holder's key:
+// it names where the presentation is going (`aud`), carries a nonce, and
+// hashes the exact presentation it accompanies (`sd_hash`). So a presentation
+// copied from one proof request or share link cannot be replayed to another,
+// and nobody without the holder's wallet can present the credential at all.
+
+export type KeyBindingProblem = 'HOLDER_PROOF_MISSING' | 'HOLDER_PROOF_INVALID' | 'HOLDER_PROOF_WRONG_AUDIENCE'
+
+/** Append a key-binding JWT to a presentation (which must end with `~`). */
+export async function addKeyBinding(
+  presentation: string,
+  holderKey: CryptoKey,
+  options: { audience: string; nonce: string; issuedAt?: number }
+): Promise<string> {
+  if (!presentation.endsWith('~')) throw new Error('addKeyBinding: presentation already bound or malformed')
+  const kb = await new SignJWT({
+    aud: options.audience,
+    nonce: options.nonce,
+    iat: options.issuedAt ?? Math.floor(Date.now() / 1000),
+    sd_hash: await sha256b64u(presentation),
+  })
+    .setProtectedHeader({ alg: 'ES256', typ: 'kb+jwt' })
+    .sign(holderKey)
+  return presentation + kb
+}
+
+/**
+ * Check a presentation's key binding against the holder key its issuer signed
+ * in. Returns null when it holds, or why it does not.
+ */
+export async function checkKeyBinding(
+  presentation: string,
+  holderKey: JWK,
+  audience: string,
+  now: number
+): Promise<KeyBindingProblem | null> {
+  const { keyBinding, withoutKeyBinding } = parseSdJwt(presentation)
+  if (!keyBinding) return 'HOLDER_PROOF_MISSING'
+  let payload: Record<string, unknown>
+  try {
+    const key = await importJWK({ ...holderKey, alg: 'ES256' }, 'ES256')
+    ;({ payload } = (await jwtVerify(keyBinding, key, { algorithms: ['ES256'], typ: 'kb+jwt' })) as unknown as {
+      payload: Record<string, unknown>
+    })
+  } catch {
+    return 'HOLDER_PROOF_INVALID'
+  }
+  if (typeof payload.nonce !== 'string' || typeof payload.iat !== 'number' || payload.iat > now + 300) {
+    return 'HOLDER_PROOF_INVALID'
+  }
+  if (payload.sd_hash !== (await sha256b64u(withoutKeyBinding))) return 'HOLDER_PROOF_INVALID'
+  if (payload.aud !== audience) return 'HOLDER_PROOF_WRONG_AUDIENCE'
+  return null
+}
+
+/** What a share link's key-binding proof names as its audience. */
+export function shareAudience(shareId: string): string {
+  return `actik:share:${shareId}`
 }

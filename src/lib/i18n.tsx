@@ -115,6 +115,7 @@ const translations = {
       encrypted_badge: 'Encrypted in your vault',
       no_printed_copy: 'The institution did not sign a printed copy of this credential.',
       decline_btn: 'Decline',
+      holder_key_mismatch: 'This was bound to a different wallet, so you could never present it. Ask the issuer to send it again to this account.',
       decline_confirm: 'Decline this? It will not be added to your wallet, and the offer is deleted. If it is something you want, ask the issuer to send it again.',
       raw_token_trigger: 'Advanced: export full credential',
       raw_token_modal_title: 'Full credential export',
@@ -480,6 +481,9 @@ const translations = {
       did_desc3: 'Employers can verify credentials were signed by your institution without contacting you.',
       inst_type_label: 'Institution type',
       type_employer: 'Employer (company or organisation)',
+      holder_binding: 'Bound to',
+      bound_to_wallet: 'The recipient’s wallet — only they can present it',
+      not_bound: 'Not bound: the recipient has no Actik wallet yet. Verifiers will be told to check ID.',
       employee_section: 'Employee',
       employee_email: 'Employee email',
       employee_email_req: 'Employee email',
@@ -725,6 +729,8 @@ const translations = {
       type_employment_record: 'Employment record',
       kind_institution: 'Accredited institution',
       kind_employer: 'Registered employer',
+      holder_bound: 'Sent from the wallet it was issued to: the issuer bound it to that wallet’s key, and this came with that key’s proof, made for you. Someone who copied it could not have sent it.',
+      holder_unbound: 'Not bound to a wallet: it was issued before its holder had an Actik wallet. Anyone holding a copy could send it, so check the person’s ID.',
       field_job_title: 'Job title',
       field_employment_type: 'Employment type',
       field_employment_start: 'Started',
@@ -985,6 +991,7 @@ const translations = {
       encrypted_badge: 'ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
       no_printed_copy: 'ស្ថាប័នមិនបានចុះហត្ថលេខាលើច្បាប់បោះពុម្ពនៃលិខិតនេះទេ។', // TODO(km-review)
       decline_btn: 'បដិសេធ', // TODO(km-review)
+      holder_key_mismatch: 'លិខិតនេះត្រូវបានភ្ជាប់ទៅកាបូបផ្សេង ដូច្នេះអ្នកមិនអាចបង្ហាញវាបានទេ។ សូមស្នើឱ្យអ្នកចេញផ្ញើវាម្តងទៀតទៅគណនីនេះ។', // TODO(km-review)
       decline_confirm: 'បដិសេធលិខិតនេះ? វានឹងមិនត្រូវបានបន្ថែមទៅកាបូបរបស់អ្នកទេ ហើយការផ្តល់ជូននឹងត្រូវលុប។ ប្រសិនបើអ្នកចង់បាន សូមស្នើឱ្យអ្នកចេញផ្ញើម្តងទៀត។', // TODO(km-review)
       raw_token_trigger: 'កម្រិតខ្ពស់៖ នាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
       raw_token_modal_title: 'ការនាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
@@ -1350,6 +1357,9 @@ const translations = {
       did_desc3: 'និយោជកអាចផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រដែលបានចុះហត្ថលេខាដោយស្ថាប័នរបស់អ្នកដោយមិនចាំបាច់ទាក់ទងអ្នកឡើយ។',
       inst_type_label: 'ប្រភេទស្ថាប័ន',
       type_employer: 'និយោជក (ក្រុមហ៊ុន ឬអង្គការ)', // TODO(km-review)
+      holder_binding: 'ភ្ជាប់ទៅ', // TODO(km-review)
+      bound_to_wallet: 'កាបូបរបស់អ្នកទទួល — មានតែពួកគេទេដែលអាចបង្ហាញវាបាន', // TODO(km-review)
+      not_bound: 'មិនបានភ្ជាប់៖ អ្នកទទួលមិនទាន់មានកាបូប Actik ទេ។ អ្នកផ្ទៀងផ្ទាត់នឹងត្រូវបានប្រាប់ឱ្យពិនិត្យអត្តសញ្ញាណប័ណ្ណ។', // TODO(km-review)
       employee_section: 'បុគ្គលិក', // TODO(km-review)
       employee_email: 'អ៊ីមែលបុគ្គលិក', // TODO(km-review)
       employee_email_req: 'អ៊ីមែលបុគ្គលិក', // TODO(km-review)
@@ -1596,6 +1606,8 @@ const translations = {
       type_employment_record: 'កំណត់ត្រាការងារ', // TODO(km-review)
       kind_institution: 'ស្ថាប័នដែលទទួលស្គាល់', // TODO(km-review)
       kind_employer: 'និយោជកដែលបានចុះឈ្មោះ', // TODO(km-review)
+      holder_bound: 'ផ្ញើពីកាបូបដែលវាត្រូវបានចេញជូន៖ អ្នកចេញបានភ្ជាប់វាទៅកូនសោរបស់កាបូបនោះ ហើយវាមកជាមួយភស្តុតាងនៃកូនសោនោះ ដែលបានធ្វើសម្រាប់អ្នក។ អ្នកដែលចម្លងវាមិនអាចផ្ញើវាបានទេ។', // TODO(km-review)
+      holder_unbound: 'មិនបានភ្ជាប់ទៅកាបូបទេ៖ វាត្រូវបានចេញមុនពេលម្ចាស់មានកាបូប Actik។ អ្នកណាដែលមានច្បាប់ចម្លងអាចផ្ញើវាបាន ដូច្នេះសូមពិនិត្យអត្តសញ្ញាណប័ណ្ណ។', // TODO(km-review)
       field_job_title: 'មុខតំណែង', // TODO(km-review)
       field_employment_type: 'ប្រភេទការងារ', // TODO(km-review)
       field_employment_start: 'ចាប់ផ្តើម', // TODO(km-review)

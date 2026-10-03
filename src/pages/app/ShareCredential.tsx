@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 import { ALWAYS_REVEALED } from '../../lib/disclosure'
 import { useZkVault } from '../../vault/zk-vault'
-import { readDisclosures, present } from '../../lib/sdjwt'
+import { readDisclosures, present, peekJwt, addKeyBinding, shareAudience } from '../../lib/sdjwt'
+import { ensureHolderKey } from '../../lib/holderKey'
 import { useLanguage } from '../../lib/i18n'
 import { Lock, CheckCircle, Copy, ExternalLink, Mail, Download, Calendar, AlertTriangle, Clock, Check, Loader2, EyeOff } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
@@ -89,7 +90,7 @@ export default function ShareCredential() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const step = searchParams.get('step') || 'sharing'
-  const { unlockWithPin, unlockWithPasskey, decryptPayload, isUnlocked } = useZkVault()
+  const { unlockWithPin, unlockWithPasskey, decryptPayload, encryptPayload, isUnlocked } = useZkVault()
   const { t } = useLanguage()
 
   // Session & Loading states
@@ -476,10 +477,17 @@ export default function ShareCredential() {
       // pre-6502ec7 credential discloses its degree under whichever name it
       // actually has.
       const revealNames = Array.from(new Set([...ALWAYS_REVEALED, ...selectedFields]))
-      const presentationStr = present(decryptedSDJwt, revealNames)
+      let presentationStr = present(decryptedSDJwt, revealNames)
 
       // Step B: Generate UUID token
       const token = crypto.randomUUID()
+
+      // A credential bound to this wallet's key carries the wallet's proof,
+      // signed for this one link: copied into another link, it fails.
+      if (peekJwt(decryptedSDJwt).bound) {
+        const holder = await ensureHolderKey(currentUser.id, encryptPayload, (p) => decryptPayload(p))
+        presentationStr = await addKeyBinding(presentationStr, holder.key, { audience: shareAudience(token), nonce: crypto.randomUUID() })
+      }
       const expiry = calculateExpiryDate()
 
       // Step C: Save to Supabase

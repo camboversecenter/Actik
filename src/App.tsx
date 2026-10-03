@@ -27,6 +27,7 @@ import ProofRequestDetail from './pages/requests/ProofRequestDetail'
 import ProofRequestPublic from './pages/requests/ProofRequestPublic'
 import AnswerProofRequest from './pages/requests/AnswerProofRequest'
 import { VaultProvider } from './vault/zk-vault'
+import HolderKeyKeeper from './components/HolderKeyKeeper'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
 
@@ -383,6 +384,7 @@ export default function App() {
                 lockOnWindowBlur={false}
                 autoLockTimeoutMs={1800000}
               >
+                <HolderKeyKeeper />
                 <Layout />
               </VaultProvider>
             </PrivateRoute>

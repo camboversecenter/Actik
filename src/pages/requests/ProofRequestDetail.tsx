@@ -78,6 +78,7 @@ function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
             ? `${t('verify.standing_unchecked_title')} ${t('verify.standing_lapsed_desc', { issuer: c.issuer.name, date: longDate(standing.listExpiredAt ?? 0) })}`
             : `${t('verify.standing_unchecked_title')} ${t('verify.standing_none_desc', { issuer: c.issuer.name })}`}
       </p>
+      <p className="text-xs text-stone-600">{c.holder.binding === 'bound' ? t('proof.holder_bound') : t('proof.holder_unbound')}</p>
       {c.assertion.mustMatchPrintedDocument.subjectName && (
         <p className="text-xs text-stone-600">{t('proof.check_id', { name: c.assertion.mustMatchPrintedDocument.subjectName })}</p>
       )}
