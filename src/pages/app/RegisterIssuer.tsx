@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { holdIssuerKey } from '../../lib/issuerKeyStore'
+import { recordNewIssuerKey } from '../../lib/issuerKeys'
 import { generateIssuerKeys, didWeb } from '../../lib/did'
 import { useLanguage } from '../../lib/i18n'
 import { useZkVault } from '../../vault/zk-vault/hooks'
@@ -149,6 +151,9 @@ export default function RegisterIssuer() {
         name: name.trim(),
         domain: domain.trim(),
         type: type,
+        // Employers may issue employment records only. The Root decides what
+        // is signed into the trust list; this is what the registry proposes.
+        kind: type === 'Employer' ? 'employer' : 'institution',
         did: did,
         public_key: JSON.stringify(jwkToStore),
         accredited: false,
@@ -160,6 +165,7 @@ export default function RegisterIssuer() {
         res = await supabase.from('issuers').insert({
           owner: currentUser.id,
           name: name.trim(),
+          kind: type === 'Employer' ? 'employer' : 'institution',
           did: did,
           public_jwk: jwkToStore,
           accredited: false
@@ -183,10 +189,11 @@ export default function RegisterIssuer() {
       )
       if (vaultRes.error) throw vaultRes.error
 
-      // Step 4: Store private key in sessionStorage for this session too, so
-      // nothing downstream (signing/issuance) needs to change.
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', did)
+      // Step 4: Put the key on record for the Root to list once the
+      // institution is accredited, and hold it in memory — never in
+      // sessionStorage — for this session's signing.
+      await recordNewIssuerKey(currentUser.id, publicJwk)
+      await holdIssuerKey(privateJwk, did)
 
       // Step 5: Success state
       const successData: IssuerData = {
@@ -433,8 +440,12 @@ export default function RegisterIssuer() {
               <option value="University">University</option>
               <option value="Ministry">Ministry</option>
               <option value="Training centre">Training centre</option>
+              <option value="Employer">{t('dashboard.type_employer')}</option>
               <option value="Other">Other</option>
             </select>
+            {type === 'Employer' && (
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed">{t('dashboard.employer_note')}</p>
+            )}
             {errors.type && (
               <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.type}</p>
             )}

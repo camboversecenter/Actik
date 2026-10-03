@@ -5,7 +5,8 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { verifyIssuedCredential, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { ensureHolderKey, isOwnHolderKey } from '../../lib/holderKey'
 
 interface PendingCredential {
   id: string
@@ -29,6 +30,7 @@ interface PendingCredential {
   major?: string
   graduation_date?: string
   certificate_id?: string
+  printed_code?: string | null
 }
 
 export default function Notifications() {
@@ -39,7 +41,8 @@ export default function Notifications() {
     checkVaultStatus, 
     unlockWithPin, 
     unlockWithPasskey, 
-    encryptPayload 
+    encryptPayload,
+    decryptPayload
   } = useZkVault()
 
   // State
@@ -150,7 +153,8 @@ export default function Notifications() {
         claimed: false,
         claimed_at: null,
         created_at: p.created_at,
-        credential_type: p.credential_type
+        credential_type: p.credential_type,
+        printed_code: p.printed_code ?? null
       }))
 
       setPendingList(unclaimedList)
@@ -266,9 +270,25 @@ export default function Notifications() {
       // Check the signature before the vault swallows it. Until this ran, a
       // row that merely *said* it came from an accredited institution went
       // into the holder's wallet looking exactly like one that did.
-      const assertion = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const checked = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const { assertion } = checked
 
-      const payload = { sdjwt: cred.sd_jwt }
+      // A credential bound to a holder key must be bound to *this* wallet's
+      // key — otherwise only someone else could ever present it.
+      if (assertion.holderKey) {
+        const own = await ensureHolderKey(currentUser.id, encryptPayload, (p) => decryptPayload(p))
+        if (!(await isOwnHolderKey(own, assertion.holderKey))) {
+          throw new ClaimRefused('HOLDER_KEY_MISMATCH', t('wallet.holder_key_mismatch'))
+        }
+      }
+
+      // The printed copy, if the institution signed one, goes into the vault
+      // beside the credential — but only if it checks out on its own and names
+      // the same document and holder. Otherwise it is left behind.
+      const printed = await verifyPrintedCopy(cred.printed_code, checked)
+      if (printed.payload === null && printed.reason) console.warn('[claim] printed copy not kept:', printed.reason)
+
+      const payload = printed.payload ? { sdjwt: cred.sd_jwt, printed: printed.payload } : { sdjwt: cred.sd_jwt }
       const encryptedPayload = await encryptPayload(payload)
       const encryptedStr = JSON.stringify(encryptedPayload)
 
@@ -334,6 +354,17 @@ export default function Notifications() {
     } finally {
       setClaimingCredId(null)
     }
+  }
+
+  const declineCredential = async (cred: PendingCredential) => {
+    if (!window.confirm(t('wallet.decline_confirm'))) return
+    const { error } = await supabase.from('pending_credentials').delete().eq('id', cred.id)
+    if (error) {
+      setClaimErrors(prev => ({ ...prev, [cred.id]: error.message }))
+      return
+    }
+    setPendingList(prev => prev.filter(c => c.id !== cred.id))
+    window.dispatchEvent(new Event('actik:pending-credentials-changed'))
   }
 
   const truncateDid = (did: string) => {
@@ -411,6 +442,17 @@ export default function Notifications() {
                     <span className="text-xs text-gray-400">
                       {new Date(c.created_at).toLocaleDateString()}
                     </span>
+                    {/* Nothing counts until the recipient accepts it — and they can
+                        refuse. Declining deletes the offer; the issuer's own log of
+                        what it sent is untouched. */}
+                    <button
+                      type="button"
+                      onClick={() => declineCredential(c)}
+                      disabled={claimingCredId !== null}
+                      className="shrink-0 border border-gray-300 text-gray-700 font-semibold h-11 px-4 rounded-lg text-xs md:text-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {t('wallet.decline_btn')}
+                    </button>
                     <button
                       onClick={() => triggerClaimFlow(c)}
                       disabled={claimingCredId !== null}

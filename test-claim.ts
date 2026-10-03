@@ -1,12 +1,15 @@
 // Run with: npm run test:claim
 //
-// The claim gate: a credential only enters the holder's vault if the issuer's
-// registered key actually signed it. These cases are the ones that used to
-// walk straight through — a token signed by a stranger, a token that names a
-// different issuer from the row that carried it, a row with no token at all.
+// The claim gate: a credential only enters the holder's vault if a key the
+// Root-signed trust list accepts for that issuer actually signed it. These are
+// the cases that used to walk straight through — a token signed by a
+// stranger, a token that names a different issuer from the row that carried
+// it, a row with no token at all.
 import { generateIssuerKeys, didWeb } from './src/lib/did.ts'
 import { issueSdJwt } from './src/lib/sdjwt.ts'
-import { checkIssuedCredential, ClaimRefused, signedOr, readPublicJwk } from './src/lib/credentialCheck.ts'
+import { importSigningKey, keyId, openTrustList } from './src/lib/trustList.ts'
+import { buildTrustList } from './src/lib/trustListBuild.ts'
+import { checkCredential, ClaimRefused, signedOr, type TrustState } from './src/lib/credentialCheck.ts'
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error('FAIL: ' + msg)
@@ -22,9 +25,26 @@ async function refusal(fn: () => Promise<unknown>): Promise<string> {
   return 'NO_REFUSAL'
 }
 
+const now = Math.floor(Date.now() / 1000)
+const root = await generateIssuerKeys()
 const rupp = await generateIssuerKeys()
 const ruppDid = didWeb('rupp.edu.kh')
 const attacker = await generateIssuerKeys()
+
+const { document } = await buildTrustList({
+  snapshot: [{
+    did: ruppDid, name: 'Royal University of Phnom Penh', accredited: true,
+    // stored as a JSON string, as one of this project's code paths does
+    keys: [{ public_jwk: JSON.stringify(rupp.publicJwk), created_at: new Date(Date.now() - 86400_000).toISOString() }],
+  }],
+  previousVersion: 0,
+  rootKey: await importSigningKey(root.privateJwk),
+  rootKid: await keyId(root.publicJwk),
+  now,
+})
+const trust: TrustState = { list: await openTrustList(document, { roots: [root.publicJwk], now }), failure: null }
+const none = { list: null, failure: null }
+const check = (sdjwt: string | null, did: string | null) => checkCredential(sdjwt, did, trust, none, now)
 
 const claims = {
   name: 'សុខ ដារ៉ា',
@@ -34,73 +54,39 @@ const claims = {
   major: 'Software Engineering',
   graduation_date: '2026-07-15',
 }
+function issue(key: typeof rupp, did = ruppDid, expiresInSec = 3600) {
+  return issueSdJwt({
+    issuerDid: did, issuerPrivateJwk: key.privateJwk,
+    vct: 'https://actik.kh/credentials/academic_degree', subject: claims, expiresInSec,
+  })
+}
 
-const genuine = await issueSdJwt({
-  issuerDid: ruppDid,
-  issuerPrivateJwk: rupp.privateJwk,
-  vct: 'https://actik.kh/credentials/academic_degree',
-  subject: claims,
-  expiresInSec: 3600,
-})
-
-// The registry row, in both shapes this project writes.
-const rowJsonb = { did: ruppDid, public_jwk: rupp.publicJwk, accredited: true }
-const rowString = { did: ruppDid, public_key: JSON.stringify(rupp.publicJwk), accredited: true }
-
-const ok = await checkIssuedCredential(genuine, ruppDid, { row: rowJsonb, failed: false })
-assert(ok.issuer === ruppDid, 'a genuine credential is accepted')
-assert(
-  (await checkIssuedCredential(genuine, ruppDid, { row: rowString, failed: false })).issuer === ruppDid,
-  'the registry key is read whether stored as jsonb or as a JSON string',
-)
-assert(readPublicJwk({ public_key: 'not json' }) === null, 'an unparseable registry key reads as absent')
+const genuine = await issue(rupp)
+const ok = await check(genuine, ruppDid)
+assert(ok.assertion.issuer === ruppDid, 'a genuine credential is accepted')
+assert(ok.issuer.name === 'Royal University of Phnom Penh', 'the institution name comes from the signed list')
 
 // What the wallet card will show comes from the signed claims, not the row.
-assert(signedOr(ok, 'institution', 'TYPED BY HAND') === 'Royal University of Phnom Penh',
+assert(signedOr(ok.assertion, 'institution', 'TYPED BY HAND') === 'Royal University of Phnom Penh',
   'display values are taken from the signed claims')
-assert(signedOr(ok, 'nickname', 'from the row') === 'from the row',
+assert(signedOr(ok.assertion, 'nickname', 'from the row') === 'from the row',
   'a claim the credential does not carry falls back to the row')
 
-// The hole this closes: anyone could write a pending row naming RUPP.
-const forged = await issueSdJwt({
-  issuerDid: ruppDid,
-  issuerPrivateJwk: attacker.privateJwk,
-  vct: 'https://actik.kh/credentials/academic_degree',
-  subject: claims,
-  expiresInSec: 3600,
-})
-assert(
-  (await refusal(() => checkIssuedCredential(forged, ruppDid, { row: rowJsonb, failed: false })))
-    === 'SIGNATURE_INVALID',
-  "a credential signed by someone else under RUPP's name is refused",
-)
+const forged = await issue(attacker)
+const wrongIssuer = await issue(rupp, didWeb('other.edu.kh'))
+const expired = await issue(rupp, ruppDid, -10)
 
-// A genuine token from one issuer, carried by a row claiming another.
-assert(
-  (await refusal(() => checkIssuedCredential(genuine, 'did:web:other.edu.kh', { row: { did: 'did:web:other.edu.kh', public_jwk: rupp.publicJwk }, failed: false })))
-    === 'ISSUER_MISMATCH',
-  'a row whose issuer_did disagrees with the signed token is refused',
-)
-
-assert((await refusal(() => checkIssuedCredential(genuine, ruppDid, { row: null, failed: false })))
-  === 'ISSUER_UNKNOWN', 'an issuer absent from the registry is refused')
-assert((await refusal(() => checkIssuedCredential(genuine, ruppDid, { row: null, failed: true })))
-  === 'REGISTRY_UNAVAILABLE', 'an unreadable registry is reported as unavailable, not as a bad credential')
-assert((await refusal(() => checkIssuedCredential(null, ruppDid, { row: rowJsonb, failed: false })))
-  === 'NO_CREDENTIAL', 'a row with no token is refused')
-assert((await refusal(() => checkIssuedCredential(genuine, null, { row: rowJsonb, failed: false })))
-  === 'NO_ISSUER', 'a row with no issuer is refused')
-assert((await refusal(() => checkIssuedCredential(genuine, ruppDid, { row: { did: ruppDid }, failed: false })))
-  === 'ISSUER_KEY_MALFORMED', 'a registry row with no usable key is reported as unchecked')
-
-const expired = await issueSdJwt({
-  issuerDid: ruppDid,
-  issuerPrivateJwk: rupp.privateJwk,
-  vct: 'test',
-  subject: claims,
-  expiresInSec: -10,
-})
-assert((await refusal(() => checkIssuedCredential(expired, ruppDid, { row: rowJsonb, failed: false })))
-  === 'CREDENTIAL_EXPIRED', 'an expired credential is refused')
+assert((await refusal(() => check(forged, ruppDid))) === 'SIGNATURE_INVALID',
+  "a credential signed by someone else under RUPP's name is refused")
+assert((await refusal(() => check(genuine, didWeb('other.edu.kh')))) === 'ISSUER_NOT_LISTED',
+  'a row naming an issuer the Root never listed is refused')
+assert((await refusal(() => check(wrongIssuer, ruppDid))) === 'ISSUER_MISMATCH',
+  'a row whose issuer_did disagrees with the signed token is refused')
+assert((await refusal(() => check(null, ruppDid))) === 'NO_CREDENTIAL', 'a row with no token is refused')
+assert((await refusal(() => check(genuine, null))) === 'NO_ISSUER', 'a row with no issuer is refused')
+assert((await refusal(() => checkCredential(genuine, ruppDid, { list: null, failure: 'TRUSTLIST_MISSING' }, none, now)))
+  === 'TRUSTLIST_MISSING', 'with no signed trust list nothing is claimed, and nothing is blamed on the credential')
+assert((await refusal(() => check(expired, ruppDid))) === 'CREDENTIAL_EXPIRED',
+  'an expired credential is refused')
 
 console.log('\nALL TESTS PASSED')

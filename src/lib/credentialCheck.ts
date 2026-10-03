@@ -1,137 +1,245 @@
-// Is this credential genuinely from the issuer it names? Pure: it takes the
-// registry record as an argument and performs no I/O, so it is testable
-// without a database (see test-claim.ts). The lookup lives in
-// claimVerification.ts.
+// Is this credential genuinely from the issuer it names, and does that issuer
+// still stand behind it? Shared by the holder's claim gate and the verifier
+// page, so the two can never disagree about what counts.
 //
-// Why it exists: the wallet renders a credential from plain columns
-// (`institution_name`, `degree_type`, `student_name`), and nothing used to
-// check the signed token behind them. A row saying "RUPP — BSc in IT"
-// therefore looked identical whether an accredited institution signed it or
-// not, and a holder who claimed it carried it as genuine until some
-// third-party verifier finally refused it.
+// Pure: the trust list and the issuer's revocation list arrive as arguments,
+// already fetched and opened (trustAnchor.ts does that). Testable without a
+// network or a database — see test-claim.ts.
+//
+// The order matters and follows QRSeal SPEC §2.8 in spirit:
+//   1. our own trust state      — no signed list, no verdict
+//   2. the issuer and its key   — listed, not revoked, valid when it signed
+//   3. the signature            — against that key, and only that key
+//   4. the issuer binding       — the token names the issuer it was sent under
+//   5. the issuer's withdrawals — clear, unchecked, or revoked
 
-import { verify, VerificationRejected, type CredentialAssertion } from './sdjwt'
-import type { JWK } from 'jose'
+import { verify, peekJwt, checkKeyBinding, VerificationRejected, type CredentialAssertion } from './sdjwt'
+import {
+  candidateKeys,
+  TrustRejected,
+  TRUST_STATE_REASONS,
+  type OpenedTrustList,
+  type TrustListIssuer,
+  type TrustListKey,
+  issuerMayIssue,
+} from './trustList'
+import { credentialStatus, type CredentialStatus, type OpenedRevocations, type WithdrawalReason } from './revocation'
 
 /**
- * A claim that must not proceed. `reason` is the stable part — match on it,
- * log it; `message` is what a person reads and may be reworded or translated.
+ * A credential that must not be accepted. `reason` is the stable part — match
+ * on it, log it. `message` is what a person reads. `unavailable` is true when
+ * the reason is our own trust state rather than anything about the credential:
+ * an interface must then say "could not check", never "this is not genuine".
  */
-export class ClaimRefused extends Error {
+export class CredentialRefused extends Error {
   readonly reason: string
+  readonly unavailable: boolean
   constructor(reason: string, message: string) {
     super(message)
-    this.name = 'ClaimRefused'
+    this.name = 'CredentialRefused'
     this.reason = reason
+    this.unavailable = isTrustStateReason(reason)
   }
 }
 
-/** What the registry lookup came back with. `failed` means we could not read it. */
-export interface RegistryResult {
-  row: Record<string, unknown> | null
-  failed: boolean
+/** Kept so existing callers read naturally; it is the same class. */
+export const ClaimRefused = CredentialRefused
+
+export function isTrustStateReason(reason: string): boolean {
+  return TRUST_STATE_REASONS.has(reason) || reason.startsWith('REVOCATIONS_')
 }
 
-/** The registry stores the key as jsonb in one code path and a JSON string in another. */
-export function readPublicJwk(row: Record<string, unknown>): JWK | null {
-  for (const candidate of [row.public_jwk, row.public_key]) {
-    if (!candidate) continue
-    let jwk: unknown = candidate
-    if (typeof candidate === 'string') {
-      try {
-        jwk = JSON.parse(candidate)
-      } catch {
-        continue
-      }
-    }
-    if (jwk && typeof jwk === 'object') {
-      const typed = jwk as JWK
-      return typed.alg ? typed : { ...typed, alg: 'ES256' }
-    }
-  }
-  return null
+export interface TrustState {
+  list: OpenedTrustList | null
+  /** Why `list` is null, when it is. */
+  failure: string | null
+}
+
+export interface RevocationState {
+  /** null with no failure means the issuer publishes no list. */
+  list: OpenedRevocations | null
+  failure: string | null
+}
+
+export interface CheckedCredential {
+  assertion: CredentialAssertion
+  issuer: TrustListIssuer
+  key: TrustListKey
+  /** clear or unchecked. A revoked credential never gets this far — it is refused. */
+  standing: Exclude<CredentialStatus, { status: 'revoked' }>
+  trustListVersion: number
+  /**
+   * Whether the presenter proved they hold the wallet this was issued to.
+   *   bound      — the issuer bound it to a holder key, and this presentation
+   *                carries a key-binding proof for this audience
+   *   unbound    — issued without a holder key (before binding existed, or to
+   *                someone with no wallet yet): only an ID check ties it to a person
+   *   not_asked  — bound, but this check was not about presenting it (claiming,
+   *                exporting from one's own wallet)
+   */
+  holder: { binding: 'bound'; audience: string } | { binding: 'unbound' } | { binding: 'not_asked' }
 }
 
 export function messageForRefusal(reason: string): string {
+  if (isTrustStateReason(reason)) {
+    return 'The signed trust registry could not be checked right now, so this credential was not checked. ' +
+      'Nothing is known to be wrong with it. Please try again shortly.'
+  }
   switch (reason) {
+    case 'ISSUER_NOT_LISTED':
+      return 'The institution that issued this is not on the signed trust registry. ' +
+        'If it was approved only recently, it appears once the registry is next published.'
+    case 'KEY_UNKNOWN':
+      return 'This was signed with a key the trust registry does not list for this institution. ' +
+        'If the institution changed its signing key recently, this resolves once the registry is next published.'
+    case 'KEY_REVOKED':
+      return "The institution's signing key has been revoked, so nothing it signed can be trusted. " +
+        'Ask the institution to issue this again.'
+    case 'KEY_NOT_VALID_AT_ISSUANCE':
+      return 'This is dated outside the period the institution’s key was valid for, so it cannot be trusted.'
     case 'SIGNATURE_INVALID':
-      // The common innocent cause is a key rotation: InstitutionSettings lets
-      // an issuer replace its keypair, and the registry then holds a key that
-      // never signed this credential. Either way the holder's move is the
-      // same, and it is not to store this.
-      return 'This credential was not signed by the key the institution has registered. ' +
-        'If the institution has changed its signing key, ask it to issue the credential again.'
+      return 'This was not signed by any key the institution has registered. It did not verify.'
     case 'DISCLOSURE_NOT_SIGNED':
-      return 'A field in this credential was not covered by the signature, so it cannot be trusted.'
+      return 'A field in this was not covered by the signature, so it cannot be trusted.'
     case 'CREDENTIAL_EXPIRED':
       return 'This credential has expired. Ask the institution for a current one.'
     case 'CREDENTIAL_NOT_YET_VALID':
       return 'This credential is dated in the future. Check the date on this device, then try again.'
-    case 'ISSUER_KEY_MALFORMED':
-      return "The registry's key for this institution is unusable, so this credential could not be checked."
-    case 'NO_CREDENTIAL':
-      return 'This entry carries no credential to claim.'
-    case 'NO_ISSUER':
-      return 'This entry names no issuer, so there is nothing to check it against.'
-    case 'REGISTRY_UNAVAILABLE':
-      return 'The trust registry could not be reached, so this credential was not checked. Please try again shortly.'
-    case 'ISSUER_UNKNOWN':
-      return 'The institution that issued this credential is not listed in the trust registry.'
+    case 'CREDENTIAL_REVOKED':
+      return 'The institution has withdrawn this credential. That was its decision, not a fault in the code.'
+    case 'UNKNOWN_KID':
+      return 'This was signed with a key the trust registry does not list. It did not verify.'
+    case 'ISSUER_KEY_MISMATCH':
+      return 'The key that signed this belongs to a different institution from the one it names. It did not verify.'
+    case 'URL_PAYLOAD_REJECTED':
+      return 'This code opens a website. Actik certificates never do — this is not one of them. ' +
+        'Do not open it, and do not enter any details on a site it leads to.'
+    case 'PREFIX_INVALID':
+      return 'This is not an Actik printed certificate code.'
+    case 'HOLDER_PROOF_MISSING':
+      return 'This credential is bound to its holder’s wallet, but it was presented without proof from that wallet. Whoever sent it may not be the person it was issued to.'
+    case 'HOLDER_PROOF_INVALID':
+      return 'The proof that this came from its holder’s wallet does not check out. Whoever sent it may not be the person it was issued to.'
+    case 'HOLDER_PROOF_WRONG_AUDIENCE':
+      return 'This was presented to someone else, and has been copied here. Ask the holder to send it to you directly.'
+    case 'TYPE_NOT_ALLOWED_FOR_ISSUER':
+      return 'This issuer is registered as an employer, which may issue employment records only — not this kind of credential. It did not verify.'
     case 'ISSUER_MISMATCH':
-      return 'This credential names a different issuer from the one it was sent under, so it cannot be trusted.'
+      return 'This names a different issuer from the one it was sent under, so it cannot be trusted.'
+    case 'NO_CREDENTIAL':
+      return 'There is no credential here to check.'
+    case 'NO_ISSUER':
+      return 'This names no issuer, so there is nothing to check it against.'
     default:
-      return 'This credential could not be read, so it cannot be trusted.'
+      return 'This could not be read as a credential. It did not verify.'
   }
 }
 
 function refuse(reason: string): never {
-  throw new ClaimRefused(reason, messageForRefusal(reason))
+  throw new CredentialRefused(reason, messageForRefusal(reason))
 }
 
-/**
- * Returns the assertion for a credential that genuinely came from the issuer
- * it names, or throws `ClaimRefused`.
- *
- * Accreditation standing is deliberately NOT checked. A credential signed
- * while an institution was accredited was legitimately issued, and refusing to
- * let the holder keep it because the institution's standing changed later
- * would strand real credentials. Standing is a question for whoever verifies a
- * share, and the verifier page asks it.
- */
-export async function checkIssuedCredential(
+/** Revocation details travel on the refusal so an interface can show them. */
+export class CredentialWithdrawn extends CredentialRefused {
+  readonly withdrawalReason: WithdrawalReason
+  readonly revokedAt: number
+  constructor(withdrawalReason: WithdrawalReason, revokedAt: number) {
+    super('CREDENTIAL_REVOKED', messageForRefusal('CREDENTIAL_REVOKED'))
+    this.name = 'CredentialWithdrawn'
+    this.withdrawalReason = withdrawalReason
+    this.revokedAt = revokedAt
+  }
+}
+
+export async function checkCredential(
   sdjwt: string | null | undefined,
   issuerDid: string | null | undefined,
-  registry: RegistryResult
-): Promise<CredentialAssertion> {
+  trust: TrustState,
+  revocations: RevocationState,
+  now: number,
+  options: { holderProof?: { audience: string } } = {}
+): Promise<CheckedCredential> {
   if (!sdjwt) refuse('NO_CREDENTIAL')
   if (!issuerDid) refuse('NO_ISSUER')
 
-  // A registry we cannot read is our problem, not the credential's: say so and
-  // let the holder try again rather than refusing something never checked.
-  if (registry.failed) refuse('REGISTRY_UNAVAILABLE')
-  if (!registry.row) refuse('ISSUER_UNKNOWN')
+  // 1. No signed list, no verdict — and no falling back on the database.
+  if (!trust.list) refuse(trust.failure ?? 'TRUSTLIST_MISSING')
+  const list = trust.list
 
-  const publicJwk = readPublicJwk(registry.row)
-  if (!publicJwk) refuse('ISSUER_KEY_MALFORMED')
-
-  let assertion: CredentialAssertion
+  // 2. Which listed keys could have signed this? The header kid and iat are
+  //    read unverified here, only to choose; step 3 verifies, and the window
+  //    is re-checked below against the verified iat.
+  const peek = peekJwt(sdjwt)
+  let candidates: TrustListKey[]
   try {
-    assertion = await verify(sdjwt, publicJwk)
+    candidates = candidateKeys(list, issuerDid, { kid: peek.kid, iat: peek.iat })
   } catch (e) {
-    if (e instanceof VerificationRejected) {
-      // The reason, never the payload.
-      console.error('[claim] refused:', e.reason)
-      refuse(e.reason)
-    }
+    if (e instanceof TrustRejected) refuse(e.reason)
     throw e
   }
 
-  // The signature verified against the key the registry holds for this DID. If
-  // the token names a different issuer, the row and the credential disagree
-  // about who made it, and the row is the half nobody signed.
+  // 3. The signature, against a trusted key.
+  let assertion: CredentialAssertion | null = null
+  let key: TrustListKey | null = null
+  for (const candidate of candidates) {
+    try {
+      assertion = await verify(sdjwt, candidate.jwk)
+      key = candidate
+      break
+    } catch (e) {
+      if (!(e instanceof VerificationRejected)) throw e
+      // A wrong key reads as a bad signature: try the next candidate. Any
+      // other reason (expired, malformed) is about the credential itself.
+      if (e.reason !== 'SIGNATURE_INVALID') refuse(e.reason)
+    }
+  }
+  if (!assertion || !key) refuse('SIGNATURE_INVALID')
+
+  // 4. The token names the issuer it arrived under.
   if (assertion.issuer !== issuerDid) refuse('ISSUER_MISMATCH')
 
-  return assertion
+  //    And the issuer is the kind that may issue this. A registered employer
+  //    signs employment records, never degrees: its key on the trust list
+  //    does not make it a university.
+  if (!issuerMayIssue(list.issuers.get(issuerDid)?.kind, assertion.credentialType)) refuse('TYPE_NOT_ALLOWED_FOR_ISSUER')
+
+  //    The key was valid when this was signed — on the *verified* iat. A
+  //    retired key only vouches for what it signed before it was retired.
+  if (assertion.issuedAt === null && key.status === 'retired') refuse('KEY_NOT_VALID_AT_ISSUANCE')
+  if (assertion.issuedAt !== null) {
+    try {
+      candidateKeys(list, issuerDid, { kid: key.kid, iat: assertion.issuedAt })
+    } catch (e) {
+      if (e instanceof TrustRejected) refuse(e.reason)
+      throw e
+    }
+  }
+
+  // 5. Has the issuer withdrawn it?
+  if (revocations.failure) refuse(revocations.failure)
+  const standing = await credentialStatus(assertion, revocations.list, now)
+  if (standing.status === 'revoked') throw new CredentialWithdrawn(standing.reason, standing.revokedAt)
+
+  // 6. Is it being presented by the holder it was issued to?
+  let holder: CheckedCredential['holder'] = { binding: 'unbound' }
+  if (assertion.holderKey) {
+    if (!options.holderProof) {
+      holder = { binding: 'not_asked' }
+    } else {
+      const problem = await checkKeyBinding(sdjwt, assertion.holderKey, options.holderProof.audience, now)
+      if (problem) refuse(problem)
+      holder = { binding: 'bound', audience: options.holderProof.audience }
+    }
+  }
+
+  return {
+    assertion,
+    issuer: list.issuers.get(issuerDid)!,
+    key,
+    standing,
+    trustListVersion: list.version,
+    holder,
+  }
 }
 
 /** A signed value if the credential carries one, else what the row claimed. */

@@ -2,10 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
-import { readDisclosures } from '../../lib/sdjwt'
+import { readDisclosures, peekJwt } from '../../lib/sdjwt'
+import { readPrintedFields } from '../../lib/printedCredential'
+import { displayClaim } from '../../lib/claimDisplay'
+import PrintableCertificate from '../../components/PrintableCertificate'
+import MuseumExportDialog from '../../components/MuseumExportDialog'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2 } from 'lucide-react'
+import { FileText, Landmark, CheckCircle2, ShieldCheck, ArrowLeft, Maximize2, Code, X, Copy, Share2, Printer, Frame } from 'lucide-react'
 
 // Reusing same Credential interface
 interface Credential {
@@ -70,6 +74,13 @@ export default function CredentialDetail() {
   const [detail, setDetail] = useState<Record<string, any> | null>(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [showRawTokenModal, setShowRawTokenModal] = useState(false)
+  // The institution's printed (KH1:) copy, if it signed one: kept in the vault
+  // beside the credential, so the holder can reprint it.
+  const [printed, setPrinted] = useState<{
+    payload: string; holder: string; documentId: string; institution: string; issueDate: string
+  } | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
+  const [showMuseum, setShowMuseum] = useState(false)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -261,15 +272,24 @@ export default function CredentialDetail() {
       const decryptCredDetails = async (cred: Credential) => {
         try {
           setIsDecrypting(true)
-          let sdjwtString = ''
-
+          let decrypted: { sdjwt: string; printed?: string }
           if (cred.cipher && cred.iv) {
-            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
+            decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string; printed?: string }
           } else {
             const parsedPayload = JSON.parse(cred.sd_jwt)
-            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
+            decrypted = await decryptPayload(parsedPayload) as { sdjwt: string; printed?: string }
+          }
+          const sdjwtString = decrypted.sdjwt
+
+          if (typeof decrypted.printed === 'string') {
+            // The paper shows exactly what the code signs — taken from the code.
+            const f = await readPrintedFields(decrypted.printed)
+            if (f) {
+              setPrinted({
+                payload: decrypted.printed, holder: f.subjectName, documentId: f.documentId,
+                institution: f.issuingOrganisation, issueDate: f.issueDate,
+              })
+            }
           }
 
           const disclosures = readDisclosures(sdjwtString)
@@ -392,6 +412,27 @@ export default function CredentialDetail() {
         {t('wallet.share_credential')}
       </button>
 
+      {isUnlocked && detail && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <button
+            type="button"
+            disabled={!printed}
+            title={printed ? undefined : t('wallet.no_printed_copy')}
+            onClick={() => setShowPrint(true)}
+            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            <Printer size={15} /> {t('print.reprint')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMuseum(true)}
+            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <Frame size={15} /> {t('museum.export_button')}
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-5 md:p-8 text-sm text-left">
           {!isUnlocked ? (
@@ -513,7 +554,7 @@ export default function CredentialDetail() {
                   <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
                     {renderField(t('wallet.student_name'), 'Full name', detail.name)}
                     {renderField(t('wallet.student_email'), 'Email', detail.email || credential.holder_email)}
-                    {renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
+                    {credential.credential_type !== 'employment_record' && renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
                   </div>
                 </div>
 
@@ -529,10 +570,25 @@ export default function CredentialDetail() {
                         disclosures are fixed forever at signing time, a code
                         fix alone can't correct already-issued ones. Falling
                         back to it here is the only way those still render. */}
+                    {credential.credential_type === 'employment_record' ? (
+                      <>
+                        {renderField(t('proof.field_job_title'), 'Job title', detail.job_title)}
+                        {renderField(t('proof.field_employment_type'), 'Employment type', detail.employment_type ? displayClaim(t, 'employment_type', detail.employment_type, null) : null)}
+                        {renderField(t('proof.field_department'), 'Department', detail.department)}
+                        {renderField(t('proof.field_employment_start'), 'Started', detail.employment_start ? formatDate(detail.employment_start) : null)}
+                        {renderField(t('proof.field_employment_status'), 'Status', detail.employment_end
+                          ? `${t('proof.employment_ended')} ${formatDate(detail.employment_end)}`
+                          : detail.employment_status ? displayClaim(t, 'employment_status', detail.employment_status, typeof detail.iat === 'number' ? detail.iat : peekJwt(detail.rawJwt).iat) : null)}
+                        {renderField(t('proof.field_role_description'), 'Role', detail.role_description)}
+                      </>
+                    ) : (
+                      <>
                     {renderField(t('wallet.degree_type'), 'Degree type', formatDegreeTitle(detail.degree_type || detail.degree) || undefined)}
-                    {renderField(t('wallet.major'), 'Major', detail.major)}
-                    {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
-                    {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
+                      {renderField(t('wallet.major'), 'Major', detail.major)}
+                      {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
+                      {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
+                      </>
+                    )}
                     {renderField(t('wallet.detail_issued_by'), 'Issued by', detail.institution || credential.institution_name)}
                     {renderField(t('wallet.issuer_did'), 'Institution DID', detail.iss || credential.issuer_did, true)}
                     {renderField(t('wallet.issue_date_label'), 'Issue date', credential.created_at ? formatDate(credential.created_at) : null)}
@@ -618,6 +674,32 @@ export default function CredentialDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPrint && printed && (
+        <PrintableCertificate
+          payload={printed.payload}
+          title={formatDegreeTitle(credential.degree_title)}
+          holder={printed.holder}
+          documentId={printed.documentId}
+          institution={printed.institution}
+          issueDate={printed.issueDate}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
+
+      {showMuseum && detail && (
+        <MuseumExportDialog
+          credentialId={credential.id}
+          issuerDid={credential.issuer_did}
+          sdjwt={detail.rawJwt}
+          jti={peekJwt(detail.rawJwt).jti}
+          claims={detail}
+          credentialType={credential.credential_type ?? null}
+          title={formatDegreeTitle(credential.degree_title)}
+          printed={printed?.payload ?? null}
+          onClose={() => setShowMuseum(false)}
+        />
       )}
 
       {/* UNLOCK MODAL — cancel navigates back to the wallet rather than just

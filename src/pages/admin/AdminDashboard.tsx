@@ -15,6 +15,8 @@ interface Issuer {
   name: string
   domain: string
   type: string
+  /** 'employer' may issue employment records only; signed into the trust list as such. */
+  kind: 'institution' | 'employer'
   did: string
   public_key: string
   accredited: boolean
@@ -76,6 +78,7 @@ function mapDbIssuer(db: Record<string, unknown>): Issuer {
     name,
     domain: extractedDomain,
     type,
+    kind: db.kind === 'employer' ? 'employer' : 'institution',
     did,
     public_key: publicKeyStr,
     accredited: !!db.accredited,
@@ -802,6 +805,11 @@ export default function AdminDashboard() {
                           <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border shrink-0 ${getTypeBadgeStyles(issuer.type)}`}>
                             {issuer.type}
                           </span>
+                          {issuer.kind === 'employer' && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border shrink-0 bg-amber-50 text-amber-800 border-amber-200">
+                              Employment records only
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex gap-2.5 mt-1">

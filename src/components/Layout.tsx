@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useLanguage } from '../lib/i18n'
 import { Session } from '@supabase/supabase-js'
+import { getIssuerKey, subscribeIssuerKey, forgetIssuerKey } from '../lib/issuerKeyStore'
+import { forgetHolderKey } from '../lib/holderKey'
 import { supabase } from '../lib/supabase'
 import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
 import {
   Wallet, Activity, Fingerprint, LayoutDashboard, FileSignature, Settings,
-  ShieldCheck, LogOut, Building2, Lock,
+  ShieldCheck, LogOut, Building2, Lock, Briefcase,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -106,7 +108,10 @@ export default function Layout() {
       return
     }
 
-    setHasSigningKey(!!sessionStorage.getItem('issuer_private_key'))
+    // The key lives in memory now (issuerKeyStore.ts); follow it as it is
+    // unlocked or forgotten rather than reading it once.
+    setHasSigningKey(!!getIssuerKey())
+    const unsubscribeKey = subscribeIssuerKey(() => setHasSigningKey(!!getIssuerKey()))
 
     supabase
       .from('issuers')
@@ -119,10 +124,16 @@ export default function Layout() {
         }
       })
 
-    return () => { active = false }
+    return () => {
+      active = false
+      unsubscribeKey()
+    }
   }, [role, session?.user?.id])
 
   const handleSignOut = async () => {
+    // The signing key must not outlive the session that unlocked it.
+    forgetIssuerKey()
+    forgetHolderKey()
     await supabase.auth.signOut()
     navigate('/auth/login', { replace: true })
   }
@@ -207,6 +218,10 @@ export default function Layout() {
             <Activity size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.activity')}
           </NavLink>
+          <NavLink to="/app/requests" className={sidebarLinkClass}>
+            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
+            {t('nav.requests')}
+          </NavLink>
           <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
             <Fingerprint size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.account')}
@@ -222,6 +237,10 @@ export default function Layout() {
           <NavLink to="/app/issued" className={sidebarLinkClass}>
             <FileSignature size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.issued')}
+          </NavLink>
+          <NavLink to="/app/requests" className={sidebarLinkClass}>
+            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
+            {t('nav.requests')}
           </NavLink>
           <NavLink to="/app/institution-settings" className={sidebarLinkClass}>
             <Settings size={20} strokeWidth={1.9} className="shrink-0" />
@@ -356,6 +375,10 @@ export default function Layout() {
               <Activity size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.activity')}</span>
             </NavLink>
+            <NavLink to="/app/requests" className={bottomNavLinkClass}>
+              <Briefcase size={20} strokeWidth={1.9} />
+              <span className="mt-1">{t('nav.requests')}</span>
+            </NavLink>
             <NavLink to="/app/vault-setup" className={bottomNavLinkClass}>
               <Fingerprint size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.account')}</span>
@@ -371,6 +394,10 @@ export default function Layout() {
             <NavLink to="/app/issued" className={bottomNavLinkClass}>
               <FileSignature size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.issued')}</span>
+            </NavLink>
+            <NavLink to="/app/requests" className={bottomNavLinkClass}>
+              <Briefcase size={20} strokeWidth={1.9} />
+              <span className="mt-1">{t('nav.requests')}</span>
             </NavLink>
             <NavLink to="/app/institution-settings" className={bottomNavLinkClass}>
               <Settings size={20} strokeWidth={1.9} />
