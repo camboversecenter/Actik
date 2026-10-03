@@ -192,6 +192,13 @@ visible at the next lookup, and standing as an operating government service — 
 stated in the paper (`paper/`, section 8.2), with the architectural comparison
 carried from the QRSeal preprint.
 
+## Federation (designed, not built)
+
+ACTIK is open source, so anyone may run an installation. How separate
+installations would connect through a hub that holds only public, signed
+documents — and the four format decisions to settle before the first real
+credential is issued — is in [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
 ## Paper
 
 `paper/` holds a preprint describing this design and what has and has not been
