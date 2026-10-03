@@ -1,13 +1,22 @@
-# Actik — digital proof of ownership (MVP)
+# Actik — issue and manage digital assets (MVP)
 
-Actik's long-term focus is **RWA (real-world asset) tokenization / digital
-proof of ownership**. Digital certificates are the first product — a
-deliberate entry point, not the end goal — because they're simpler to build
-and have clear early demand (MoEYS accreditation, universities).
+Actik has two purposes:
 
-This MVP is a Vite + React + TypeScript **PWA** for issuing, holding, and
-verifying digital certificates, backed by **Supabase**. It implements the core
-lifecycle from the design proposal:
+1. **Issue digital assets** — an institution signs an asset in its own name,
+   so anyone can check who issued it.
+2. **Manage digital assets** — the owner holds their assets, decides who sees
+   what, and takes them where they are needed (a share link, a printed copy, a
+   CamboVerse museum).
+
+A **digital certificate is one kind of digital asset**, and the first one
+built: simple enough to start with, and with clear early demand. The longer
+aim is digital proof of ownership for real-world assets (RWA). Code and
+formats that are certificate-specific today are named as such, so that other
+asset kinds can be added beside them rather than forced into a certificate's
+shape.
+
+This MVP is a Vite + React + TypeScript **PWA**, backed by **Supabase**. For
+certificates it implements the core lifecycle from the design proposal:
 
 1. **Issue** — an accredited issuer (university / ministry / trainer) signs a
    credential as an **SD-JWT** under a `did:web` identity.
