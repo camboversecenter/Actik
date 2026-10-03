@@ -528,6 +528,7 @@ The vendored implementation passes all thirteen Profile B verification vectors o
 the original specification.
 
 \subsection{The seam with CamboVerse}
+\label{sec:seam}
 
 A holder can export a credential as an exhibit for a CamboVerse personal museum.
 The exhibit carries the SHA-256 of the original file, a picture the holder has
@@ -601,7 +602,9 @@ There is no deployment. No credential has been issued to a real person, no
 employer has written a request, and no candidate has answered one. The browser
 checks ran against a stand-in database, not the hosted service. No timing has
 been taken on the low-cost phones the design targets. The Root role has been
-exercised only in a rehearsal of its key ceremony; nobody holds it.
+exercised only in a rehearsal of its key ceremony; nobody holds it. The CamboVerse
+side of the seam in Section~\ref{sec:seam} --- the view that displays ACTIK
+exhibits --- is being built separately and is not described here.
 
 % ===========================================================================
 \section{Evidence, Not a Verdict}
@@ -907,8 +910,10 @@ process, and should not be cited as a University position.
 \paragraph{Author contributions.} \emph{To be confirmed by the authors before
 posting.} SC conceived the study and the claims, and drafted the manuscript. MV
 built the ACTIK application on which Section~\ref{sec:system} reports, as recorded
-in the repository history, and verified the description of it. LK [contribution
-to be stated by the authors]. All authors reviewed and approved the submitted version and accept responsibility for its
+in the repository history, and verified the description of it. LK is building the
+CamboVerse side of the seam described in Section~\ref{sec:seam}: the view that
+displays ACTIK exhibits within CamboVerse. That work is in progress, and nothing
+in this paper reports on it. All authors reviewed and approved the submitted version and accept responsibility for its
 content.
 
 \paragraph{Relationship to prior work.} The printed-certificate format and the
