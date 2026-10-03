@@ -6,6 +6,7 @@ import { Lock, CheckCircle, XCircle, ChevronDown, ChevronUp, HelpCircle, Check, 
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PinDotsInput from '../../components/PinDotsInput'
+import { verifyIssuedCredential } from '../../lib/claimVerification'
 
 // Note: The prompt expects import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -924,8 +925,11 @@ export function useClaim() {
       throw new Error('Vault is locked. Unlock your vault to claim credentials.')
     }
 
-    // Step 3: Encrypt the sd_jwt string using zk-vault encryptPayload
-    // Encrypts the raw JSON containing the SD-JWT string.
+    // Step 3: Verify the signature against the issuer's registry record, then
+    // encrypt. Nothing unchecked goes into the vault — see
+    // src/lib/claimVerification.ts.
+    await verifyIssuedCredential(credential.sd_jwt, credential.issuer_did)
+
     const payload = { sdjwt: credential.sd_jwt }
     const encrypted = await encryptPayload(payload)
     const encryptedStr = JSON.stringify(encrypted)

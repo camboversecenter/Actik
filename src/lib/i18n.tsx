@@ -231,6 +231,7 @@ const translations = {
       no_pending_credentials_desc: 'You have no pending credentials to claim at this time. Institutions will issue digital certificates directly to your identity.',
       claim_to_vault_btn: 'Claim to Vault',
       claim_failed_msg: 'Claim failed: ',
+      claim_refused_msg: 'Not added to your wallet: ',
       unlock_and_claim_btn: 'Unlock & Claim',
       auth_biometric_desc: 'Authenticate using your secure local biometrics.',
       auth_passkey_desc: 'Authenticate using your secure device passkey.',
@@ -833,6 +834,7 @@ const translations = {
       no_pending_credentials_desc: 'អ្នកមិនមានវិញ្ញាបនបត្រដែលត្រូវទទួលនៅពេលនេះទេ។ ស្ថាប័ននឹងចេញវិញ្ញាបនបត្រឌីជីថលដោយផ្ទាល់ទៅកាន់អត្តសញ្ញាណរបស់អ្នក។',
       claim_to_vault_btn: 'ទទួលចូលកាបូប',
       claim_failed_msg: 'ការទទួលបរាជ័យ៖ ',
+      claim_refused_msg: 'មិនបានបញ្ចូលទៅក្នុងកាបូបរបស់អ្នក៖ ', // TODO(km-review)
       unlock_and_claim_btn: 'បើកសោ និងទទួល',
       auth_biometric_desc: 'បញ្ជាក់អត្តសញ្ញាណដោយប្រើជីវមាត្រក្នុងឧបករណ៍របស់អ្នក។',
       auth_passkey_desc: 'បញ្ជាក់អត្តសញ្ញាណដោយប្រើ Passkey ក្នុងឧបករណ៍របស់អ្នក។',
