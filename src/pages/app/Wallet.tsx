@@ -521,7 +521,8 @@ export default function Wallet() {
               }, {} as Record<string, Credential[]>);
 
               const typeLabels: Record<string, string> = {
-                'academic_degree': t('wallet.category_academic_degree')
+                'academic_degree': t('wallet.category_academic_degree'),
+                'employment_record': t('wallet.category_employment_record')
               };
 
               const getLabel = (type: string) => typeLabels[type] || t('wallet.category_other');

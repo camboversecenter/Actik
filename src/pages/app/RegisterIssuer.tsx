@@ -151,6 +151,9 @@ export default function RegisterIssuer() {
         name: name.trim(),
         domain: domain.trim(),
         type: type,
+        // Employers may issue employment records only. The Root decides what
+        // is signed into the trust list; this is what the registry proposes.
+        kind: type === 'Employer' ? 'employer' : 'institution',
         did: did,
         public_key: JSON.stringify(jwkToStore),
         accredited: false,
@@ -162,6 +165,7 @@ export default function RegisterIssuer() {
         res = await supabase.from('issuers').insert({
           owner: currentUser.id,
           name: name.trim(),
+          kind: type === 'Employer' ? 'employer' : 'institution',
           did: did,
           public_jwk: jwkToStore,
           accredited: false
@@ -436,8 +440,12 @@ export default function RegisterIssuer() {
               <option value="University">University</option>
               <option value="Ministry">Ministry</option>
               <option value="Training centre">Training centre</option>
+              <option value="Employer">{t('dashboard.type_employer')}</option>
               <option value="Other">Other</option>
             </select>
+            {type === 'Employer' && (
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed">{t('dashboard.employer_note')}</p>
+            )}
             {errors.type && (
               <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.type}</p>
             )}

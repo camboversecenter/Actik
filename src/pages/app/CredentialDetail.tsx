@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, peekJwt } from '../../lib/sdjwt'
 import { readPrintedFields } from '../../lib/printedCredential'
+import { displayClaim } from '../../lib/claimDisplay'
 import PrintableCertificate from '../../components/PrintableCertificate'
 import MuseumExportDialog from '../../components/MuseumExportDialog'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
@@ -553,7 +554,7 @@ export default function CredentialDetail() {
                   <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
                     {renderField(t('wallet.student_name'), 'Full name', detail.name)}
                     {renderField(t('wallet.student_email'), 'Email', detail.email || credential.holder_email)}
-                    {renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
+                    {credential.credential_type !== 'employment_record' && renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
                   </div>
                 </div>
 
@@ -569,10 +570,25 @@ export default function CredentialDetail() {
                         disclosures are fixed forever at signing time, a code
                         fix alone can't correct already-issued ones. Falling
                         back to it here is the only way those still render. */}
+                    {credential.credential_type === 'employment_record' ? (
+                      <>
+                        {renderField(t('proof.field_job_title'), 'Job title', detail.job_title)}
+                        {renderField(t('proof.field_employment_type'), 'Employment type', detail.employment_type ? displayClaim(t, 'employment_type', detail.employment_type, null) : null)}
+                        {renderField(t('proof.field_department'), 'Department', detail.department)}
+                        {renderField(t('proof.field_employment_start'), 'Started', detail.employment_start ? formatDate(detail.employment_start) : null)}
+                        {renderField(t('proof.field_employment_status'), 'Status', detail.employment_end
+                          ? `${t('proof.employment_ended')} ${formatDate(detail.employment_end)}`
+                          : detail.employment_status ? displayClaim(t, 'employment_status', detail.employment_status, typeof detail.iat === 'number' ? detail.iat : peekJwt(detail.rawJwt).iat) : null)}
+                        {renderField(t('proof.field_role_description'), 'Role', detail.role_description)}
+                      </>
+                    ) : (
+                      <>
                     {renderField(t('wallet.degree_type'), 'Degree type', formatDegreeTitle(detail.degree_type || detail.degree) || undefined)}
-                    {renderField(t('wallet.major'), 'Major', detail.major)}
-                    {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
-                    {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
+                      {renderField(t('wallet.major'), 'Major', detail.major)}
+                      {renderField(t('wallet.graduation_date'), 'Graduation date', detail.graduation_date ? formatDate(detail.graduation_date) : null)}
+                      {renderField(t('wallet.certificate_id'), 'Certificate ID', detail.certificate_id, true)}
+                      </>
+                    )}
                     {renderField(t('wallet.detail_issued_by'), 'Issued by', detail.institution || credential.institution_name)}
                     {renderField(t('wallet.issuer_did'), 'Institution DID', detail.iss || credential.issuer_did, true)}
                     {renderField(t('wallet.issue_date_label'), 'Issue date', credential.created_at ? formatDate(credential.created_at) : null)}
@@ -679,6 +695,7 @@ export default function CredentialDetail() {
           sdjwt={detail.rawJwt}
           jti={peekJwt(detail.rawJwt).jti}
           claims={detail}
+          credentialType={credential.credential_type ?? null}
           title={formatDegreeTitle(credential.degree_title)}
           printed={printed?.payload ?? null}
           onClose={() => setShowMuseum(false)}

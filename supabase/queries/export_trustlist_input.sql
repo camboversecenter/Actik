@@ -10,6 +10,7 @@ select coalesce(json_agg(json_build_object(
          'name',       i.name,
          'domain',     i.domain,
          'accredited', i.accredited,
+         'kind',       coalesce(i.kind, 'institution'),
          'revoked_at', i.revoked_at,
          'keys', coalesce((
            select json_agg(json_build_object(

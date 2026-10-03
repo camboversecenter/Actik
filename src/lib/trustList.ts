@@ -183,11 +183,28 @@ export interface TrustListKey {
   notAfter: number
 }
 
+/**
+ * What kind of issuer the Root admitted, and therefore what it may issue.
+ * An accredited institution may issue every credential type; a registered
+ * employer only employment records. Verifiers show the kind beside the name,
+ * so a job record from a small business never borrows a university's weight.
+ * A list signed before kinds existed carries none: every issuer on it is an
+ * institution.
+ */
+export type IssuerKind = 'institution' | 'employer'
+
 export interface TrustListIssuer {
   did: string
   name: string
   domain: string | null
+  kind?: IssuerKind
   keys: TrustListKey[]
+}
+
+/** The credential types each kind of issuer may sign. */
+export function issuerMayIssue(kind: IssuerKind | undefined, credentialType: string | null): boolean {
+  if ((kind ?? 'institution') === 'institution') return true
+  return credentialType === 'employment_record'
 }
 
 export interface TrustListStatement {
@@ -236,7 +253,10 @@ function parseStatement(text: string): TrustListStatement {
     throw new TrustRejected('TRUSTLIST_MALFORMED')
   }
   for (const issuer of s.issuers) {
-    if (!issuer || typeof issuer.did !== 'string' || !Array.isArray(issuer.keys)) {
+    if (
+      !issuer || typeof issuer.did !== 'string' || !Array.isArray(issuer.keys) ||
+      (issuer.kind !== undefined && issuer.kind !== 'institution' && issuer.kind !== 'employer')
+    ) {
       throw new TrustRejected('TRUSTLIST_MALFORMED')
     }
     for (const k of issuer.keys) {
@@ -308,7 +328,7 @@ export async function openTrustList(
     expires: s.expires,
     digest,
     document: doc,
-    issuers: new Map(s.issuers.map((i) => [i.did, i])),
+    issuers: new Map(s.issuers.map((i) => [i.did, { ...i, kind: i.kind ?? 'institution' }])),
   }
 }
 

@@ -49,6 +49,7 @@ import {
   type OpenedTrustList,
   type TrustListIssuer,
   type TrustListKey,
+  issuerMayIssue,
 } from './trustList'
 import type { OpenedRevocations, RevocationEntry } from './revocation'
 import {
@@ -293,6 +294,7 @@ export async function verifyPrintedCredential(
   // Which listed key signed it, and was that key valid when it did?
   const issuer = list.issuers.get(assertion.issuer)
   if (!issuer) refuse('ISSUER_NOT_LISTED')
+  if (!issuerMayIssue(issuer.kind, assertion.documentType)) refuse('TYPE_NOT_ALLOWED_FOR_ISSUER')
   let key: TrustListKey | undefined
   for (const k of issuer.keys) {
     if (k.status !== 'revoked' && (await printedKeyId(k.jwk)) === assertion.kid) key = k

@@ -89,9 +89,11 @@ writeFileSync(outPath, JSON.stringify(document, null, 2) + '\n', { flag: 'wx' })
 const fmt = (t: number) => new Date(t * 1000).toISOString().replace('.000Z', 'Z')
 console.log(`Trust list v${statement.version}, signed by Root ${rootKid}`)
 console.log(`valid ${fmt(statement.issuedAt)} → ${fmt(statement.expires)}\n`)
-console.log(`${statement.issuers.length} institution(s) will be trusted:`)
+console.log(`${statement.issuers.length} issuer(s) will be trusted:`)
 for (const i of statement.issuers) {
-  console.log(`  ${i.name}  ${i.did}`)
+  // The tier is part of what the Root signs: check it as carefully as the name.
+  const tier = i.kind === 'employer' ? 'registered employer — employment records only' : 'accredited institution — every credential type'
+  console.log(`  ${i.name}  ${i.did}\n    ${tier}`)
   for (const k of i.keys) {
     console.log(`    ${k.status.padEnd(7)} ${k.kid}  signs credentials dated ${fmt(k.notBefore)} → ${fmt(k.notAfter)}`)
   }

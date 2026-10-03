@@ -37,7 +37,8 @@ export interface ExhibitPackage {
   /** Unix seconds. */
   exportedAt: number
   exhibit: {
-    kind: 'certificate'
+    /** 'work' for an employment record; 'certificate' for everything else issued. */
+    kind: 'certificate' | 'work'
     title: string
     /** Never guessed (MUSEUM.md rule 10). */
     khmerTitle: null
@@ -103,6 +104,7 @@ const SENSITIVE_CLAIMS: Array<{ claim: string; label: string }> = [
   { claim: 'birth_date', label: 'Date of birth' },
   { claim: 'place_of_birth', label: 'Place of birth' },
   { claim: 'gpa', label: 'Grades' },
+  { claim: 'salary', label: 'Salary' },
 ]
 
 export function sensitiveFieldsOnDocument(claims: Record<string, unknown>): string[] {
@@ -119,6 +121,7 @@ export interface ExhibitInput {
   issuerDid: string
   /** The credential's own (signed) claims, as disclosed in the holder's vault. */
   claims: Record<string, unknown>
+  credentialType?: string | null
   jti: string | null
   title: string
   /** The original issued file as the credential carries it (claims.photo), if any. */
@@ -165,13 +168,14 @@ export async function buildExhibitPackage(input: ExhibitInput): Promise<ExhibitP
     type: EXHIBIT_TYPE,
     exportedAt: input.now,
     exhibit: {
-      kind: 'certificate',
+      kind: input.credentialType === 'employment_record' ? 'work' : 'certificate',
       title: input.title,
       khmerTitle: null,
       issuerName: asText(input.claims.institution) ?? asText(input.claims.issuing_body) ?? '',
       issuerDid: input.issuerDid,
       date:
         asText(input.claims.graduation_date) ?? asText(input.claims.date_certified) ??
+        asText(input.claims.employment_start) ??
         asText(input.claims.completion_date) ?? asText(input.claims.date_awarded) ??
         asText(input.claims.event_date) ?? asText(input.claims.date),
     },

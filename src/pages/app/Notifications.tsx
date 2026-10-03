@@ -345,6 +345,17 @@ export default function Notifications() {
     }
   }
 
+  const declineCredential = async (cred: PendingCredential) => {
+    if (!window.confirm(t('wallet.decline_confirm'))) return
+    const { error } = await supabase.from('pending_credentials').delete().eq('id', cred.id)
+    if (error) {
+      setClaimErrors(prev => ({ ...prev, [cred.id]: error.message }))
+      return
+    }
+    setPendingList(prev => prev.filter(c => c.id !== cred.id))
+    window.dispatchEvent(new Event('actik:pending-credentials-changed'))
+  }
+
   const truncateDid = (did: string) => {
     if (!did) return 'Unknown'
     if (did.length <= 32) return did
@@ -420,6 +431,17 @@ export default function Notifications() {
                     <span className="text-xs text-gray-400">
                       {new Date(c.created_at).toLocaleDateString()}
                     </span>
+                    {/* Nothing counts until the recipient accepts it — and they can
+                        refuse. Declining deletes the offer; the issuer's own log of
+                        what it sent is untouched. */}
+                    <button
+                      type="button"
+                      onClick={() => declineCredential(c)}
+                      disabled={claimingCredId !== null}
+                      className="shrink-0 border border-gray-300 text-gray-700 font-semibold h-11 px-4 rounded-lg text-xs md:text-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {t('wallet.decline_btn')}
+                    </button>
                     <button
                       onClick={() => triggerClaimFlow(c)}
                       disabled={claimingCredId !== null}

@@ -24,6 +24,7 @@ import {
 } from '../../lib/proofRequest'
 import { getProofRequest, submitAnswer } from '../../lib/proofRequestApi'
 import { RequestSummary } from './ProofRequestPublic'
+import { displayClaim } from '../../lib/claimDisplay'
 
 type UnlockMethod = 'pin' | 'passkey' | 'biometric' | 'both' | null
 
@@ -37,7 +38,6 @@ interface Candidate {
   check: { usable: true; issuer: string } | { usable: false; message: string } | null
 }
 
-const display = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v))
 
 export default function AnswerProofRequest() {
   const { id = '' } = useParams<{ id: string }>()
@@ -104,7 +104,7 @@ export default function AnswerProofRequest() {
       const checked = await Promise.all(out.map(async (c) => {
         try {
           const r = await verifyIssuedCredential(c.sdjwt, peekJwt(c.sdjwt).iss)
-          return { ...c, check: { usable: true as const, issuer: r.issuer.name } }
+          return { ...c, check: { usable: true as const, issuer: `${r.issuer.name} · ${t(`proof.kind_${r.issuer.kind ?? 'institution'}`)}` } }
         } catch (e) {
           const message = e instanceof CredentialRefused ? messageForRefusal(e.reason) : String(e)
           return { ...c, check: { usable: false as const, message } }
@@ -236,7 +236,7 @@ export default function AnswerProofRequest() {
                       {shown.map((k) => (
                         <div key={k} className="contents">
                           <dt className="text-stone-500">{t(`proof.field_${k}`)}</dt>
-                          <dd className="text-stone-900 break-words">{display(chosen.claims[k])}</dd>
+                          <dd className="text-stone-900 break-words">{displayClaim(t, k, chosen.claims[k], peekJwt(chosen.sdjwt).iat)}</dd>
                         </div>
                       ))}
                     </dl>

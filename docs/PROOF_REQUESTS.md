@@ -40,6 +40,7 @@ A request names fields from a per-type allowlist and nothing else:
 | Attendance or participation | name, institution, type, event, date, organiser | role |
 | Merit or excellence | name, institution, achievement, date awarded | basis of award |
 | Appreciation or service | name, institution, type, reason, date | capacity |
+| Employment record | name, employer, job title, employment type, start, status, end | department, role |
 
 So there is no way to ask for **date of birth or age, sex, marital status, a
 photograph, national ID, student number, place of birth, religion or

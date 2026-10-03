@@ -21,6 +21,7 @@ import {
   type OpenedTrustList,
   type TrustListIssuer,
   type TrustListKey,
+  issuerMayIssue,
 } from './trustList'
 import { credentialStatus, type CredentialStatus, type OpenedRevocations, type WithdrawalReason } from './revocation'
 
@@ -105,6 +106,8 @@ export function messageForRefusal(reason: string): string {
         'Do not open it, and do not enter any details on a site it leads to.'
     case 'PREFIX_INVALID':
       return 'This is not an Actik printed certificate code.'
+    case 'TYPE_NOT_ALLOWED_FOR_ISSUER':
+      return 'This issuer is registered as an employer, which may issue employment records only — not this kind of credential. It did not verify.'
     case 'ISSUER_MISMATCH':
       return 'This names a different issuer from the one it was sent under, so it cannot be trusted.'
     case 'NO_CREDENTIAL':
@@ -177,6 +180,11 @@ export async function checkCredential(
 
   // 4. The token names the issuer it arrived under.
   if (assertion.issuer !== issuerDid) refuse('ISSUER_MISMATCH')
+
+  //    And the issuer is the kind that may issue this. A registered employer
+  //    signs employment records, never degrees: its key on the trust list
+  //    does not make it a university.
+  if (!issuerMayIssue(list.issuers.get(issuerDid)?.kind, assertion.credentialType)) refuse('TYPE_NOT_ALLOWED_FOR_ISSUER')
 
   //    The key was valid when this was signed — on the *verified* iat. A
   //    retired key only vouches for what it signed before it was retired.

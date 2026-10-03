@@ -11,6 +11,7 @@ import {
   CredentialWithdrawn,
   type CheckedCredential,
 } from '../../lib/credentialCheck'
+import { displayClaim } from '../../lib/claimDisplay'
 import type { WithdrawalReason } from '../../lib/revocation'
 import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
 
@@ -55,6 +56,8 @@ interface IssuerRecord {
   domain: string
   did: string
   accredited: boolean
+  /** From the signed trust list: an accredited institution, or a registered employer. */
+  kind: 'institution' | 'employer'
 }
 
 interface ParsedPresentation {
@@ -189,6 +192,13 @@ function getFieldLabel(key: string, t: (k: string) => string): string {
     case 'photo':
     case 'student_photo':
       return t('wallet.field_photo')
+    case 'job_title':
+    case 'employment_type':
+    case 'employment_start':
+    case 'employment_end':
+    case 'employment_status':
+    case 'department':
+      return t(`proof.field_${key}`)
     default:
       return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
   }
@@ -543,6 +553,7 @@ export default function VerifyCredential() {
           domain: result.issuer.domain ?? '',
           did: result.issuer.did,
           accredited: true,
+          kind: result.issuer.kind ?? 'institution',
         })
 
         // Parse claims for display
@@ -1010,6 +1021,11 @@ export default function VerifyCredential() {
                     {t('verify.issued_by_label')}
                   </span>
                   <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
+                  {issuer && (
+                    <span className="inline-block text-[11px] font-semibold text-stone-600 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                      {t(`proof.kind_${issuer.kind}`)}
+                    </span>
+                  )}
                   <a
                     href={`https://${issuer?.domain}`}
                     target="_blank"
@@ -1087,6 +1103,16 @@ export default function VerifyCredential() {
                               )}
                             />
                           )}
+                        </div>
+                      )
+                    }
+                    if (key === 'employment_status' || key === 'employment_type') {
+                      return (
+                        <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
+                          <span className="font-khmer text-stone-500 font-medium">{getFieldLabel(key, t)}</span>
+                          <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
+                            {displayClaim(t, key, value, assertion?.issuedAt ?? null)}
+                          </span>
                         </div>
                       )
                     }

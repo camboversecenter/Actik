@@ -56,6 +56,7 @@ const translations = {
       view_notifications: 'View pending notifications',
       view_all_notifications: 'View all notifications',
       category_academic_degree: 'Academic Degrees',
+      category_employment_record: 'Employment',
       category_other: 'Other',
       see_all: 'See all ({count})',
       all_count: 'All {count}',
@@ -113,6 +114,8 @@ const translations = {
       issuer_did: 'Issuer DID:',
       encrypted_badge: 'Encrypted in your vault',
       no_printed_copy: 'The institution did not sign a printed copy of this credential.',
+      decline_btn: 'Decline',
+      decline_confirm: 'Decline this? It will not be added to your wallet, and the offer is deleted. If it is something you want, ask the issuer to send it again.',
       raw_token_trigger: 'Advanced: export full credential',
       raw_token_modal_title: 'Full credential export',
       raw_token_modal_subtitle: 'For developer or audit use',
@@ -476,6 +479,29 @@ const translations = {
       did_desc2: 'It is tied to your domain and used to digitally sign every credential you issue.',
       did_desc3: 'Employers can verify credentials were signed by your institution without contacting you.',
       inst_type_label: 'Institution type',
+      type_employer: 'Employer (company or organisation)',
+      employee_section: 'Employee',
+      employee_email: 'Employee email',
+      employee_email_req: 'Employee email',
+      employee_found: '✓ Employee has an Actik account',
+      issuing_employer: 'Employer',
+      issue_desc_employment: 'Sign and send an employment record. It reaches the employee’s wallet only if they accept it.',
+      type_employment: 'Employment record',
+      type_employment_desc: 'Confirms someone works or worked here: job title and dates. The employee accepts it into their wallet.',
+      job_title_req: 'Job title *',
+      employment_type_req: 'Employment type *',
+      employment_type_full_time: 'Full-time',
+      employment_type_part_time: 'Part-time',
+      employment_type_contract: 'Contract',
+      employment_type_internship: 'Internship',
+      employment_type_volunteer: 'Volunteer',
+      employment_start_req: 'Start date *',
+      employment_end: 'End date',
+      still_employed: 'Still employed here',
+      department_opt: 'Department (optional)',
+      job_description_opt: 'Role, in a line (optional)',
+      employment_never: 'An employment record never carries salary, reason for leaving, performance or disciplinary notes. When the job ends or the title changes, issue a new record and withdraw this one as “replaced by a corrected credential”.',
+      employer_note: 'A registered employer issues employment records to its staff — job title and dates — and nothing else. Verifiers show it as a registered employer, not an accredited institution.',
       register_btn_text: 'Register Institution'
     },
     role: {
@@ -696,6 +722,22 @@ const translations = {
       field_role_description: 'Role',
       field_basis_description: 'Basis of award',
       field_capacity: 'Capacity',
+      type_employment_record: 'Employment record',
+      kind_institution: 'Accredited institution',
+      kind_employer: 'Registered employer',
+      field_job_title: 'Job title',
+      field_employment_type: 'Employment type',
+      field_employment_start: 'Started',
+      field_employment_end: 'Ended',
+      field_employment_status: 'Status',
+      field_department: 'Department',
+      employment_current_as_of: 'Current, as of {date} (when the employer signed it)',
+      employment_ended: 'Ended',
+      employment_type_full_time: 'Full-time',
+      employment_type_part_time: 'Part-time',
+      employment_type_contract: 'Contract',
+      employment_type_internship: 'Internship',
+      employment_type_volunteer: 'Volunteer',
     },
     museum: {
       title: 'Add to a CamboVerse museum',
@@ -884,6 +926,7 @@ const translations = {
       view_notifications: 'មើលការជូនដំណឹង',
       view_all_notifications: 'មើលការជូនដំណឹងទាំងអស់', // TODO(km-review)
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
+      category_employment_record: 'ការងារ', // TODO(km-review)
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
       all_count: 'ទាំងអស់ {count}',
@@ -941,6 +984,8 @@ const translations = {
       issuer_did: 'លេខសម្គាល់ស្ថាប័ន (DID)៖',
       encrypted_badge: 'ត្រូវបានអ៊ិនគ្រីបក្នុងកាបូប',
       no_printed_copy: 'ស្ថាប័នមិនបានចុះហត្ថលេខាលើច្បាប់បោះពុម្ពនៃលិខិតនេះទេ។', // TODO(km-review)
+      decline_btn: 'បដិសេធ', // TODO(km-review)
+      decline_confirm: 'បដិសេធលិខិតនេះ? វានឹងមិនត្រូវបានបន្ថែមទៅកាបូបរបស់អ្នកទេ ហើយការផ្តល់ជូននឹងត្រូវលុប។ ប្រសិនបើអ្នកចង់បាន សូមស្នើឱ្យអ្នកចេញផ្ញើម្តងទៀត។', // TODO(km-review)
       raw_token_trigger: 'កម្រិតខ្ពស់៖ នាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
       raw_token_modal_title: 'ការនាំចេញវិញ្ញាបនបត្រពេញលេញ', // TODO(km-review)
       raw_token_modal_subtitle: 'សម្រាប់អ្នកអភិវឌ្ឍ ឬការត្រួតពិនិត្យ', // TODO(km-review)
@@ -1304,6 +1349,29 @@ const translations = {
       did_desc2: 'វាត្រូវបានភ្ជាប់ទៅនឹងដែនរបស់អ្នកហើយប្រើដើម្បីចុះហត្ថលេខាលើរាល់វិញ្ញាបនបត្រដែលអ្នកចេញ។',
       did_desc3: 'និយោជកអាចផ្ទៀងផ្ទាត់វិញ្ញាបនបត្រដែលបានចុះហត្ថលេខាដោយស្ថាប័នរបស់អ្នកដោយមិនចាំបាច់ទាក់ទងអ្នកឡើយ។',
       inst_type_label: 'ប្រភេទស្ថាប័ន',
+      type_employer: 'និយោជក (ក្រុមហ៊ុន ឬអង្គការ)', // TODO(km-review)
+      employee_section: 'បុគ្គលិក', // TODO(km-review)
+      employee_email: 'អ៊ីមែលបុគ្គលិក', // TODO(km-review)
+      employee_email_req: 'អ៊ីមែលបុគ្គលិក', // TODO(km-review)
+      employee_found: '✓ បុគ្គលិកមានគណនី Actik', // TODO(km-review)
+      issuing_employer: 'និយោជក', // TODO(km-review)
+      issue_desc_employment: 'ចុះហត្ថលេខា និងផ្ញើកំណត់ត្រាការងារ។ វាចូលកាបូបបុគ្គលិក លុះត្រាតែពួកគេទទួលយក។', // TODO(km-review)
+      type_employment: 'កំណត់ត្រាការងារ', // TODO(km-review)
+      type_employment_desc: 'បញ្ជាក់ថានរណាម្នាក់កំពុងធ្វើ ឬធ្លាប់ធ្វើការនៅទីនេះ៖ មុខតំណែង និងកាលបរិច្ឆេទ។ បុគ្គលិកទទួលយកវាចូលកាបូបរបស់ខ្លួន។', // TODO(km-review)
+      job_title_req: 'មុខតំណែង *', // TODO(km-review)
+      employment_type_req: 'ប្រភេទការងារ *', // TODO(km-review)
+      employment_type_full_time: 'ពេញម៉ោង', // TODO(km-review)
+      employment_type_part_time: 'ក្រៅម៉ោង', // TODO(km-review)
+      employment_type_contract: 'កិច្ចសន្យា', // TODO(km-review)
+      employment_type_internship: 'កម្មសិក្សា', // TODO(km-review)
+      employment_type_volunteer: 'ស្ម័គ្រចិត្ត', // TODO(km-review)
+      employment_start_req: 'ថ្ងៃចាប់ផ្តើម *', // TODO(km-review)
+      employment_end: 'ថ្ងៃបញ្ចប់', // TODO(km-review)
+      still_employed: 'នៅតែធ្វើការនៅទីនេះ', // TODO(km-review)
+      department_opt: 'ផ្នែក (ស្រេចចិត្ត)', // TODO(km-review)
+      job_description_opt: 'តួនាទី មួយបន្ទាត់ (ស្រេចចិត្ត)', // TODO(km-review)
+      employment_never: 'កំណត់ត្រាការងារមិនដែលមានប្រាក់ខែ មូលហេតុនៃការចាកចេញ ការវាយតម្លៃ ឬកំណត់ចំណាំវិន័យទេ។ នៅពេលការងារបញ្ចប់ ឬមុខតំណែងផ្លាស់ប្តូរ សូមចេញកំណត់ត្រាថ្មី ហើយដកកំណត់ត្រានេះវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ”។', // TODO(km-review)
+      employer_note: 'និយោជកដែលបានចុះឈ្មោះចេញកំណត់ត្រាការងារជូនបុគ្គលិករបស់ខ្លួន — មុខតំណែង និងកាលបរិច្ឆេទ — ហើយគ្មានអ្វីផ្សេងទៀតទេ។ អ្នកផ្ទៀងផ្ទាត់បង្ហាញវាជានិយោជកដែលបានចុះឈ្មោះ មិនមែនជាស្ថាប័នដែលទទួលស្គាល់ទេ។', // TODO(km-review)
       register_btn_text: 'ចុះឈ្មោះស្ថាប័ន'
     },
     role: {
@@ -1525,6 +1593,22 @@ const translations = {
       field_role_description: 'តួនាទី', // TODO(km-review)
       field_basis_description: 'មូលដ្ឋាននៃរង្វាន់', // TODO(km-review)
       field_capacity: 'សមត្ថភាព', // TODO(km-review)
+      type_employment_record: 'កំណត់ត្រាការងារ', // TODO(km-review)
+      kind_institution: 'ស្ថាប័នដែលទទួលស្គាល់', // TODO(km-review)
+      kind_employer: 'និយោជកដែលបានចុះឈ្មោះ', // TODO(km-review)
+      field_job_title: 'មុខតំណែង', // TODO(km-review)
+      field_employment_type: 'ប្រភេទការងារ', // TODO(km-review)
+      field_employment_start: 'ចាប់ផ្តើម', // TODO(km-review)
+      field_employment_end: 'បញ្ចប់', // TODO(km-review)
+      field_employment_status: 'ស្ថានភាព', // TODO(km-review)
+      field_department: 'ផ្នែក', // TODO(km-review)
+      employment_current_as_of: 'នៅធ្វើការ គិតត្រឹម {date} (ពេលនិយោជកចុះហត្ថលេខា)', // TODO(km-review)
+      employment_ended: 'បានបញ្ចប់', // TODO(km-review)
+      employment_type_full_time: 'ពេញម៉ោង', // TODO(km-review)
+      employment_type_part_time: 'ក្រៅម៉ោង', // TODO(km-review)
+      employment_type_contract: 'កិច្ចសន្យា', // TODO(km-review)
+      employment_type_internship: 'កម្មសិក្សា', // TODO(km-review)
+      employment_type_volunteer: 'ស្ម័គ្រចិត្ត', // TODO(km-review)
     },
     museum: {
       title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)

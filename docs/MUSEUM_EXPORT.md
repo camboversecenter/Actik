@@ -12,7 +12,8 @@ are MUSEUM.md §5's.
 Actik's purpose is to **issue** and to **manage** digital assets; a
 certificate is one kind of asset, and the only kind built so far. Exporting to
 a museum is part of managing: the owner takes an asset they hold and decides
-how it is shown. So `exhibit.kind` is `"certificate"` today, and other asset
+how it is shown. So `exhibit.kind` is `"certificate"` for certificates and
+`"work"` for employment records (docs/EMPLOYMENT_RECORDS.md), and other asset
 kinds will be added as further values — with their own rules for what is
 signed, what is shown and what is covered — rather than by stretching the
 certificate fields. CamboVerse should treat an unknown `kind` as something to

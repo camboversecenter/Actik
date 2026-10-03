@@ -178,6 +178,15 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
 
+## Employment records
+
+Proof of work: a **registered employer** — a trust-list tier signed by the Root,
+shown to every verifier, allowed to issue employment records only — signs a
+record of job title, type and dates. It reaches the employee's wallet only if
+they accept it; they can decline. It never carries salary, reason for leaving or
+ratings (the database refuses them). "Current" is always shown as of the day it
+was signed. Details: [`docs/EMPLOYMENT_RECORDS.md`](docs/EMPLOYMENT_RECORDS.md).
+
 ## Proof requests (recruitment)
 
 An employer asks for proof — **Requests → New request**: up to five credential

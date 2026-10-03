@@ -9,6 +9,7 @@ import { ArrowLeft, Copy, Loader2 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { longDate } from '../../lib/dates'
 import { messageForRefusal } from '../../lib/credentialCheck'
+import { displayClaim } from '../../lib/claimDisplay'
 import type { CheckedAnswer, ProofRequest } from '../../lib/proofRequest'
 import {
   checkResponses,
@@ -36,7 +37,6 @@ export function RequirementLabel({ request, index }: { request: Pick<ProofReques
   )
 }
 
-const display = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : JSON.stringify(v))
 
 function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
   const { t } = useLanguage()
@@ -60,13 +60,14 @@ function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
     <div className="space-y-2">
       <p className="text-sm">
         <span className="text-stone-500">{t('proof.issued_by')}</span>{' '}
-        <span className="font-bold text-stone-900">{c.issuer.name}</span>
+        <span className="font-bold text-stone-900">{c.issuer.name}</span>{' '}
+        <span className="text-xs text-stone-500">· {t(`proof.kind_${c.issuer.kind ?? 'institution'}`)}</span>
       </p>
       <dl className="grid grid-cols-[minmax(0,10rem)_1fr] gap-x-3 gap-y-1 text-sm">
         {answer.fields.map(([k, v]) => (
           <div key={k} className="contents">
             <dt className="text-stone-500">{t(`proof.field_${k}`)}</dt>
-            <dd className="font-medium text-stone-900 break-words">{display(v)}</dd>
+            <dd className="font-medium text-stone-900 break-words">{displayClaim(t, k, v, c.assertion.issuedAt)}</dd>
           </div>
         ))}
       </dl>

@@ -25,6 +25,7 @@ export interface MuseumExportDialogProps {
   sdjwt: string
   jti: string | null
   claims: Record<string, unknown>
+  credentialType: string | null
   title: string
   printed: string | null
   onClose: () => void
@@ -131,6 +132,7 @@ export default function MuseumExportDialog(props: MuseumExportDialogProps) {
         credentialId: props.credentialId,
         issuerDid: props.issuerDid,
         claims: props.claims,
+        credentialType: props.credentialType,
         jti: props.jti,
         title: props.title,
         originalFile: original,

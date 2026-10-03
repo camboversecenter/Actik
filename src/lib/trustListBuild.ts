@@ -21,6 +21,8 @@ export interface IssuerSnapshot {
   name: string
   domain?: string | null
   accredited: boolean
+  /** 'employer' admits a registered employer; anything else an institution. */
+  kind?: string | null
   revoked_at?: string | null
   keys: Array<{
     public_jwk: JWK | string
@@ -68,7 +70,14 @@ export async function buildTrustList(options: {
       })
     }
     if (keys.length === 0) continue
-    issuers.push({ did: s.did, name: s.name, domain: s.domain ?? null, keys })
+    // The kind is decided here too, by what the Root signs — not by what an
+    // issuer said about itself when it registered. A kind this build does not
+    // recognise stops it, rather than admit anyone at the wider tier.
+    const kind = s.kind ?? 'institution'
+    if (kind !== 'institution' && kind !== 'employer') {
+      throw new Error(`Issuer ${s.did} has unknown kind "${s.kind}"; nothing was signed.`)
+    }
+    issuers.push({ did: s.did, name: s.name, domain: s.domain ?? null, kind, keys })
   }
 
   const statement: TrustListStatement = {

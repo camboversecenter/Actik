@@ -12,7 +12,7 @@ import Banner from '../../components/ui/Banner'
 import {
   AlertTriangle, CheckCircle2, GraduationCap, UserCheck, Star,
   HeartHandshake, Briefcase, Loader2, Check, ArrowLeft, FileText, Upload,
-  Landmark, ShieldCheck,
+  Landmark, ShieldCheck, BadgeCheck,
 } from 'lucide-react'
 
 interface IssuerInfo {
@@ -20,11 +20,22 @@ interface IssuerInfo {
   domain: string
   did: string
   accredited: boolean
+  /** A registered employer may issue employment records only. */
+  kind: 'institution' | 'employer'
   rawIssuerData: any
 }
 
 export default function IssueCredential() {
   const { t } = useLanguage()
+  // An employment record goes to an employee, from an employer: the form says so.
+  const EMPLOYMENT_LABELS: Record<string, string> = {
+    'dashboard.student_section': 'dashboard.employee_section',
+    'dashboard.student_email': 'dashboard.employee_email',
+    'dashboard.student_email_req': 'dashboard.employee_email_req',
+    'dashboard.student_found': 'dashboard.employee_found',
+    'dashboard.issuing_institution': 'dashboard.issuing_employer',
+    'dashboard.issue_credential_desc_form': 'dashboard.issue_desc_employment',
+  }
   const navigate = useNavigate()
   const [currentUser, setCurrentUser] = useState<any | null>(null)
   
@@ -49,6 +60,7 @@ export default function IssueCredential() {
 
   // New Certificate Types State
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const label = (key: string) => t(selectedType === 'employment_record' && EMPLOYMENT_LABELS[key] ? EMPLOYMENT_LABELS[key] : key)
   
   const [subType, setSubType] = useState('')
   const [eventName, setEventName] = useState('')
@@ -74,6 +86,17 @@ export default function IssueCredential() {
   const [licenseNumber, setLicenseNumber] = useState('')
   const [dateCertified, setDateCertified] = useState('')
   const [expiryDate, setExpiryDate] = useState('')
+
+  // Employment record. Deliberately no salary, reason for leaving or rating:
+  // a record people fear to accept, or that can be used against them, is
+  // not one they will carry.
+  const [jobTitle, setJobTitle] = useState('')
+  const [employmentType, setEmploymentType] = useState('')
+  const [employmentStart, setEmploymentStart] = useState('')
+  const [stillEmployed, setStillEmployed] = useState(true)
+  const [employmentEnd, setEmploymentEnd] = useState('')
+  const [department, setDepartment] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
 
   // Certificate document upload (PDF or image)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
@@ -125,6 +148,7 @@ export default function IssueCredential() {
     achievementTitle, basisDescription, dateAwarded,
     reason, capacity, appreciationDate,
     certName, issuingBody, licenseNumber, dateCertified, expiryDate,
+    jobTitle, employmentType, employmentStart, stillEmployed, employmentEnd, department, jobDescription,
   })
 
   // Anything worth saving/warning about — an empty form isn't a "draft".
@@ -177,6 +201,13 @@ export default function IssueCredential() {
     setLicenseNumber(data.licenseNumber || '')
     setDateCertified(data.dateCertified || '')
     setExpiryDate(data.expiryDate || '')
+    setJobTitle(data.jobTitle || '')
+    setEmploymentType(data.employmentType || '')
+    setEmploymentStart(data.employmentStart || '')
+    setStillEmployed(data.stillEmployed !== false)
+    setEmploymentEnd(data.employmentEnd || '')
+    setDepartment(data.department || '')
+    setJobDescription(data.jobDescription || '')
     if (data.studentEmail) lookupStudent(String(data.studentEmail).trim().toLowerCase())
   }
 
@@ -209,6 +240,7 @@ export default function IssueCredential() {
     graduationDate, certificateId, notes, subType, eventName, eventDate, organizer, roleDescription, programName,
     duration, completionDate, departmentOrRole, achievementTitle, basisDescription, dateAwarded, reason, capacity,
     appreciationDate, certName, issuingBody, licenseNumber, dateCertified, expiryDate,
+    jobTitle, employmentType, employmentStart, stillEmployed, employmentEnd, department, jobDescription,
   ])
 
   // Catches an actual tab close/refresh/URL-bar navigation — separate from
@@ -286,6 +318,7 @@ export default function IssueCredential() {
           domain: issuerData.domain || '',
           did: issuerData.did || held?.did || '',
           accredited: issuerData.accredited,
+          kind: issuerData.kind === 'employer' ? 'employer' : 'institution',
           rawIssuerData: issuerData
         })
         setGateState('valid')
@@ -378,6 +411,12 @@ export default function IssueCredential() {
       if (!certName.trim()) nextErrors.certName = 'Certification name is required'
       if (!issuingBody.trim()) nextErrors.issuingBody = 'Issuing body is required'
       if (!dateCertified) nextErrors.dateCertified = 'Date certified is required'
+    } else if (selectedType === 'employment_record') {
+      if (!jobTitle.trim()) nextErrors.jobTitle = 'Job title is required'
+      if (!employmentType) nextErrors.employmentType = 'Employment type is required'
+      if (!employmentStart) nextErrors.employmentStart = 'Start date is required'
+      if (!stillEmployed && !employmentEnd) nextErrors.employmentEnd = 'End date is required'
+      if (!stillEmployed && employmentEnd && employmentEnd < employmentStart) nextErrors.employmentEnd = 'End date is before the start date'
     }
 
     setErrors(nextErrors)
@@ -462,6 +501,19 @@ export default function IssueCredential() {
         }
         if (licenseNumber.trim()) typeMetadata.license_number = licenseNumber.trim()
         if (expiryDate) typeMetadata.expiry_date = expiryDate
+      } else if (selectedType === 'employment_record') {
+        // "current" is true as of the day it is signed, and verifiers say so.
+        // When the job ends the employer issues a corrected record and
+        // withdraws this one as 'corrected'.
+        typeMetadata = {
+          job_title: jobTitle.trim(),
+          employment_type: employmentType,
+          employment_start: employmentStart,
+          employment_status: stillEmployed ? 'current' : 'ended',
+        }
+        if (!stillEmployed) typeMetadata.employment_end = employmentEnd
+        if (department.trim()) typeMetadata.department = department.trim()
+        if (jobDescription.trim()) typeMetadata.role_description = jobDescription.trim()
       }
 
       if (typeMetadata) {
@@ -572,7 +624,7 @@ export default function IssueCredential() {
         credentialData.certificate_id = certificateId.trim()
       } else {
         credentialData.type_metadata = typeMetadata
-        credentialData.label = typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
+        credentialData.label = typeMetadata.job_title || typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
       }
 
       const res = await supabase.from('pending_credentials').insert(credentialData)
@@ -628,6 +680,13 @@ export default function IssueCredential() {
     setLicenseNumber('')
     setDateCertified('')
     setExpiryDate('')
+    setJobTitle('')
+    setEmploymentType('')
+    setEmploymentStart('')
+    setStillEmployed(true)
+    setEmploymentEnd('')
+    setDepartment('')
+    setJobDescription('')
     
     setSelectedType(null)
     setStudentFoundStatus(null)
@@ -746,6 +805,7 @@ export default function IssueCredential() {
     : selectedType === 'merit_excellence' ? achievementTitle
     : selectedType === 'appreciation_service' ? reason
     : selectedType === 'professional_certification' ? certName
+    : selectedType === 'employment_record' ? jobTitle
     : ''
 
   // Success Screen
@@ -760,7 +820,7 @@ export default function IssueCredential() {
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.student_email')}</span>
+              <span className="text-xs text-gray-400 block font-medium">{label('dashboard.student_email')}</span>
               <strong className="text-gray-900 text-base">{studentEmail}</strong>
             </div>
             <div>
@@ -873,6 +933,15 @@ export default function IssueCredential() {
     )
     if (licenseNumber.trim()) reviewRows.push({ label: t('dashboard.license_num_opt'), value: licenseNumber })
     if (expiryDate) reviewRows.push({ label: t('dashboard.expiry_date_opt'), value: expiryDate })
+  } else if (selectedType === 'employment_record') {
+    reviewRows.push(
+      { label: t('dashboard.job_title_req'), value: jobTitle },
+      { label: t('dashboard.employment_type_req'), value: employmentType ? t(`dashboard.employment_type_${employmentType}`) : '' },
+      { label: t('dashboard.employment_start_req'), value: employmentStart },
+      { label: t('dashboard.employment_end'), value: stillEmployed ? t('dashboard.still_employed') : employmentEnd }
+    )
+    if (department.trim()) reviewRows.push({ label: t('dashboard.department_opt'), value: department })
+    if (jobDescription.trim()) reviewRows.push({ label: t('dashboard.job_description_opt'), value: jobDescription })
   }
 
   // Step indicator — derived purely from selectedType/showConfirm, no new
@@ -919,12 +988,12 @@ export default function IssueCredential() {
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-left text-sm space-y-3">
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.student_email')}</span>
+              <span className="text-xs text-gray-400 block font-medium">{label('dashboard.student_email')}</span>
               <strong className="text-gray-900 text-base break-all">{studentEmail}</strong>
               {studentFoundStatus === 'found' && (
                 <p className="text-emerald-700 text-xs mt-1 font-semibold inline-flex items-center gap-1">
                   <CheckCircle2 size={13} />
-                  {t('dashboard.student_found')}
+                  {label('dashboard.student_found')}
                 </p>
               )}
               {studentFoundStatus === 'not_found' && (
@@ -936,7 +1005,7 @@ export default function IssueCredential() {
               <strong className="text-gray-900">{fullName}</strong>
             </div>
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.issuing_institution')}</span>
+              <span className="text-xs text-gray-400 block font-medium">{label('dashboard.issuing_institution')}</span>
               <strong className="text-gray-900">{issuerInfo?.name}</strong>
             </div>
             {reviewRows.map((row, i) => (
@@ -1034,7 +1103,7 @@ export default function IssueCredential() {
           {t('dashboard.issue_credential_title')}
         </h2>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">
-          {t('dashboard.issue_credential_desc_form')}
+          {issuerInfo?.kind === 'employer' ? t('dashboard.issue_desc_employment') : label('dashboard.issue_credential_desc_form')}
         </p>
       </div>
 
@@ -1094,8 +1163,12 @@ export default function IssueCredential() {
             { id: 'completion', icon: CheckCircle2, title: t('dashboard.type_completion'), desc: t('dashboard.type_completion_desc') },
             { id: 'merit_excellence', icon: Star, title: t('dashboard.type_merit'), desc: t('dashboard.type_merit_desc') },
             { id: 'appreciation_service', icon: HeartHandshake, title: t('dashboard.type_appreciation'), desc: t('dashboard.type_appreciation_desc') },
-            { id: 'professional_certification', icon: Briefcase, title: t('dashboard.type_professional'), desc: t('dashboard.type_professional_desc') }
-          ].map(c => (
+            { id: 'professional_certification', icon: Briefcase, title: t('dashboard.type_professional'), desc: t('dashboard.type_professional_desc') },
+            { id: 'employment_record', icon: BadgeCheck, title: t('dashboard.type_employment'), desc: t('dashboard.type_employment_desc') }
+          ]
+            // A registered employer issues employment records and nothing else.
+            .filter(c => issuerInfo?.kind !== 'employer' || c.id === 'employment_record')
+            .map(c => (
             <button
               key={c.id}
               onClick={() => setSelectedType(c.id)}
@@ -1129,12 +1202,12 @@ export default function IssueCredential() {
 
             {/* Section A: Student Identity */}
             <h3 className="font-mono text-[9px] tracking-widest text-stone-400 uppercase mt-2 mb-4">
-              {t('dashboard.student_section')}
+              {label('dashboard.student_section')}
             </h3>
 
             {/* Student Email */}
             <div>
-              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.student_email_req')} <span className="text-rose-500">*</span></label>
+              <label className="text-xs md:text-sm font-bold text-gray-700 block">{label('dashboard.student_email_req')} <span className="text-rose-500">*</span></label>
               <div className="relative mt-1">
                 <input
                   type="email"
@@ -1159,7 +1232,7 @@ export default function IssueCredential() {
               {studentFoundStatus === 'found' && (
                 <p className="text-emerald-700 text-xs mt-1 font-semibold inline-flex items-center gap-1">
                   <CheckCircle2 size={13} />
-                  {t('dashboard.student_found')}
+                  {label('dashboard.student_found')}
                 </p>
               )}
               {studentFoundStatus === 'not_found' && (
@@ -1201,7 +1274,7 @@ export default function IssueCredential() {
 
             {/* Issuing Institution (Common) */}
             <div>
-              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.issuing_institution')}</label>
+              <label className="text-xs md:text-sm font-bold text-gray-700 block">{label('dashboard.issuing_institution')}</label>
               <input
                 type="text"
                 value={issuerInfo?.name || ''}
@@ -1432,8 +1505,59 @@ export default function IssueCredential() {
               </>
             )}
 
-            {/* Additional Notes - hidden for academic_degree per spec */}
-            {selectedType !== 'academic_degree' && (
+            {selectedType === 'employment_record' && (
+              <>
+                <div>
+                  <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.job_title_req')}</label>
+                  <input type="text" name="jobTitle" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Accountant" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                  {errors.jobTitle && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.jobTitle}</p>}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.employment_type_req')}</label>
+                    <select name="employmentType" value={employmentType} onChange={e => setEmploymentType(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900">
+                      <option value="">{t('dashboard.select_type')}</option>
+                      {['full_time', 'part_time', 'contract', 'internship', 'volunteer'].map(v => (
+                        <option key={v} value={v}>{t(`dashboard.employment_type_${v}`)}</option>
+                      ))}
+                    </select>
+                    {errors.employmentType && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.employmentType}</p>}
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.department_opt')}</label>
+                    <input type="text" name="department" value={department} onChange={e => setDepartment(e.target.value)} placeholder="Finance" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.employment_start_req')}</label>
+                    <input type="date" name="employmentStart" value={employmentStart} onChange={e => setEmploymentStart(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                    {errors.employmentStart && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.employmentStart}</p>}
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.employment_end')}</label>
+                    <label className="mt-2 flex items-center gap-2 text-sm text-stone-700">
+                      <input type="checkbox" name="stillEmployed" checked={stillEmployed} onChange={e => setStillEmployed(e.target.checked)} />
+                      {t('dashboard.still_employed')}
+                    </label>
+                    {!stillEmployed && (
+                      <input type="date" name="employmentEnd" value={employmentEnd} onChange={e => setEmploymentEnd(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                    )}
+                    {errors.employmentEnd && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.employmentEnd}</p>}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.job_description_opt')}</label>
+                  <textarea name="jobDescription" value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={2} maxLength={300} placeholder="Month-end close, accounts payable" className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                </div>
+                <p className="text-xs text-stone-500 leading-relaxed">{t('dashboard.employment_never')}</p>
+              </>
+            )}
+
+            {/* Additional Notes - hidden for academic_degree per spec, and for
+                employment records, where free text is where a salary or a
+                reason for leaving would end up. */}
+            {selectedType !== 'academic_degree' && selectedType !== 'employment_record' && (
               <div>
                 <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.additional_notes_opt')}</label>
                 <textarea
@@ -1447,6 +1571,7 @@ export default function IssueCredential() {
             )}
 
             {/* Certificate Document Upload */}
+            {selectedType !== 'employment_record' && (
             <div>
               <label className="text-xs md:text-sm font-bold text-gray-700 block">
                 {t('dashboard.cert_doc_req')} {selectedType === 'academic_degree' ? <span className="text-rose-500">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
@@ -1528,6 +1653,7 @@ export default function IssueCredential() {
                 </button>
               )}
             </div>
+            )}
 
             {/* Submit Error */}
             {submitError && (
@@ -1585,6 +1711,8 @@ export default function IssueCredential() {
                 ? { title: reason, subtitle: capacity, date: appreciationDate }
                 : selectedType === 'professional_certification'
                 ? { title: certName, subtitle: issuingBody, date: dateCertified }
+                : selectedType === 'employment_record'
+                ? { title: jobTitle, subtitle: department, date: '' }
                 : null
 
             if (!preview) return null
