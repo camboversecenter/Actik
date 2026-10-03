@@ -29,7 +29,8 @@ const translations = {
       account: 'Account',
       dashboard: 'Dashboard',
       issued: 'Issued',
-      settings: 'Settings'
+      settings: 'Settings',
+      requests: 'Requests'
     },
     layout: {
       loading: 'Loading Actik...',
@@ -578,6 +579,124 @@ const translations = {
       final_cta_button: 'Sign in',
       footer_rights: '© 2026 Actik. All rights reserved.'
     },
+    proof: {
+      page_title: 'Proof requests',
+      page_intro: 'Ask for proof of qualifications, or answer a request from your wallet. Answers carry only what the request may see, checked against the institution that issued it.',
+      your_requests: 'Requests you made',
+      new_request: 'New request',
+      no_requests: 'You have not made a request.',
+      your_answers: 'Requests you answered',
+      no_answers: 'You have not answered a request.',
+      answers_count: '{count} answer(s)',
+      until: 'open until {date}',
+      sent_items: '{count} credential(s) sent',
+      withdraw_answer: 'Withdraw',
+      withdraw_confirm: 'Withdraw your answer? The requester will no longer see it.',
+      status_open: 'Open',
+      status_closed: 'Closed',
+      status_expired: 'Expired',
+      status_closed_long: 'This request is closed and no longer takes answers.',
+      status_expired_long: 'This request has expired and no longer takes answers.',
+      new_intro: 'Say what you need to see. Candidates answer from their own wallets, and only with credentials an institution issued.',
+      requester_name: 'Who is asking',
+      requester_name_hint: 'Your organisation, as candidates will see it. Actik shows it as stated by you, not verified.',
+      request_title: 'What it is for',
+      request_title_placeholder: 'e.g. Junior accountant, Phnom Penh office',
+      description: 'Details (optional)',
+      what_you_ask: 'What you ask for',
+      credential_type: 'Credential type',
+      remove: 'Remove',
+      also_ask: 'Also ask to see:',
+      note: 'Note',
+      note_placeholder: 'Your note, e.g. “in accounting or finance” (optional)',
+      add_requirement: 'Ask for another credential',
+      always_shown: 'Every answer shows the holder’s name, the issuing institution, the credential itself, its document number and date — so you can check the person’s ID at interview.',
+      never_asked: 'A request cannot ask for date of birth or age, sex, marital status, a photograph, national ID, student number, place of birth, religion or ethnicity, or an email or phone number.',
+      open_for: 'Open for',
+      days: '{count} days',
+      saving: 'Saving…',
+      create: 'Create request',
+      invalid_REQUESTER_NAME: 'Say who is asking (2–120 characters).',
+      invalid_TITLE: 'Give the request a title (2–120 characters).',
+      invalid_DESCRIPTION: 'The details are too long.',
+      invalid_NO_REQUIREMENTS: 'Ask for at least one credential.',
+      invalid_TOO_MANY_REQUIREMENTS: 'Ask for at most five credentials.',
+      invalid_UNKNOWN_TYPE: 'That credential type cannot be requested.',
+      invalid_FIELD_NOT_REQUESTABLE: 'That field cannot be requested.',
+      invalid_NOTE: 'A note is too long.',
+      invalid_EXPIRY: 'A request stays open for 1 to 90 days.',
+      not_found: 'There is no such request.',
+      share_heading: 'Share this request',
+      share_hint: 'Send the link or show the code. Anyone with it can see what you ask; only people who answer send you anything.',
+      close_request: 'Close request',
+      close_confirm: 'Close this request? Nobody will be able to answer it any more.',
+      answers_heading: 'Answers ({count})',
+      answers_hint: 'Each answer is checked on this device against the signed trust registry and the institution’s withdrawal list.',
+      no_answers_yet: 'No answers yet.',
+      contact: 'Contact:',
+      not_answered: 'Not answered.',
+      not_asked_WRONG_TYPE: 'Not counted: this is a different kind of credential from the one asked for.',
+      not_asked_OVER_DISCLOSED: 'Not shown: this answer carries fields the request could not ask for.',
+      not_asked_NO_SUCH_REQUIREMENT: 'Not shown.',
+      could_not_check: 'Could not be checked right now',
+      did_not_verify: 'Did not verify',
+      issued_by: 'Issued by',
+      check_id: 'Issued to {name}. Check the person’s ID at interview: a credential proves who it was issued to, not who is presenting it.',
+      request_from: 'Proof request',
+      requester_unverified: 'As the requester describes themselves. Actik has not verified who they are.',
+      they_ask: 'They ask for',
+      answer_shows: 'An answer shows your name, the issuing institution, the credential, its document number and date, and any extra field listed above — nothing else.',
+      answer_from_wallet: 'Answer from my Actik wallet',
+      answer_privacy: 'Only the requester sees your answer. You can withdraw it at any time from Proof requests.',
+      no_wallet: 'You need an Actik wallet with credentials to answer.',
+      set_up_wallet: 'Set up your wallet',
+      unlock_failed: 'The wallet did not unlock. Try again.',
+      no_match: 'Your wallet has no credential of this kind.',
+      checking: 'Checking…',
+      skip_requirement: 'Do not answer this one',
+      they_will_see: '{requester} will see:',
+      contact_label: 'How they can reach you',
+      contact_hint: 'Shown to the requester with your answer. Your account email is not shared unless you leave it here.',
+      sending: 'Sending…',
+      send_answer: 'Send {count} credential(s)',
+      already_answered: 'You have already answered this request. Withdraw that answer first to send a new one.',
+      sent_title: 'Answer sent.',
+      sent_desc: '{requester} can now see what you sent. You can withdraw it from Proof requests.',
+      type_academic_degree: 'Academic degree',
+      type_professional_certification: 'Professional certification',
+      type_completion: 'Certificate of completion',
+      type_attendance_participation: 'Attendance or participation',
+      type_merit_excellence: 'Merit or excellence award',
+      type_appreciation_service: 'Appreciation or service',
+      field_institution: 'Institution',
+      field_name: 'Name',
+      field_degree_type: 'Degree',
+      field_degree: 'Degree',
+      field_graduation_date: 'Graduation date',
+      field_certificate_id: 'Certificate number',
+      field_sub_type: 'Type',
+      field_event_name: 'Event',
+      field_event_date: 'Event date',
+      field_organizer: 'Organiser',
+      field_program_name: 'Programme',
+      field_completion_date: 'Completion date',
+      field_achievement_title: 'Achievement',
+      field_date_awarded: 'Date awarded',
+      field_reason: 'Reason',
+      field_date: 'Date',
+      field_cert_name: 'Certification',
+      field_issuing_body: 'Issuing body',
+      field_date_certified: 'Date certified',
+      field_license_number: 'Licence number',
+      field_expiry_date: 'Expiry date',
+      field_major: 'Major',
+      field_gpa: 'GPA',
+      field_duration: 'Duration',
+      field_department_or_role: 'Department or role',
+      field_role_description: 'Role',
+      field_basis_description: 'Basis of award',
+      field_capacity: 'Capacity',
+    },
     museum: {
       title: 'Add to a CamboVerse museum',
       intro: 'You decide what can be shown. The original file stays in your wallet — the exhibit carries only its fingerprint, the picture you prepare here and, if you choose, the institution’s signed code.',
@@ -738,7 +857,8 @@ const translations = {
       account: 'គណនី',
       dashboard: 'ផ្ទាំងគ្រប់គ្រង',
       issued: 'បានចេញ',
-      settings: 'ការកំណត់'
+      settings: 'ការកំណត់',
+      requests: 'សំណើ' // TODO(km-review)
     },
     layout: {
       loading: 'កំពុងផ្ទុក Actik...',
@@ -1287,6 +1407,124 @@ const translations = {
       final_cta_desc: 'ចូលគណនីជាមួយ Google — ចំណាយពេលតិចជាងមួយនាទី។',
       final_cta_button: 'ចូលគណនី',
       footer_rights: '© 2026 Actik។ រក្សាសិទ្ធិគ្រប់យ៉ាង។'
+    },
+    proof: {
+      page_title: 'សំណើភស្តុតាង', // TODO(km-review)
+      page_intro: 'ស្នើសុំភស្តុតាងនៃគុណវុឌ្ឍិ ឬឆ្លើយតបសំណើពីកាបូបរបស់អ្នក។ ចម្លើយមានតែអ្វីដែលសំណើអាចមើលបាន ហើយត្រូវបានពិនិត្យជាមួយស្ថាប័នដែលបានចេញ។', // TODO(km-review)
+      your_requests: 'សំណើដែលអ្នកបានបង្កើត', // TODO(km-review)
+      new_request: 'សំណើថ្មី', // TODO(km-review)
+      no_requests: 'អ្នកមិនទាន់បានបង្កើតសំណើទេ។', // TODO(km-review)
+      your_answers: 'សំណើដែលអ្នកបានឆ្លើយ', // TODO(km-review)
+      no_answers: 'អ្នកមិនទាន់បានឆ្លើយសំណើទេ។', // TODO(km-review)
+      answers_count: 'ចម្លើយ {count}', // TODO(km-review)
+      until: 'បើករហូតដល់ {date}', // TODO(km-review)
+      sent_items: 'បានផ្ញើលិខិត {count}', // TODO(km-review)
+      withdraw_answer: 'ដកវិញ', // TODO(km-review)
+      withdraw_confirm: 'ដកចម្លើយរបស់អ្នកវិញ? អ្នកស្នើសុំនឹងមិនឃើញវាទៀតទេ។', // TODO(km-review)
+      status_open: 'បើក', // TODO(km-review)
+      status_closed: 'បានបិទ', // TODO(km-review)
+      status_expired: 'ផុតកំណត់', // TODO(km-review)
+      status_closed_long: 'សំណើនេះត្រូវបានបិទ ហើយលែងទទួលចម្លើយទៀតហើយ។', // TODO(km-review)
+      status_expired_long: 'សំណើនេះផុតកំណត់ ហើយលែងទទួលចម្លើយទៀតហើយ។', // TODO(km-review)
+      new_intro: 'បញ្ជាក់អ្វីដែលអ្នកត្រូវការមើល។ បេក្ខជនឆ្លើយពីកាបូបផ្ទាល់ខ្លួន ហើយតែជាមួយលិខិតដែលស្ថាប័នបានចេញប៉ុណ្ណោះ។', // TODO(km-review)
+      requester_name: 'អ្នកណាជាអ្នកស្នើសុំ', // TODO(km-review)
+      requester_name_hint: 'ស្ថាប័នរបស់អ្នក ដូចដែលបេក្ខជននឹងឃើញ។ Actik បង្ហាញវាតាមការប្រកាសរបស់អ្នក មិនបានផ្ទៀងផ្ទាត់ទេ។', // TODO(km-review)
+      request_title: 'សម្រាប់អ្វី', // TODO(km-review)
+      request_title_placeholder: 'ឧ. គណនេយ្យករកម្រិតដំបូង ការិយាល័យភ្នំពេញ', // TODO(km-review)
+      description: 'ព័ត៌មានលម្អិត (ស្រេចចិត្ត)', // TODO(km-review)
+      what_you_ask: 'អ្វីដែលអ្នកស្នើសុំ', // TODO(km-review)
+      credential_type: 'ប្រភេទលិខិត', // TODO(km-review)
+      remove: 'លុប', // TODO(km-review)
+      also_ask: 'ស្នើមើលបន្ថែម៖', // TODO(km-review)
+      note: 'កំណត់ចំណាំ', // TODO(km-review)
+      note_placeholder: 'កំណត់ចំណាំរបស់អ្នក ឧ. “ផ្នែកគណនេយ្យ ឬហិរញ្ញវត្ថុ” (ស្រេចចិត្ត)', // TODO(km-review)
+      add_requirement: 'ស្នើលិខិតមួយទៀត', // TODO(km-review)
+      always_shown: 'ចម្លើយនីមួយៗបង្ហាញឈ្មោះម្ចាស់ ស្ថាប័នចេញ លិខិតខ្លួនឯង លេខឯកសារ និងកាលបរិច្ឆេទ — ដើម្បីឱ្យអ្នកពិនិត្យអត្តសញ្ញាណប័ណ្ណនៅពេលសម្ភាសន៍។', // TODO(km-review)
+      never_asked: 'សំណើមិនអាចស្នើសុំថ្ងៃខែឆ្នាំកំណើត ឬអាយុ ភេទ ស្ថានភាពគ្រួសារ រូបថត អត្តសញ្ញាណប័ណ្ណ លេខសិស្ស ទីកន្លែងកំណើត សាសនា ឬជាតិពន្ធុ ឬអ៊ីមែល ឬលេខទូរស័ព្ទបានទេ។', // TODO(km-review)
+      open_for: 'បើករយៈពេល', // TODO(km-review)
+      days: '{count} ថ្ងៃ', // TODO(km-review)
+      saving: 'កំពុងរក្សាទុក…', // TODO(km-review)
+      create: 'បង្កើតសំណើ', // TODO(km-review)
+      invalid_REQUESTER_NAME: 'សូមបញ្ជាក់អ្នកស្នើសុំ (២–១២០ តួអក្សរ)។', // TODO(km-review)
+      invalid_TITLE: 'សូមដាក់ចំណងជើង (២–១២០ តួអក្សរ)។', // TODO(km-review)
+      invalid_DESCRIPTION: 'ព័ត៌មានលម្អិតវែងពេក។', // TODO(km-review)
+      invalid_NO_REQUIREMENTS: 'សូមស្នើយ៉ាងហោចណាស់លិខិតមួយ។', // TODO(km-review)
+      invalid_TOO_MANY_REQUIREMENTS: 'អាចស្នើបានច្រើនបំផុតប្រាំលិខិត។', // TODO(km-review)
+      invalid_UNKNOWN_TYPE: 'មិនអាចស្នើប្រភេទលិខិតនោះបានទេ។', // TODO(km-review)
+      invalid_FIELD_NOT_REQUESTABLE: 'មិនអាចស្នើព័ត៌មាននោះបានទេ។', // TODO(km-review)
+      invalid_NOTE: 'កំណត់ចំណាំវែងពេក។', // TODO(km-review)
+      invalid_EXPIRY: 'សំណើបើកពី ១ ដល់ ៩០ ថ្ងៃ។', // TODO(km-review)
+      not_found: 'គ្មានសំណើនេះទេ។', // TODO(km-review)
+      share_heading: 'ចែករំលែកសំណើនេះ', // TODO(km-review)
+      share_hint: 'ផ្ញើតំណ ឬបង្ហាញកូដ។ អ្នកមានវាអាចឃើញអ្វីដែលអ្នកស្នើ ប៉ុន្តែតែអ្នកដែលឆ្លើយទេដែលផ្ញើអ្វីមកអ្នក។', // TODO(km-review)
+      close_request: 'បិទសំណើ', // TODO(km-review)
+      close_confirm: 'បិទសំណើនេះ? គ្មាននរណាអាចឆ្លើយវាបានទៀតទេ។', // TODO(km-review)
+      answers_heading: 'ចម្លើយ ({count})', // TODO(km-review)
+      answers_hint: 'ចម្លើយនីមួយៗត្រូវបានពិនិត្យលើឧបករណ៍នេះ ជាមួយបញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខា និងបញ្ជីដកហូតរបស់ស្ថាប័ន។', // TODO(km-review)
+      no_answers_yet: 'មិនទាន់មានចម្លើយទេ។', // TODO(km-review)
+      contact: 'ទំនាក់ទំនង៖', // TODO(km-review)
+      not_answered: 'មិនបានឆ្លើយ។', // TODO(km-review)
+      not_asked_WRONG_TYPE: 'មិនរាប់បញ្ចូល៖ នេះជាប្រភេទលិខិតខុសពីអ្វីដែលបានស្នើ។', // TODO(km-review)
+      not_asked_OVER_DISCLOSED: 'មិនបង្ហាញ៖ ចម្លើយនេះមានព័ត៌មានដែលសំណើមិនអាចស្នើបាន។', // TODO(km-review)
+      not_asked_NO_SUCH_REQUIREMENT: 'មិនបង្ហាញ។', // TODO(km-review)
+      could_not_check: 'មិនអាចពិនិត្យបាននៅពេលនេះ', // TODO(km-review)
+      did_not_verify: 'មិនបានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      issued_by: 'ចេញដោយ', // TODO(km-review)
+      check_id: 'ចេញជូន {name}។ សូមពិនិត្យអត្តសញ្ញាណប័ណ្ណនៅពេលសម្ភាសន៍៖ លិខិតបញ្ជាក់ថាចេញជូននរណា មិនមែនថានរណាកំពុងបង្ហាញវាទេ។', // TODO(km-review)
+      request_from: 'សំណើភស្តុតាង', // TODO(km-review)
+      requester_unverified: 'តាមការពិពណ៌នារបស់អ្នកស្នើសុំ។ Actik មិនបានផ្ទៀងផ្ទាត់ថាពួកគេជានរណាទេ។', // TODO(km-review)
+      they_ask: 'ពួកគេស្នើសុំ', // TODO(km-review)
+      answer_shows: 'ចម្លើយបង្ហាញឈ្មោះរបស់អ្នក ស្ថាប័នចេញ លិខិត លេខឯកសារ និងកាលបរិច្ឆេទ និងព័ត៌មានបន្ថែមដែលបានរាយខាងលើ — គ្មានអ្វីផ្សេងទៀតទេ។', // TODO(km-review)
+      answer_from_wallet: 'ឆ្លើយពីកាបូប Actik របស់ខ្ញុំ', // TODO(km-review)
+      answer_privacy: 'មានតែអ្នកស្នើសុំទេដែលឃើញចម្លើយរបស់អ្នក។ អ្នកអាចដកវាវិញនៅពេលណាក៏បានពីសំណើភស្តុតាង។', // TODO(km-review)
+      no_wallet: 'អ្នកត្រូវការកាបូប Actik ដែលមានលិខិតដើម្បីឆ្លើយ។', // TODO(km-review)
+      set_up_wallet: 'រៀបចំកាបូបរបស់អ្នក', // TODO(km-review)
+      unlock_failed: 'កាបូបមិនបានដោះសោទេ។ សូមព្យាយាមម្តងទៀត។', // TODO(km-review)
+      no_match: 'កាបូបរបស់អ្នកគ្មានលិខិតប្រភេទនេះទេ។', // TODO(km-review)
+      checking: 'កំពុងពិនិត្យ…', // TODO(km-review)
+      skip_requirement: 'មិនឆ្លើយចំណុចនេះ', // TODO(km-review)
+      they_will_see: '{requester} នឹងឃើញ៖', // TODO(km-review)
+      contact_label: 'របៀបទាក់ទងអ្នក', // TODO(km-review)
+      contact_hint: 'បង្ហាញដល់អ្នកស្នើសុំជាមួយចម្លើយរបស់អ្នក។ អ៊ីមែលគណនីរបស់អ្នកមិនត្រូវបានចែករំលែកទេ លុះត្រាតែអ្នកទុកវានៅទីនេះ។', // TODO(km-review)
+      sending: 'កំពុងផ្ញើ…', // TODO(km-review)
+      send_answer: 'ផ្ញើលិខិត {count}', // TODO(km-review)
+      already_answered: 'អ្នកបានឆ្លើយសំណើនេះរួចហើយ។ សូមដកចម្លើយនោះវិញជាមុនសិន ដើម្បីផ្ញើចម្លើយថ្មី។', // TODO(km-review)
+      sent_title: 'បានផ្ញើចម្លើយ។', // TODO(km-review)
+      sent_desc: '{requester} អាចឃើញអ្វីដែលអ្នកបានផ្ញើ។ អ្នកអាចដកវាវិញពីសំណើភស្តុតាង។', // TODO(km-review)
+      type_academic_degree: 'សញ្ញាបត្រសិក្សា', // TODO(km-review)
+      type_professional_certification: 'វិញ្ញាបនបត្រវិជ្ជាជីវៈ', // TODO(km-review)
+      type_completion: 'វិញ្ញាបនបត្របញ្ចប់', // TODO(km-review)
+      type_attendance_participation: 'ការចូលរួម', // TODO(km-review)
+      type_merit_excellence: 'រង្វាន់កិត្តិយស ឬឧត្តមភាព', // TODO(km-review)
+      type_appreciation_service: 'ការកោតសរសើរ ឬសេវាកម្ម', // TODO(km-review)
+      field_institution: 'ស្ថាប័ន', // TODO(km-review)
+      field_name: 'ឈ្មោះ', // TODO(km-review)
+      field_degree_type: 'សញ្ញាបត្រ', // TODO(km-review)
+      field_degree: 'សញ្ញាបត្រ', // TODO(km-review)
+      field_graduation_date: 'ថ្ងៃបញ្ចប់ការសិក្សា', // TODO(km-review)
+      field_certificate_id: 'លេខវិញ្ញាបនបត្រ', // TODO(km-review)
+      field_sub_type: 'ប្រភេទ', // TODO(km-review)
+      field_event_name: 'ព្រឹត្តិការណ៍', // TODO(km-review)
+      field_event_date: 'ថ្ងៃព្រឹត្តិការណ៍', // TODO(km-review)
+      field_organizer: 'អ្នករៀបចំ', // TODO(km-review)
+      field_program_name: 'កម្មវិធី', // TODO(km-review)
+      field_completion_date: 'ថ្ងៃបញ្ចប់', // TODO(km-review)
+      field_achievement_title: 'សមិទ្ធផល', // TODO(km-review)
+      field_date_awarded: 'ថ្ងៃប្រគល់', // TODO(km-review)
+      field_reason: 'មូលហេតុ', // TODO(km-review)
+      field_date: 'កាលបរិច្ឆេទ', // TODO(km-review)
+      field_cert_name: 'វិញ្ញាបនបត្រ', // TODO(km-review)
+      field_issuing_body: 'ស្ថាប័នចេញ', // TODO(km-review)
+      field_date_certified: 'ថ្ងៃទទួលស្គាល់', // TODO(km-review)
+      field_license_number: 'លេខអាជ្ញាប័ណ្ណ', // TODO(km-review)
+      field_expiry_date: 'ថ្ងៃផុតកំណត់', // TODO(km-review)
+      field_major: 'ជំនាញ', // TODO(km-review)
+      field_gpa: 'មធ្យមភាគពិន្ទុ', // TODO(km-review)
+      field_duration: 'រយៈពេល', // TODO(km-review)
+      field_department_or_role: 'ផ្នែក ឬតួនាទី', // TODO(km-review)
+      field_role_description: 'តួនាទី', // TODO(km-review)
+      field_basis_description: 'មូលដ្ឋាននៃរង្វាន់', // TODO(km-review)
+      field_capacity: 'សមត្ថភាព', // TODO(km-review)
     },
     museum: {
       title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)

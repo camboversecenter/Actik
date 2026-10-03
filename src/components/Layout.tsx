@@ -8,7 +8,7 @@ import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
 import {
   Wallet, Activity, Fingerprint, LayoutDashboard, FileSignature, Settings,
-  ShieldCheck, LogOut, Building2, Lock,
+  ShieldCheck, LogOut, Building2, Lock, Briefcase,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -216,6 +216,10 @@ export default function Layout() {
             <Activity size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.activity')}
           </NavLink>
+          <NavLink to="/app/requests" className={sidebarLinkClass}>
+            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
+            {t('nav.requests')}
+          </NavLink>
           <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
             <Fingerprint size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.account')}
@@ -231,6 +235,10 @@ export default function Layout() {
           <NavLink to="/app/issued" className={sidebarLinkClass}>
             <FileSignature size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.issued')}
+          </NavLink>
+          <NavLink to="/app/requests" className={sidebarLinkClass}>
+            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
+            {t('nav.requests')}
           </NavLink>
           <NavLink to="/app/institution-settings" className={sidebarLinkClass}>
             <Settings size={20} strokeWidth={1.9} className="shrink-0" />
@@ -365,6 +373,10 @@ export default function Layout() {
               <Activity size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.activity')}</span>
             </NavLink>
+            <NavLink to="/app/requests" className={bottomNavLinkClass}>
+              <Briefcase size={20} strokeWidth={1.9} />
+              <span className="mt-1">{t('nav.requests')}</span>
+            </NavLink>
             <NavLink to="/app/vault-setup" className={bottomNavLinkClass}>
               <Fingerprint size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.account')}</span>
@@ -380,6 +392,10 @@ export default function Layout() {
             <NavLink to="/app/issued" className={bottomNavLinkClass}>
               <FileSignature size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.issued')}</span>
+            </NavLink>
+            <NavLink to="/app/requests" className={bottomNavLinkClass}>
+              <Briefcase size={20} strokeWidth={1.9} />
+              <span className="mt-1">{t('nav.requests')}</span>
             </NavLink>
             <NavLink to="/app/institution-settings" className={bottomNavLinkClass}>
               <Settings size={20} strokeWidth={1.9} />

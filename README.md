@@ -178,6 +178,17 @@ certificate. A suspected compromise must therefore be a key **revocation**.
 (`@fontsource/noto-sans-khmer`) so certificates print with correct shaping and
 the scanner works offline.
 
+## Proof requests (recruitment)
+
+An employer asks for proof — **Requests → New request**: up to five credential
+types, with a few optional extra fields per type — and shares the link. A
+candidate answers from their own wallet with only the fields the request may
+see, and can withdraw the answer later. The employer's app checks each answer
+against the issuing institution, issuer first, no tick. A request cannot ask
+for date of birth, sex, marital status, a photograph, national ID or student
+number; the database refuses any answer that carries them. Details:
+[`docs/PROOF_REQUESTS.md`](docs/PROOF_REQUESTS.md).
+
 ## Personal museum (CamboVerse)
 
 A holder can add a credential to a CamboVerse personal museum: credential →

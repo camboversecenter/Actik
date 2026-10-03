@@ -21,6 +21,11 @@ import CredentialDetail from './pages/app/CredentialDetail'
 import IssuedCredentials from './pages/app/IssuedCredentials'
 import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
 import Withdrawals from './pages/app/Withdrawals'
+import ProofRequests from './pages/requests/ProofRequests'
+import NewProofRequest from './pages/requests/NewProofRequest'
+import ProofRequestDetail from './pages/requests/ProofRequestDetail'
+import ProofRequestPublic from './pages/requests/ProofRequestPublic'
+import AnswerProofRequest from './pages/requests/AnswerProofRequest'
 import { VaultProvider } from './vault/zk-vault'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
@@ -361,6 +366,9 @@ export default function App() {
         {/* Root redirect route */}
         <Route path="/" element={<RootRedirect />} />
 
+        {/* A proof request, as anyone with its link sees it */}
+        <Route path="/request/:id" element={<ProofRequestPublic />} />
+
         {/* Public auth routes */}
         <Route path="/auth/login" element={<GoogleAuth />} />
         <Route path="/auth/callback" element={<GoogleCallback />} />
@@ -413,6 +421,11 @@ export default function App() {
           <Route path="share/:credentialId" element={<ShareCredential />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="activity" element={<Activity />} />
+          {/* Proof requests: any signed-in account may ask, and any may answer. */}
+          <Route path="requests" element={<ProofRequests />} />
+          <Route path="requests/new" element={<NewProofRequest />} />
+          <Route path="requests/:id" element={<ProofRequestDetail />} />
+          <Route path="answer/:id" element={<AnswerProofRequest />} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Route>
 

@@ -211,6 +211,16 @@ export interface PrintedDocumentFields {
   issueDate: string | null
 }
 
+const VCT_PREFIX = 'https://actik.kh/credentials/'
+
+/** "https://actik.kh/credentials/academic_degree" → "academic_degree". The legacy "degree" reads as academic_degree. */
+export function credentialTypeFromVct(vct: unknown): string | null {
+  if (typeof vct !== 'string' || !vct.startsWith(VCT_PREFIX)) return null
+  const type = vct.slice(VCT_PREFIX.length)
+  if (type === 'degree') return 'academic_degree'
+  return /^[a-z_]{1,64}$/.test(type) ? type : null
+}
+
 function asText(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null
   return String(value)
@@ -233,9 +243,12 @@ export class CredentialAssertion {
   readonly expiresAt: number | null
   readonly claims: Claims
   readonly mustMatchPrintedDocument: PrintedDocumentFields
+  /** The credential's type, from its signed `vct` (e.g. "academic_degree"); null if it has none. */
+  readonly credentialType: string | null
 
   constructor(issuer: string, payload: Record<string, unknown>, claims: Claims) {
     this.issuer = issuer
+    this.credentialType = credentialTypeFromVct(payload.vct)
     this.jti = typeof payload.jti === 'string' ? payload.jti : null
     this.issuedAt = typeof payload.iat === 'number' ? payload.iat : null
     this.expiresAt = typeof payload.exp === 'number' ? payload.exp : null
