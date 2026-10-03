@@ -59,13 +59,57 @@ into `src/vault/zk-vault/` and its `src/components/` into `src/vault/components/
 - Auth → turn on Email. For quick local testing you can disable email
   confirmation.
 
-### 4. Configure env
+### 4. Create the trust Root and publish the first trust list
+
+Verifiers do not trust the database. They trust a list of accredited
+institutions and their keys, signed by a **Root** key whose public half is
+pinned into the app build and whose private half never touches a server.
+Approving an institution in the admin dashboard is a request; it takes effect
+when the Root holder signs and publishes the next list.
 
 ```bash
-cp .env.example .env   # then fill in your project URL + anon key
+# Once, offline. Refuses to write inside this repository.
+npx tsx scripts/trust-root-keygen.ts --out /media/usb/actik-root.private.jwk.json
+# → prints VITE_TRUST_ROOT_KEYS='[...]' for step 5
 ```
 
-### 5. Run
+Then, whenever the registry changes and **at least every 30 days** (a list
+expires, and verifiers stop verifying rather than trust a stale one):
+
+1. In the SQL editor run `supabase/queries/export_trustlist_input.sql`; save the
+   JSON cell as `trustlist-input.json`.
+2. Build and sign:
+   ```bash
+   npx tsx scripts/build-trustlist.ts --root /media/usb/actik-root.private.jwk.json \
+     --input trustlist-input.json --previous trustlist-current.json --out trustlist-next.json
+   ```
+   (omit `--previous` the very first time). Read the summary it prints: it is
+   exactly who verifiers will trust for the next 30 days.
+3. Paste the `insert into public.trust_documents …` statement it prints into
+   the SQL editor. Keep `trustlist-next.json` as next time's `--previous`.
+
+Keep the Root private key on removable media or in an HSM, with a second copy
+somewhere physically separate. Anyone holding it can declare any institution
+accredited.
+
+**Institutions** sign their own withdrawal lists from the app (Issued
+credentials → Withdrawals) and must renew them at least every 30 days, or
+verifiers report their credentials' standing as *unchecked*.
+
+**Key changes.** When an institution regenerates its key, the old one is
+retired (what it signed keeps verifying) and the new one is recorded — but
+credentials signed with the new key do not verify until the next list is
+published. If a key is *compromised*, set `revoked_at` on its `issuer_keys`
+row in the SQL editor and publish a new list: nothing it signed verifies after
+that.
+
+### 5. Configure env
+
+```bash
+cp .env.example .env   # project URL, anon key, and VITE_TRUST_ROOT_KEYS from step 4
+```
+
+### 6. Run
 
 ```bash
 npm run dev            # http://localhost:5173
@@ -80,7 +124,8 @@ npm run preview
 
 1. Sign up as `issuer@example.com`, go to **Issue**, register an issuer
    (e.g. name "RUPP", domain `rupp.edu.kh`). In the Supabase table editor set
-   that issuer's `accredited` = `true` (this is the MoEYS step).
+   that issuer's `accredited` = `true`, then build and publish a trust list
+   (step 4 above) so verifiers trust it.
 2. Still in the same browser session, issue a degree to `student@example.com`.
    (The issuer's private key is held in memory for the session only.)
 3. Sign out, sign up as `student@example.com`, set up the vault, tap
@@ -95,19 +140,25 @@ npm run preview
   comes from zk-vault at rest and TLS in transit. A verifier always reads the
   disclosed fields in clear — selective disclosure controls *what* they see.
 - **Trust registry is the point.** A valid signature only proves *who signed*.
-  The `issuers.accredited` check proves *the signer is legitimate*.
+  The Root-signed trust list proves *the signer is legitimate* — and because it
+  is signed by a key pinned in the app, not read from a table, nobody with
+  database access can add an institution or swap its key.
 - **Recovery.** zk-vault has zero key-recovery by design, so the issuer remains
   the source of truth: a lost vault is recovered by re-issuance, never by the DB.
 
 ## Limitations (deliberate MVP scope)
 
-- **No Key Binding (KB-JWT).** Presentations aren't yet bound to the holder's
-  key or to a specific verifier/nonce, so a leaked link could be replayed before
-  it expires. Adding KB-JWT is the most important next step.
-- **No real `did:web` hosting / revocation list.** Issuer keys are resolved from
-  the registry table, not from `/.well-known/did.json`, and there's no
-  Bitstring Status List yet.
-- **Issuer key in browser.** Fine for a demo; production keys belong in a KMS/HSM
-  on the issuer's server.
+- **No Key Binding (KB-JWT).** Presentations aren't bound to the holder's key,
+  so a forwarded or leaked link can be replayed until it expires, is revoked,
+  or — if the holder chose *one view only* — has been opened once.
+- **No `did:web` hosting.** Issuer keys come from the Root-signed trust list,
+  not from `/.well-known/did.json`.
+- **Issuer key in the browser.** It is held as a non-extractable key in memory,
+  so script on the page can use it while the session is open but cannot copy it
+  out. Production keys still belong in a KMS/HSM on the issuer's side.
+- **One mirror, no timestamp role.** The trust list is published from this
+  Supabase project only, and a first-time verifier will accept any genuine,
+  unexpired list (up to 31 days old). QRSeal's separate timestamp role and
+  independent mirrors would close both; neither is built.
 - Replace the hand-rolled SD-JWT with `@sd-jwt/sd-jwt-vc` for production.
 ```

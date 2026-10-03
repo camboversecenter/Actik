@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
+import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
 import CredentialCard from '../../components/CredentialCard'
 import Banner from '../../components/ui/Banner'
 import {
@@ -28,7 +29,9 @@ export default function IssueCredential() {
   // Checking & Loading States
   const [checking, setChecking] = useState(true)
   const [issuerInfo, setIssuerInfo] = useState<IssuerInfo | null>(null)
-  const [privateKey, setPrivateKey] = useState<any | null>(null)
+  // The signing key, as a non-extractable CryptoKey held in memory
+  // (issuerKeyStore.ts) — never the JWK itself.
+  const [signingKey, setSigningKey] = useState<HeldIssuerKey | null>(null)
   const [gateState, setGateState] = useState<'valid' | 'not_registered' | 'pending_approval'>('valid')
   const [gateError, setGateError] = useState<string | null>(null)
 
@@ -258,17 +261,15 @@ export default function IssueCredential() {
           return
         }
 
-        // Check 2: Is the private key available in sessionStorage? If not,
+        // Check 2: Is the signing key held in memory? If not,
         // IssuerKeyUnlock (rendered below) recovers it from the encrypted
         // vault instead of forcing a sign-out.
-        const privateKeyJson = sessionStorage.getItem('issuer_private_key')
-        const sessionDid = sessionStorage.getItem('issuer_did')
-
-        setPrivateKey(privateKeyJson ? JSON.parse(privateKeyJson) : null)
+        const held = getIssuerKey()
+        setSigningKey(held && held.did === issuerData.did ? held : null)
         setIssuerInfo({
           name: issuerData.name,
           domain: issuerData.domain || '',
-          did: issuerData.did || sessionDid || '',
+          did: issuerData.did || held?.did || '',
           accredited: issuerData.accredited,
           rawIssuerData: issuerData
         })
@@ -372,14 +373,14 @@ export default function IssueCredential() {
   // (irreversible, cryptographically signed) credential happens from there.
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!issuerInfo || !privateKey) return
+    if (!issuerInfo || !signingKey) return
     if (!validateForm()) return
     if (checkingStudent) return // wait for lookup to finish
     setShowConfirm(true)
   }
 
   const handleIssue = async () => {
-    if (!issuerInfo || !privateKey) return
+    if (!issuerInfo || !signingKey) return
     if (!validateForm()) return
     if (checkingStudent) return // wait for lookup to finish
 
@@ -453,9 +454,14 @@ export default function IssueCredential() {
       }
 
       // Step 2: Sign the SD-JWT
+      // The credential's own id, kept so the institution can later withdraw
+      // exactly this credential (and nothing else).
+      const credentialJti = crypto.randomUUID()
       const sdJwt = await issueSdJwt({
         issuerDid: issuerInfo.did,
-        issuerPrivateJwk: privateKey,
+        signingKey: signingKey.key,
+        kid: signingKey.kid,
+        jti: credentialJti,
         subject: claims,
         vct: `https://actik.kh/credentials/${selectedType}`,
         expiresInSec: 365 * 24 * 60 * 60 * 5
@@ -475,7 +481,10 @@ export default function IssueCredential() {
         sdjwt: sdJwt,
         issuer_did: issuerInfo.did,
         institution_name: issuerInfo.name,
-        credential_type: selectedType
+        credential_type: selectedType,
+        // The database copies this into issued_credentials (the issuer's own
+        // log) as the row goes in — see log_issued_credential().
+        credential_jti: credentialJti
       }
       if (selectedType === 'academic_degree') {
         credentialData.label = degreeTitle
@@ -627,14 +636,14 @@ export default function IssueCredential() {
 
   // Check 2 Fail: signing key not loaded in this browser session — recover
   // it from the encrypted vault instead of forcing a sign-out.
-  if (gateState === 'valid' && !privateKey && currentUser && issuerInfo) {
+  if (gateState === 'valid' && !signingKey && currentUser && issuerInfo) {
     return (
       <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
         <IssuerKeyUnlock
           userId={currentUser.id}
           userEmail={currentUser.email}
           did={issuerInfo.did}
-          onUnlocked={(jwk) => setPrivateKey(jwk)}
+          onUnlocked={() => setSigningKey(getIssuerKey())}
           onKeyRegenerated={(newJwk) =>
             setIssuerInfo(prev => prev && ({ ...prev, rawIssuerData: { ...prev.rawIssuerData, public_jwk: newJwk } }))
           }

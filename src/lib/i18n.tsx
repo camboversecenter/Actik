@@ -140,6 +140,8 @@ const translations = {
       will_be_hidden: 'will be hidden',
       who_is_this_for: 'Who is this for? (optional)',
       recipient_placeholder: 'e.g. Acme Corp · HR',
+      single_use: 'Allow only one view',
+      single_use_desc: 'The link stops working after it is first opened. Use this when the link should not be forwarded.',
       how_long_active: 'How long should this link work?',
       duration_desc: 'Choose a quick duration or set a custom expiry window.',
       day_1: '1 Day',
@@ -334,6 +336,9 @@ const translations = {
       other_credentials: 'OTHER CREDENTIALS',
       see_all: 'See all',
       status_claimed: 'Claimed',
+      status_issued: 'Issued',
+      status_withdrawn: 'Withdrawn',
+      manage_withdrawals: 'Withdraw a credential, or renew your withdrawal list',
       status_pending: 'Pending',
       stat_total_issued: 'Total issued',
       stat_claimed: 'Claimed',
@@ -583,7 +588,15 @@ const translations = {
       check_1: 'Loading credential…',
       check_2: 'Checking link validity…',
       check_3: 'Verifying issuer signature…',
-      check_4: 'Checking issuer trust registry…',
+      check_4: 'Checking the signed trust registry…',
+      check_5: 'Checking whether the issuer withdrew it…',
+      withdrawn_title: 'Withdrawn by the issuer',
+      withdrawn_reason: 'The institution gave this reason:',
+      standing_clear_title: 'Not withdrawn.',
+      standing_clear_desc: "Checked against {issuer}'s withdrawal list, version {version}, dated {date}. A withdrawal made after that date would not show here.",
+      standing_unchecked_title: 'Signature valid, standing unchecked.',
+      standing_none_desc: '{issuer} publishes no withdrawal list, so whether it has since withdrawn this credential is not known. Do not treat it as current on the strength of this page alone.',
+      standing_lapsed_desc: "{issuer}'s withdrawal list lapsed on {date}, so whether it has since withdrawn this credential is not known. Do not treat it as current on the strength of this page alone.",
       success_title: 'Signature checked',
       success_desc: 'A key listed in the trust registry signed the fields below. That is what was checked — it does not confirm that the document in your hand is the one that was issued.',
       unavailable_title: 'Verification unavailable',
@@ -743,6 +756,8 @@ const translations = {
       will_be_hidden: 'នឹងត្រូវលាក់',
       who_is_this_for: 'តើនេះសម្រាប់នរណា? (ស្រេចចិត្ត)',
       recipient_placeholder: 'ឧ. ក្រុមហ៊ុន Acme ផ្នែកធនធានមនុស្ស',
+      single_use: 'អនុញ្ញាតឱ្យមើលបានតែម្តង', // TODO(km-review)
+      single_use_desc: 'តំណនឹងឈប់ដំណើរការបន្ទាប់ពីការមើលលើកដំបូង។ ប្រើវានៅពេលអ្នកមិនចង់ឱ្យវាត្រូវបានបញ្ជូនបន្ត។', // TODO(km-review)
       how_long_active: 'តើតំណនេះគួរដំណើរការរយៈពេលប៉ុន្មាន?',
       duration_desc: 'ជ្រើសរើសរយៈពេលរហ័ស ឬកំណត់ថ្ងៃផុតកំណត់។',
       day_1: '១ ថ្ងៃ',
@@ -937,6 +952,9 @@ const translations = {
       other_credentials: 'វិញ្ញាបនបត្រផ្សេងៗ',
       see_all: 'មើលទាំងអស់',
       status_claimed: 'បានទទួល',
+      status_issued: 'បានចេញ', // TODO(km-review)
+      status_withdrawn: 'បានដកហូត', // TODO(km-review)
+      manage_withdrawals: 'ដកហូតវិញ្ញាបនបត្រ ឬបន្តបញ្ជីដកហូតរបស់អ្នក', // TODO(km-review)
       status_pending: 'រង់ចាំ',
       stat_total_issued: 'ចេញសរុប', // TODO(km-review)
       stat_claimed: 'បានទទួល', // TODO(km-review)
@@ -1187,7 +1205,15 @@ const translations = {
       check_1: 'ទាញយកវិញ្ញាបនបត្រ…', // TODO(km-review)
       check_2: 'ពិនិត្យសុពលភាពតំណ…',
       check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
-      check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្ត…',
+      check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្តដែលបានចុះហត្ថលេខា…', // TODO(km-review)
+      check_5: 'ពិនិត្យថាតើស្ថាប័នបានដកហូតវាឬទេ…', // TODO(km-review)
+      withdrawn_title: 'ត្រូវបានដកហូតដោយស្ថាប័នចេញ', // TODO(km-review)
+      withdrawn_reason: 'ស្ថាប័នបានផ្តល់មូលហេតុនេះ៖', // TODO(km-review)
+      standing_clear_title: 'មិនត្រូវបានដកហូតទេ។', // TODO(km-review)
+      standing_clear_desc: 'បានពិនិត្យជាមួយបញ្ជីដកហូតរបស់ {issuer} កំណែ {version} ចុះថ្ងៃ {date}។ ការដកហូតដែលធ្វើក្រោយថ្ងៃនោះនឹងមិនបង្ហាញនៅទីនេះទេ។', // TODO(km-review)
+      standing_unchecked_title: 'ហត្ថលេខាត្រឹមត្រូវ តែស្ថានភាពមិនទាន់បានពិនិត្យ។', // TODO(km-review)
+      standing_none_desc: '{issuer} មិនបោះពុម្ពផ្សាយបញ្ជីដកហូតទេ ដូច្នេះមិនដឹងថាតើវាបានដកហូតវិញ្ញាបនបត្រនេះហើយឬនៅទេ។ កុំចាត់ទុកថានៅមានសុពលភាពដោយផ្អែកលើទំព័រនេះតែមួយ។', // TODO(km-review)
+      standing_lapsed_desc: 'បញ្ជីដកហូតរបស់ {issuer} បានផុតកំណត់នៅថ្ងៃ {date} ដូច្នេះមិនដឹងថាតើវាបានដកហូតវិញ្ញាបនបត្រនេះហើយឬនៅទេ។ កុំចាត់ទុកថានៅមានសុពលភាពដោយផ្អែកលើទំព័រនេះតែមួយ។', // TODO(km-review)
       success_title: 'ហត្ថលេខាត្រូវបានពិនិត្យ', // TODO(km-review)
       success_desc: 'សោដែលមានក្នុងបញ្ជីទុកចិត្តបានចុះហត្ថលេខាលើព័ត៌មានខាងក្រោម។ នេះជាអ្វីដែលបានពិនិត្យ — វាមិនបញ្ជាក់ថាឯកសារនៅក្នុងដៃអ្នកជាឯកសារដែលបានចេញនោះទេ។', // TODO(km-review)
       unavailable_title: 'មិនអាចផ្ទៀងផ្ទាត់បានទេ', // TODO(km-review)

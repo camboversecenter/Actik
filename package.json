@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test:sdjwt": "tsx test-sdjwt.ts",
     "test:claim": "tsx test-claim.ts",
-    "test": "npm run test:sdjwt && npm run test:claim"
+    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust",
+    "test:trust": "tsx test-trust.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

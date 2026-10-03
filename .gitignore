@@ -17,3 +17,9 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 scratch/
+
+# Trust Root material. The Root private key must never be in this repository;
+# scripts/trust-root-keygen.ts refuses to write it here, and this catches the
+# case where someone copies it in by hand.
+*.private.jwk.json
+trustlist-input.json

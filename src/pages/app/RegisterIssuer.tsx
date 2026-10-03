@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { holdIssuerKey } from '../../lib/issuerKeyStore'
+import { recordNewIssuerKey } from '../../lib/issuerKeys'
 import { generateIssuerKeys, didWeb } from '../../lib/did'
 import { useLanguage } from '../../lib/i18n'
 import { useZkVault } from '../../vault/zk-vault/hooks'
@@ -183,10 +185,11 @@ export default function RegisterIssuer() {
       )
       if (vaultRes.error) throw vaultRes.error
 
-      // Step 4: Store private key in sessionStorage for this session too, so
-      // nothing downstream (signing/issuance) needs to change.
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', did)
+      // Step 4: Put the key on record for the Root to list once the
+      // institution is accredited, and hold it in memory — never in
+      // sessionStorage — for this session's signing.
+      await recordNewIssuerKey(currentUser.id, publicJwk)
+      await holdIssuerKey(privateJwk, did)
 
       // Step 5: Success state
       const successData: IssuerData = {

@@ -50,7 +50,22 @@ export type Claims = Record<string, unknown>
 
 export interface IssueParams {
   issuerDid: string
-  issuerPrivateJwk: JWK
+  /**
+   * The issuer's signing key. In the app this is always `signingKey`: a
+   * non-extractable CryptoKey held in memory (see issuerKeyStore.ts), which
+   * can sign but can never be read back out, so script on the page cannot
+   * walk off with it. `issuerPrivateJwk` remains for tests and scripts.
+   */
+  signingKey?: CryptoKey
+  issuerPrivateJwk?: JWK
+  /**
+   * RFC 7638 thumbprint of the signing key, written to the JWT header. The
+   * trust list may hold several keys for one issuer — an old one retired, a
+   * new one active — and this is how a verifier picks the right one.
+   */
+  kid?: string
+  /** The credential's id. Defaults to a fresh UUID; pass one to keep a record of it. */
+  jti?: string
   /** Claims that should each become selectively-disclosable. */
   subject: Claims
   /** Credential type, e.g. "https://actik.kh/credentials/degree". */
@@ -76,13 +91,18 @@ export async function issueSdJwt(p: IssueParams): Promise<string> {
     sd.push(digest)
   }
 
-  const key = await importJWK(p.issuerPrivateJwk, 'ES256')
+  const key = p.signingKey ?? (p.issuerPrivateJwk ? await importJWK(p.issuerPrivateJwk, 'ES256') : null)
+  if (!key) throw new Error('issueSdJwt: no signing key')
   const now = Math.floor(Date.now() / 1000)
 
+  // `jti` names this one credential, so that the issuer can later withdraw
+  // exactly it (revocation.ts) and nothing else. It sits in the signed
+  // payload, not in a disclosure, so it travels with every presentation.
   let builder = new SignJWT({ _sd: sd, _sd_alg: 'sha-256', vct: p.vct })
-    .setProtectedHeader({ alg: 'ES256', typ: 'dc+sd-jwt' })
+    .setProtectedHeader(p.kid ? { alg: 'ES256', typ: 'dc+sd-jwt', kid: p.kid } : { alg: 'ES256', typ: 'dc+sd-jwt' })
     .setIssuer(p.issuerDid)
     .setIssuedAt(now)
+    .setJti(p.jti ?? crypto.randomUUID())
   if (p.expiresInSec) builder = builder.setExpirationTime(now + p.expiresInSec)
 
   const jwt = await builder.sign(key)
@@ -100,6 +120,26 @@ function parseSdJwt(sdjwt: string): ParsedSdJwt {
   // Drop the (possibly empty) trailing element after the final `~`.
   const disclosures = parts.slice(1).filter((x) => x.length > 0)
   return { jwt, disclosures }
+}
+
+/**
+ * Read the header `kid` and the payload `iat`/`iss` WITHOUT verifying anything.
+ * Only for choosing which trusted key to verify with: every value here is
+ * re-checked against the verified payload afterwards, never acted on directly.
+ */
+export function peekJwt(sdjwt: string): { kid: string | null; iat: number | null; iss: string | null } {
+  try {
+    const [h, p] = sdjwt.split('~')[0].split('.')
+    const header = fromB64uJSON<Record<string, unknown>>(h)
+    const payload = fromB64uJSON<Record<string, unknown>>(p)
+    return {
+      kid: typeof header.kid === 'string' ? header.kid : null,
+      iat: typeof payload.iat === 'number' ? payload.iat : null,
+      iss: typeof payload.iss === 'string' ? payload.iss : null,
+    }
+  } catch {
+    return { kid: null, iat: null, iss: null }
+  }
 }
 
 export interface DecodedDisclosure {
@@ -186,6 +226,8 @@ function asText(value: unknown): string | null {
  */
 export class CredentialAssertion {
   readonly issuer: string
+  /** The credential's own identifier; null on credentials issued before jtis existed. */
+  readonly jti: string | null
   readonly issuedAt: number | null
   readonly expiresAt: number | null
   readonly claims: Claims
@@ -193,6 +235,7 @@ export class CredentialAssertion {
 
   constructor(issuer: string, payload: Record<string, unknown>, claims: Claims) {
     this.issuer = issuer
+    this.jti = typeof payload.jti === 'string' ? payload.jti : null
     this.issuedAt = typeof payload.iat === 'number' ? payload.iat : null
     this.expiresAt = typeof payload.exp === 'number' ? payload.exp : null
     this.claims = claims

@@ -266,7 +266,7 @@ export default function Notifications() {
       // Check the signature before the vault swallows it. Until this ran, a
       // row that merely *said* it came from an accredited institution went
       // into the holder's wallet looking exactly like one that did.
-      const assertion = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const { assertion } = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
 
       const payload = { sdjwt: cred.sd_jwt }
       const encryptedPayload = await encryptPayload(payload)

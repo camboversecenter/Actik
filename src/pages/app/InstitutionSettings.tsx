@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { holdIssuerKey } from '../../lib/issuerKeyStore'
+import { recordNewIssuerKey } from '../../lib/issuerKeys'
 import { generateIssuerKeys } from '../../lib/did'
 import { useZkVault } from '../../vault/zk-vault/hooks'
 import {
@@ -181,8 +183,10 @@ export default function InstitutionSettings() {
       )
       if (secretRes.error) throw secretRes.error
 
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', issuer.did)
+      // The new key goes on record for the Root to list; the old one is
+      // retired, so everything it signed keeps verifying.
+      await recordNewIssuerKey(currentUser.id, publicJwk)
+      await holdIssuerKey(privateJwk, issuer.did)
 
       setIssuer(prev => prev && { ...prev, public_key: JSON.stringify(publicJwk, null, 2) })
       setShowRegenerateConfirm(false)
@@ -453,7 +457,13 @@ export default function InstitutionSettings() {
               {showRegenerateConfirm && (
                 <div className="p-6 bg-white space-y-4">
                   <p className="text-sm text-stone-600 leading-relaxed">
-                    This creates a brand-new signing key. <strong>Every certificate issued with your current key will permanently fail verification</strong> — this cannot be undone. Only do this if you believe your key has been compromised.
+                    This creates a new signing key and <strong>retires</strong> the current one. Certificates your current key has already signed keep verifying; it simply signs nothing new.
+                  </p>
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    <strong>Certificates you issue with the new key will not verify — and recipients cannot claim them — until the trust registry is next published</strong> with the new key on it. Tell the registry operator after you regenerate.
+                  </p>
+                  <p className="text-sm text-stone-600 leading-relaxed">
+                    If you believe your current key has been <strong>compromised</strong>, regenerating is not enough: ask the registry operator to <em>revoke</em> it, which stops everything it signed from verifying.
                   </p>
 
                   <label className="flex items-start gap-2 text-sm text-stone-700">
@@ -463,7 +473,7 @@ export default function InstitutionSettings() {
                       onChange={(e) => setRegenerateAck(e.target.checked)}
                       className="mt-1"
                     />
-                    <span>I understand this permanently invalidates every previously issued certificate.</span>
+                    <span>I understand new certificates will not verify until the registry is republished.</span>
                   </label>
 
                   <div>

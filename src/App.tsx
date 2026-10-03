@@ -19,6 +19,7 @@ import WalletCategory from './pages/app/WalletCategory'
 import CredentialDetail from './pages/app/CredentialDetail'
 import IssuedCredentials from './pages/app/IssuedCredentials'
 import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
+import Withdrawals from './pages/app/Withdrawals'
 import { VaultProvider } from './vault/zk-vault'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
@@ -402,6 +403,7 @@ export default function App() {
           </Route>
           <Route path="issued" element={<IssuedCredentials />} />
           <Route path="issued/type/:credentialType" element={<IssuedCredentialsCategory />} />
+          <Route path="withdrawals" element={<Withdrawals />} />
           {/* Student routes */}
           <Route path="wallet" element={<Wallet />} />
           <Route path="wallet/type/:credentialType" element={<WalletCategory />} />

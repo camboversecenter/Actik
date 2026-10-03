@@ -4,17 +4,8 @@ import { supabase } from '../../lib/supabase'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import StatusPill from '../../components/ui/StatusPill'
+import { loadIssuedRecords, type IssuedRecord } from '../../lib/withdrawal'
 
-interface IssuedRecord {
-  id: string
-  title: string
-  date: string
-  status: 'pending' | 'claimed'
-  credential_type: string
-  // See IssuedCredentials.tsx — holder email is the only holder-identifying
-  // field actually persisted in plaintext; name only ever lives encrypted.
-  email: string | null
-}
 
 export default function IssuedCredentialsCategory() {
   const { t } = useLanguage()
@@ -33,72 +24,14 @@ export default function IssuedCredentialsCategory() {
     try {
       setLoading(true)
 
-      let { data: issuerData } = await supabase
-        .from('issuers')
-        .select('did')
-        .eq('owner', userId)
-        .maybeSingle()
-
-      if (!issuerData) {
-        // Fallback to owner
-        const fallback = await supabase
-          .from('issuers')
-          .select('did')
-          .eq('owner', userId)
-          .maybeSingle()
-        issuerData = fallback.data
-      }
-
-      if (!issuerData || !issuerData.did) {
-        setLoading(false)
-        return
-      }
-
-      const myDid = issuerData.did
-
-      const [pendingRes, claimedRes] = await Promise.all([
-        supabase.from('pending_credentials').select('*').eq('issuer_did', myDid),
-        supabase.from('credentials').select('*').eq('issuer_did', myDid)
-      ])
-
-      const merged: IssuedRecord[] = []
-
-      if (pendingRes.data) {
-        pendingRes.data.forEach((p: any) => {
-          merged.push({
-            id: p.id,
-            title: p.label || 'Pending Credential',
-            date: p.created_at || new Date().toISOString(),
-            status: 'pending',
-            credential_type: 'academic_degree',
-            email: p.recipient_email || p.student_email || null
-          })
-        })
-      }
-
-      if (claimedRes.data) {
-        claimedRes.data.forEach((c: any) => {
-          merged.push({
-            id: c.id,
-            title: c.degree_title || 'Issued Credential',
-            date: c.created_at || new Date().toISOString(),
-            status: 'claimed',
-            credential_type: c.credential_type || 'academic_degree',
-            email: c.holder_email || c.student_email || null
-          })
-        })
-      }
-
-      // Filter by credentialType
-      const filtered = merged.filter(cred => {
-        const type = cred.credential_type || 'academic_degree'
-        if (credentialType === 'other') return type !== 'academic_degree'
-        return type === credentialType
-      })
-
-      filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-      setRecords(filtered)
+      // From issued_credentials: the log the database writes as each
+      // credential goes out. The old source — pending_credentials and
+      // credentials filtered by issuer_did — are the *recipients'* rows, which
+      // row-level security rightly hides from the issuer, so this page always
+      // came back empty. Withdrawals are marked from the institution's own
+      // signed list.
+      const { records: issued } = await loadIssuedRecords(userId)
+      setRecords(issued)
     } catch (err) {
       console.error('Failed to load issued credentials', err)
     } finally {
@@ -141,7 +74,7 @@ export default function IssuedCredentialsCategory() {
           </div>
         ) : (
           records.map((c) => {
-            const isClaimed = c.status === 'claimed'
+            const isWithdrawn = !!c.withdrawn
             return (
               <div
                 key={c.id}
@@ -160,8 +93,8 @@ export default function IssuedCredentialsCategory() {
                       )}
                     </div>
                     <StatusPill
-                      status={isClaimed ? 'verified' : 'pending'}
-                      label={isClaimed ? t('dashboard.status_claimed') : t('dashboard.status_pending')}
+                      status={isWithdrawn ? 'failed' : 'verified'}
+                      label={isWithdrawn ? t('dashboard.status_withdrawn') : t('dashboard.status_issued')}
                       className="shrink-0"
                     />
                   </div>

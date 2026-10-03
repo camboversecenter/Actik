@@ -117,6 +117,11 @@ export default function ShareCredential() {
   const [expiryOption, setExpiryOption] = useState<ExpiryOption>('7days')
   const [customDate, setCustomDate] = useState('')
   const [recipientLabel, setRecipientLabel] = useState('')
+  // A link that stops working after its first successful view. A forwarded or
+  // leaked share link is otherwise replayable by anyone until it expires;
+  // presentations here are not bound to the holder (no KB-JWT), so this,
+  // expiry and revocation are the controls that exist.
+  const [singleUse, setSingleUse] = useState(false)
 
   // Share action states
   const [isSharing, setIsSharing] = useState(false)
@@ -487,7 +492,9 @@ export default function ShareCredential() {
         revealed: selectedFields,
         expires_at: expiry.toISOString(),
         created_at: new Date().toISOString(),
-        recipient_label: recipientLabel.trim() || null
+        recipient_label: recipientLabel.trim() || null,
+        // Enforced by the database (get_share_for_verification), not here.
+        max_views: singleUse ? 1 : null
       })
 
       if (res.error) {
@@ -979,6 +986,18 @@ export default function ShareCredential() {
                     placeholder={t('wallet.recipient_placeholder')}
                     className="w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
+                  <label className="flex items-start gap-2 mt-3 text-sm text-stone-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={singleUse}
+                      onChange={(e) => setSingleUse(e.target.checked)}
+                      className="mt-0.5 w-4 h-4"
+                    />
+                    <span>
+                      <span className="font-semibold">{t('wallet.single_use')}</span>
+                      <span className="block text-xs text-stone-500">{t('wallet.single_use_desc')}</span>
+                    </span>
+                  </label>
                 </div>
 
                 <h3 className="font-khmer text-lg font-bold text-stone-900 mb-1">
