@@ -68,6 +68,12 @@ export default function Landing() {
               {t('landing.hero_cta')}
             </button>
             <p className="text-xs text-stone-500">{t('landing.hero_cta_sub')}</p>
+            <button
+              onClick={() => navigate('/scan')}
+              className="text-sm font-semibold text-indigo-700 hover:text-indigo-800 cursor-pointer"
+            >
+              {t('scan.title')} →
+            </button>
           </div>
           <div className="mt-10 flex items-center justify-center gap-2 text-xs font-medium text-stone-500">
             <ShieldCheck size={15} className="text-teal-600" />

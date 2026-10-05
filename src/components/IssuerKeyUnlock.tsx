@@ -11,6 +11,8 @@ import { useZkVault } from '../vault/zk-vault/hooks'
 import type { EncryptedPayload } from '../vault/zk-vault/crypto'
 import { supabase } from '../lib/supabase'
 import { generateIssuerKeys } from '../lib/did'
+import { holdIssuerKey } from '../lib/issuerKeyStore'
+import { recordNewIssuerKey } from '../lib/issuerKeys'
 
 const MIN_LEN = 8
 const LOCKOUT_AFTER = 3
@@ -102,7 +104,8 @@ interface IssuerKeyUnlockProps {
   userId: string
   userEmail: string
   did: string
-  onUnlocked: (privateJwk: JWK, did: string) => void
+  /** The key is now held in issuerKeyStore; read it with getIssuerKey(). */
+  onUnlocked: (did: string) => void
   /** Fires only on the legacy/incomplete first-time-setup path, so the parent can refresh its cached public key. */
   onKeyRegenerated?: (newPublicJwk: JWK) => void
 }
@@ -171,13 +174,15 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
       const ciphertext = await encryptPayload(privateJwk)
       await persistKey(userId, publicJwk, ciphertext)
+      // A new key: on record for the Root to list, the old one retired.
+      await recordNewIssuerKey(userId, publicJwk)
 
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', did)
+      // Into memory as a non-extractable key; never into sessionStorage.
+      await holdIssuerKey(privateJwk, did)
       clearLockout(userId)
 
       onKeyRegenerated?.(publicJwk)
-      onUnlocked(privateJwk, did)
+      onUnlocked(did)
     } catch (err: any) {
       setError(err.message || 'Failed to set up your signing PIN. Please try again.')
     } finally {
@@ -226,10 +231,9 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
       setAttempts(0)
       clearLockout(userId)
-      const decrypted = (await decryptPayload(ciphertext)) as JWK
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(decrypted))
-      sessionStorage.setItem('issuer_did', did)
-      onUnlocked(decrypted, did)
+      // Decrypted, imported as non-extractable, and the plaintext dropped.
+      await holdIssuerKey((await decryptPayload(ciphertext)) as JWK, did)
+      onUnlocked(did)
     } catch (err: any) {
       setError(err.message || "Couldn't unlock your signing key. Try again, or use Regenerate signing key if the problem persists.")
     } finally {

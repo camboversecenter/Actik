@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { takeReturnTo } from '../../lib/proofRequestApi'
 import { supabase } from '../../lib/supabase'
 import { GraduationCap, Building2 } from 'lucide-react'
 
@@ -49,9 +50,9 @@ export default function GoogleAuth() {
 
         const role = data?.role
         if (role === 'admin') navigate('/admin', { replace: true })
-        else if (role === 'issuer') navigate('/app/dashboard', { replace: true })
-        else if (role === 'student') navigate('/app/wallet', { replace: true })
-        else navigate('/app/dashboard', { replace: true })
+        else if (role === 'issuer') navigate(takeReturnTo() ?? '/app/dashboard', { replace: true })
+        else if (role === 'student') navigate(takeReturnTo() ?? '/app/wallet', { replace: true })
+        else navigate(takeReturnTo() ?? '/app/dashboard', { replace: true })
       }
     }
     checkExistingSession()
@@ -68,7 +69,8 @@ export default function GoogleAuth() {
       if (data.type === AUTH_COMPLETE) {
         stopWatchingPopup()
         popupRef.current = null
-        navigate(data.target || '/app/dashboard', { replace: true })
+        const target = data.target || '/app/dashboard'
+        navigate(target === '/admin' ? target : takeReturnTo() ?? target, { replace: true })
       } else if (data.type === AUTH_ERROR) {
         stopWatchingPopup()
         popupRef.current = null
@@ -259,7 +261,8 @@ export function GoogleCallback() {
       window.opener?.postMessage({ type: AUTH_COMPLETE, target }, window.location.origin)
       window.close()
     } else {
-      navigate(target, { replace: true })
+      // A candidate who opened a proof request before signing in goes back to it.
+      navigate(target === '/admin' ? target : takeReturnTo() ?? target, { replace: true })
     }
   }
 

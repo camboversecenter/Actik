@@ -5,6 +5,8 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
+import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { ensureHolderKey, isOwnHolderKey } from '../../lib/holderKey'
 
 interface PendingCredential {
   id: string
@@ -28,6 +30,7 @@ interface PendingCredential {
   major?: string
   graduation_date?: string
   certificate_id?: string
+  printed_code?: string | null
 }
 
 export default function Notifications() {
@@ -38,7 +41,8 @@ export default function Notifications() {
     checkVaultStatus, 
     unlockWithPin, 
     unlockWithPasskey, 
-    encryptPayload 
+    encryptPayload,
+    decryptPayload
   } = useZkVault()
 
   // State
@@ -55,6 +59,9 @@ export default function Notifications() {
   // Modal / Action state
   const [showUnlockModal, setShowUnlockModal] = useState(false)
   const [unlockTargetCred, setUnlockTargetCred] = useState<PendingCredential | null>(null)
+  // Refused (we checked, and it is not what it claims) versus failed (we could
+  // not finish). Both end up in claimErrors; this says which to call it.
+  const [claimRefused, setClaimRefused] = useState<Record<string, boolean>>({})
   const [pinInput, setPinInput] = useState('')
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
@@ -146,7 +153,8 @@ export default function Notifications() {
         claimed: false,
         claimed_at: null,
         created_at: p.created_at,
-        credential_type: p.credential_type
+        credential_type: p.credential_type,
+        printed_code: p.printed_code ?? null
       }))
 
       setPendingList(unclaimedList)
@@ -256,9 +264,31 @@ export default function Notifications() {
   const executeClaim = async (cred: PendingCredential) => {
     setClaimingCredId(cred.id)
     setClaimErrors(prev => ({ ...prev, [cred.id]: '' }))
+    setClaimRefused(prev => ({ ...prev, [cred.id]: false }))
 
     try {
-      const payload = { sdjwt: cred.sd_jwt }
+      // Check the signature before the vault swallows it. Until this ran, a
+      // row that merely *said* it came from an accredited institution went
+      // into the holder's wallet looking exactly like one that did.
+      const checked = await verifyIssuedCredential(cred.sd_jwt, cred.issuer_did)
+      const { assertion } = checked
+
+      // A credential bound to a holder key must be bound to *this* wallet's
+      // key — otherwise only someone else could ever present it.
+      if (assertion.holderKey) {
+        const own = await ensureHolderKey(currentUser.id, encryptPayload, (p) => decryptPayload(p))
+        if (!(await isOwnHolderKey(own, assertion.holderKey))) {
+          throw new ClaimRefused('HOLDER_KEY_MISMATCH', t('wallet.holder_key_mismatch'))
+        }
+      }
+
+      // The printed copy, if the institution signed one, goes into the vault
+      // beside the credential — but only if it checks out on its own and names
+      // the same document and holder. Otherwise it is left behind.
+      const printed = await verifyPrintedCopy(cred.printed_code, checked)
+      if (printed.payload === null && printed.reason) console.warn('[claim] printed copy not kept:', printed.reason)
+
+      const payload = printed.payload ? { sdjwt: cred.sd_jwt, printed: printed.payload } : { sdjwt: cred.sd_jwt }
       const encryptedPayload = await encryptPayload(payload)
       const encryptedStr = JSON.stringify(encryptedPayload)
 
@@ -268,20 +298,24 @@ export default function Notifications() {
       const isFallback = (cred.cipher !== undefined || cred.iv !== undefined) || (!cred.sd_jwt) || (cred.issuer_id === '')
 
       if (isFallback) {
+        // The display columns are written from the *verified* claims, falling
+        // back to the row only where the credential carries no such claim.
+        // The wallet card then shows what the issuer signed rather than what
+        // someone typed into a column beside it.
         updateRes = await supabase.from('credentials').insert({
           owner: currentUser.id,
-          label: cred.degree_title || cred.label,
+          label: signedOr(assertion, 'degree_type', cred.degree_title || cred.label),
           cipher: encryptedPayload.cipher,
           iv: encryptedPayload.iv,
           credential_type: cred.credential_type,
           type_metadata: cred.type_metadata,
-          degree_type: cred.degree_type,
-          student_id: cred.student_id,
-          major: cred.major,
-          graduation_date: cred.graduation_date,
-          certificate_id: cred.certificate_id,
+          degree_type: signedOr(assertion, 'degree_type', cred.degree_type),
+          student_id: signedOr(assertion, 'student_id', cred.student_id),
+          major: signedOr(assertion, 'major', cred.major),
+          graduation_date: signedOr(assertion, 'graduation_date', cred.graduation_date),
+          certificate_id: signedOr(assertion, 'certificate_id', cred.certificate_id),
           issuer_did: cred.issuer_did,
-          institution_name: cred.institution_name
+          institution_name: signedOr(assertion, 'institution', cred.institution_name)
         })
 
         if (!updateRes.error) {
@@ -313,10 +347,24 @@ export default function Notifications() {
       // fallback interval in NotificationsBell.tsx) or a full page reload.
       window.dispatchEvent(new Event('actik:pending-credentials-changed'))
     } catch (err: any) {
+      const refused = err instanceof ClaimRefused
+      if (refused) console.error('[claim] not stored:', err.reason)
+      setClaimRefused(prev => ({ ...prev, [cred.id]: refused }))
       setClaimErrors(prev => ({ ...prev, [cred.id]: err.message || 'Claim failed' }))
     } finally {
       setClaimingCredId(null)
     }
+  }
+
+  const declineCredential = async (cred: PendingCredential) => {
+    if (!window.confirm(t('wallet.decline_confirm'))) return
+    const { error } = await supabase.from('pending_credentials').delete().eq('id', cred.id)
+    if (error) {
+      setClaimErrors(prev => ({ ...prev, [cred.id]: error.message }))
+      return
+    }
+    setPendingList(prev => prev.filter(c => c.id !== cred.id))
+    window.dispatchEvent(new Event('actik:pending-credentials-changed'))
   }
 
   const truncateDid = (did: string) => {
@@ -394,6 +442,17 @@ export default function Notifications() {
                     <span className="text-xs text-gray-400">
                       {new Date(c.created_at).toLocaleDateString()}
                     </span>
+                    {/* Nothing counts until the recipient accepts it — and they can
+                        refuse. Declining deletes the offer; the issuer's own log of
+                        what it sent is untouched. */}
+                    <button
+                      type="button"
+                      onClick={() => declineCredential(c)}
+                      disabled={claimingCredId !== null}
+                      className="shrink-0 border border-gray-300 text-gray-700 font-semibold h-11 px-4 rounded-lg text-xs md:text-sm cursor-pointer disabled:opacity-50"
+                    >
+                      {t('wallet.decline_btn')}
+                    </button>
                     <button
                       onClick={() => triggerClaimFlow(c)}
                       disabled={claimingCredId !== null}
@@ -407,8 +466,13 @@ export default function Notifications() {
                   </div>
 
                   {claimErrors[c.id] && (
-                    <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded p-2.5 mt-2">
-                      {t('wallet.claim_failed_msg')}{claimErrors[c.id]}
+                    <div className={`w-full border text-xs rounded p-2.5 mt-2 ${
+                      claimRefused[c.id]
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : 'bg-rose-50 border-rose-200 text-rose-700'
+                    }`}>
+                      {claimRefused[c.id] ? t('wallet.claim_refused_msg') : t('wallet.claim_failed_msg')}
+                      {claimErrors[c.id]}
                     </div>
                   )}
                 </div>

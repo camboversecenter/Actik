@@ -7,6 +7,8 @@ import { Building2, Plus, Loader2 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { useZkVault } from '../../vault/zk-vault/hooks'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
+import { getIssuerKey, holdIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
+import { recordNewIssuerKey } from '../../lib/issuerKeys'
 import Banner from '../../components/ui/Banner'
 import StatusPill from '../../components/ui/StatusPill'
 
@@ -32,7 +34,7 @@ export default function IssuerDashboard() {
   // Loading & state management
   const [loading, setLoading] = useState(true)
   const [issuerInfo, setIssuerInfo] = useState<IssuerInfo | null>(null)
-  const [privateKey, setPrivateKey] = useState<any | null>(null)
+  const [privateKey, setPrivateKey] = useState<HeldIssuerKey | null>(null)
 
   // Registration Form Fields
   const [regName, setRegName] = useState('')
@@ -167,13 +169,9 @@ export default function IssuerDashboard() {
             rawIssuerData: issuerData
           })
 
-          // Retrieve private key from sessionStorage
-          const keyJson = sessionStorage.getItem('issuer_private_key')
-          if (keyJson) {
-            setPrivateKey(JSON.parse(keyJson))
-          } else {
-            setPrivateKey(null)
-          }
+          // The signing key, if this session has unlocked it (in memory only).
+          const held = getIssuerKey()
+          setPrivateKey(held && held.did === issuerData.did ? held : null)
 
           const monthStart = new Date()
           monthStart.setDate(1)
@@ -349,12 +347,11 @@ export default function IssuerDashboard() {
       )
       if (vaultRes.error) throw vaultRes.error
 
-      // 4. Save private key in sessionStorage
-      sessionStorage.setItem('issuer_private_key', JSON.stringify(privateJwk))
-      sessionStorage.setItem('issuer_did', did)
+      // 4. On record for the Root to list, and held in memory for signing.
+      await recordNewIssuerKey(currentUser.id, publicJwk)
+      setPrivateKey(await holdIssuerKey(privateJwk, did))
 
       // 5. Update states
-      setPrivateKey(privateJwk)
       setIssuerInfo({
         id: currentUser.id,
         name: regName.trim(),
@@ -568,7 +565,7 @@ export default function IssuerDashboard() {
                 userId={currentUser.id}
                 userEmail={currentUser.email}
                 did={issuerInfo.did}
-                onUnlocked={(jwk) => setPrivateKey(jwk)}
+                onUnlocked={() => setPrivateKey(getIssuerKey())}
                 onKeyRegenerated={(newJwk) =>
                   setIssuerInfo(prev => prev && ({ ...prev, rawIssuerData: { ...prev.rawIssuerData, public_jwk: newJwk } }))
                 }

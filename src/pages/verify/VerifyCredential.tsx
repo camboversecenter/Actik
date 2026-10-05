@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { longDate } from '../../lib/dates'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 
+import { readDisclosures, type CredentialAssertion } from '../../lib/sdjwt'
 import {
-  verify as verifyPresentation,
-  readDisclosures,
-  VerificationRejected,
-  type CredentialAssertion,
-} from '../../lib/sdjwt'
+  checkCredential,
+  CredentialRefused,
+  CredentialWithdrawn,
+  type CheckedCredential,
+} from '../../lib/credentialCheck'
+import { shareAudience } from '../../lib/sdjwt'
+import { displayClaim } from '../../lib/claimDisplay'
+import type { WithdrawalReason } from '../../lib/revocation'
+import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
 
 // --- TypeScript Types ---
 type CheckStatus = 'waiting' | 'running' | 'passed' | 'failed'
@@ -43,7 +49,7 @@ interface ShareLookupRow {
   credential_id: string | null
   expires_at: string | null
   created_at: string | null
-  status: 'ok' | 'expired' | 'revoked' | 'not_found'
+  status: 'ok' | 'expired' | 'revoked' | 'exhausted' | 'not_found'
 }
 
 interface IssuerRecord {
@@ -51,6 +57,8 @@ interface IssuerRecord {
   domain: string
   did: string
   accredited: boolean
+  /** From the signed trust list: an accredited institution, or a registered employer. */
+  kind: 'institution' | 'employer'
 }
 
 interface ParsedPresentation {
@@ -146,27 +154,6 @@ function parsePresentation(presentation: string): ParsedPresentation {
 }
 
 /**
- * One sentence per rejection reason. The reason string is the stable contract
- * (see sdjwt.ts); this is the part that may be reworded or translated.
- */
-function messageForRejection(reason: string): string {
-  switch (reason) {
-    case 'SIGNATURE_INVALID':
-      return 'The signature does not match these fields. This code did not verify.'
-    case 'DISCLOSURE_NOT_SIGNED':
-      return 'A field in this code was not covered by the signature. This code did not verify.'
-    case 'CREDENTIAL_EXPIRED':
-      return 'The credential itself has expired. Ask the holder for a current one.'
-    case 'CREDENTIAL_NOT_YET_VALID':
-      return 'The credential is dated in the future. Check the date on this device.'
-    case 'ISSUER_KEY_MALFORMED':
-      return "The registry's key for this issuer is unusable, so this code was not checked."
-    default:
-      return 'This code could not be read as a credential. It did not verify.'
-  }
-}
-
-/**
  * Formats keys to Khmer-primary, human-readable labels — reuses the same
  * i18n keys the wallet/share screens already use for these exact fields,
  * so the label a holder sees when sharing matches what a verifier sees here.
@@ -206,6 +193,13 @@ function getFieldLabel(key: string, t: (k: string) => string): string {
     case 'photo':
     case 'student_photo':
       return t('wallet.field_photo')
+    case 'job_title':
+    case 'employment_type':
+    case 'employment_start':
+    case 'employment_end':
+    case 'employment_status':
+    case 'department':
+      return t(`proof.field_${key}`)
     default:
       return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
   }
@@ -357,22 +351,29 @@ export default function VerifyCredential() {
   const [checks, setChecks] = useState<VerificationCheck[]>([
     { id: '1', label: t('verify.check_1'), status: 'waiting' },
     { id: '2', label: t('verify.check_2'), status: 'waiting' },
-    { id: '3', label: t('verify.check_3'), status: 'waiting' },
     { id: '4', label: t('verify.check_4'), status: 'waiting' },
+    { id: '3', label: t('verify.check_3'), status: 'waiting' },
+    { id: '5', label: t('verify.check_5'), status: 'waiting' },
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
   // Which way check 2 failed — expired and withdrawn read the same to the
   // crypto and very differently to the person holding the paper.
-  const [linkStatus, setLinkStatus] = useState<'expired' | 'revoked' | null>(null)
+  const [linkStatus, setLinkStatus] = useState<'expired' | 'revoked' | 'exhausted' | null>(null)
   const [issuer, setIssuer] = useState<IssuerRecord | null>(null)
   // What verification produced. There is no boolean on it by design: holding
   // this object means a registered key signed these fields, which is not the
   // same as the document in the reader's hand being the one that was issued.
   const [assertion, setAssertion] = useState<CredentialAssertion | null>(null)
-  // Refused and "we could not check" are different answers and must not be
-  // dressed the same. The code is only to blame in the first case.
-  const [failureKind, setFailureKind] = useState<'rejected' | 'unavailable'>('rejected')
+  // The whole result of the check: which signed-list key vouched for it, and
+  // its standing against the issuer's withdrawal list.
+  const [checked, setChecked] = useState<CheckedCredential | null>(null)
+  // Refused, "we could not check", and "the issuer withdrew it" are three
+  // different answers and must not be dressed the same. The code is only to
+  // blame in the first; nobody is in the second; the institution decided the
+  // third.
+  const [failureKind, setFailureKind] = useState<'rejected' | 'unavailable' | 'withdrawn'>('rejected')
+  const [withdrawal, setWithdrawal] = useState<{ reason: WithdrawalReason; revokedAt: number } | null>(null)
   const [parsedPresentation, setParsedPresentation] = useState<ParsedPresentation | null>(null)
   const [detailsExpanded, setDetailsExpanded] = useState(false)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
@@ -393,8 +394,9 @@ export default function VerifyCredential() {
       setChecks([
         { id: '1', label: t('verify.check_1'), status: 'running' },
         { id: '2', label: t('verify.check_2'), status: 'waiting' },
-        { id: '3', label: t('verify.check_3'), status: 'waiting' },
         { id: '4', label: t('verify.check_4'), status: 'waiting' },
+        { id: '3', label: t('verify.check_3'), status: 'waiting' },
+        { id: '5', label: t('verify.check_5'), status: 'waiting' },
       ])
       setStatus('loading')
 
@@ -447,6 +449,14 @@ export default function VerifyCredential() {
           return
         }
 
+        // A link the holder limited to one view, already viewed.
+        if (lookup.status === 'exhausted') {
+          setLinkStatus('exhausted')
+          updateCheck('2', 'failed', 'This link could be opened only once, and it already has been')
+          if (active) setStatus('failed')
+          return
+        }
+
         // Expiry is decided by the database, not by this browser's clock.
         if (lookup.status === 'expired' || new Date(shareRecord.expires_at) < new Date()) {
           setLinkStatus('expired')
@@ -473,96 +483,82 @@ export default function VerifyCredential() {
         const remainingText = `Valid for ${diffDays} more day${diffDays === 1 ? '' : 's'}`
         updateCheck('2', 'passed', undefined, remainingText)
 
-        // --- CHECK 3: Signature verification ---
-        updateCheck('3', 'running')
+        // --- CHECKS 4, 3, 5: registry, signature, withdrawal ---
+        // One call does all three, in that order, against the Root-signed
+        // trust list — never against the `issuers` table, which anyone with
+        // database access could edit. See src/lib/credentialCheck.ts.
+        updateCheck('4', 'running')
         if (!active) return
 
         const jwt = shareRecord.presentation.split('~')[0]
         const payload = parseJwtPayload(jwt)
-        const issuerDID = payload?.iss
+        const issuerDID: string | undefined = payload?.iss
 
-        if (!issuerDID) {
-          setFailureKind('rejected')
-          updateCheck('3', 'failed', 'This code names no issuer, so there is nothing to check it against.')
-          if (active) setStatus('failed')
-          return
-        }
-
-        // One read of the registry, used for both the key and the standing.
-        // Use select('*') — avoids 400 if optional columns like 'domain' don't exist yet
-        const { data: registryIssuer, error: registryError } = await supabase
-          .from('issuers')
-          .select('*')
-          .eq('did', issuerDID)
-          .maybeSingle()
-
-        // A registry we cannot read is our problem, not the code's. Saying
-        // "this may be fraudulent" here would accuse a credential we never
-        // actually checked.
-        if (registryError) {
-          setFailureKind('unavailable')
-          updateCheck('3', 'failed', 'The trust registry could not be reached, so this code was not checked.')
-          if (active) setStatus('failed')
-          return
-        }
-
-        // An unknown issuer is a refusal, but a plain one: during rollout it
-        // may be an institution that has not enrolled yet.
-        if (!registryIssuer) {
-          setFailureKind('rejected')
-          updateCheck('3', 'failed', 'The issuer of this code is not listed in the trust registry.')
-          if (active) setStatus('failed')
-          return
-        }
-
-        // Safely parse public_jwk — Supabase may return string or object
-        let publicJwk = registryIssuer.public_jwk
-        if (typeof publicJwk === 'string') {
-          try {
-            publicJwk = JSON.parse(publicJwk)
-          } catch {
-            setFailureKind('unavailable')
-            updateCheck('3', 'failed', "The registry's record for this issuer is unreadable, so this code was not checked.")
-            if (active) setStatus('failed')
-            return
-          }
-        }
-
-        // Ensure alg is set — required by jose importJWK
-        if (!publicJwk.alg) {
-          publicJwk = { ...publicJwk, alg: 'ES256' }
-        }
-
-        let credential: CredentialAssertion
-        try {
-          credential = await verifyPresentation(shareRecord.presentation, publicJwk)
-        } catch (e) {
-          if (!(e instanceof VerificationRejected)) throw e
-          // The reason, never the payload. The reason string is the contract;
-          // only the sentence shown to the reader is localised.
-          console.error('[verify] rejected:', e.reason)
-          setFailureKind(e.reason === 'ISSUER_KEY_MALFORMED' ? 'unavailable' : 'rejected')
-          updateCheck('3', 'failed', messageForRejection(e.reason))
-          if (active) setStatus('failed')
-          return
-        }
-
-        setAssertion(credential)
-        updateCheck('3', 'passed')
-
-        // --- CHECK 4: Trust registry standing (same record, no second read) ---
-        updateCheck('4', 'running')
+        const trust = await loadTrustState()
+        const revocations =
+          trust.list && issuerDID
+            ? await loadRevocationState(issuerDID, trust.list)
+            : { list: null, failure: null }
         if (!active) return
 
-        if (!registryIssuer.accredited) {
-          setFailureKind('rejected')
-          updateCheck('4', 'failed', 'This institution is listed in the registry but is not accredited.')
+        let result: CheckedCredential
+        try {
+          result = await checkCredential(
+            shareRecord.presentation,
+            issuerDID,
+            trust,
+            revocations,
+            Math.floor(Date.now() / 1000),
+            // A credential bound to its holder's wallet must come with that
+            // wallet's proof, signed for this very link.
+            { holderProof: { audience: shareAudience(shareRecord.id) } }
+          )
+        } catch (e) {
+          if (!(e instanceof CredentialRefused)) throw e
+          // The reason, never the payload.
+          console.error('[verify] refused:', e.reason)
+
+          // Which step it stopped at: the steps before it passed.
+          const stoppedAt =
+            e.reason.startsWith('TRUSTLIST_') || e.reason.startsWith('ISSUER_NOT') || e.reason.startsWith('KEY_') || e.reason === 'NO_ISSUER'
+              ? '4'
+              : e.reason.startsWith('REVOCATIONS_') || e.reason === 'CREDENTIAL_REVOKED'
+                ? '5'
+                : '3'
+          if (stoppedAt !== '4') updateCheck('4', 'passed')
+          if (stoppedAt === '5') updateCheck('3', 'passed')
+
+          if (e instanceof CredentialWithdrawn) {
+            setFailureKind('withdrawn')
+            setWithdrawal({ reason: e.withdrawalReason, revokedAt: e.revokedAt })
+          } else {
+            setFailureKind(e.unavailable ? 'unavailable' : 'rejected')
+          }
+          updateCheck(stoppedAt, 'failed', e.message)
           if (active) setStatus('failed')
           return
         }
 
-        setIssuer(registryIssuer as IssuerRecord)
-        updateCheck('4', 'passed')
+        updateCheck('4', 'passed', undefined, `Signed trust list v${result.trustListVersion}`)
+        updateCheck('3', 'passed', undefined, result.key.status === 'retired' ? 'Signed with a since-retired key, before it was retired' : undefined)
+        updateCheck(
+          '5',
+          'passed',
+          undefined,
+          result.standing.status === 'clear'
+            ? `Not withdrawn, per the issuer's list v${result.standing.listVersion}`
+            : 'Standing unchecked'
+        )
+
+        setChecked(result)
+        setAssertion(result.assertion)
+        setIssuer({
+          name: result.issuer.name,
+          domain: result.issuer.domain ?? '',
+          did: result.issuer.did,
+          accredited: true,
+          kind: result.issuer.kind ?? 'institution',
+        })
 
         // Parse claims for display
         const parsed = parsePresentation(shareRecord.presentation)
@@ -641,13 +637,21 @@ export default function VerifyCredential() {
       case '2':
         return linkStatus === 'revoked'
           ? 'The holder has withdrawn this link'
-          : 'This link has expired'
+          : linkStatus === 'exhausted'
+            ? 'This single-use link has already been opened'
+            : 'This link has expired'
       case '3':
         return failureKind === 'unavailable'
           ? 'This code was not checked'
           : "This code did not verify"
       case '4':
-        return 'The issuing institution is not accredited in the trust registry'
+        return failureKind === 'unavailable'
+          ? 'The signed trust registry could not be checked'
+          : 'The issuing institution is not on the signed trust registry'
+      case '5':
+        return failureKind === 'withdrawn'
+          ? 'The institution has withdrawn this credential'
+          : "The institution's withdrawal list could not be checked"
       default:
         return 'An error occurred during verification.'
     }
@@ -661,13 +665,21 @@ export default function VerifyCredential() {
       case '2':
         return linkStatus === 'revoked'
           ? 'The holder withdrew this link. Ask them for a new one if you still need it.'
-          : 'Ask the credential holder to generate a new share link.'
+          : linkStatus === 'exhausted'
+            ? 'Single-use links stop working after the first view. Ask the holder for a new one.'
+            : 'Ask the credential holder to generate a new share link.'
       case '3':
         return failureKind === 'unavailable'
           ? 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
           : 'This code did not verify. Do not accept it as proof, and ask the holder for the credential another way.'
       case '4':
-        return 'Contact the institution directly to verify their credentials.'
+        return failureKind === 'unavailable'
+          ? 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
+          : 'Contact the institution directly to verify their credentials.'
+      case '5':
+        return failureKind === 'withdrawn'
+          ? 'Do not accept this credential. The institution, not the code, ended it — the holder can ask the institution why.'
+          : 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
       default:
         return ''
     }
@@ -951,6 +963,35 @@ export default function VerifyCredential() {
                 ))}
               </div>
 
+              {/* Standing. "clear" is only as fresh as the issuer's list, and
+                  says so; "unchecked" must never read as current. */}
+              {checked && (
+                checked.standing.status === 'clear' ? (
+                  <div className="border border-stone-200 rounded-[11px] p-4 bg-white text-sm text-stone-700">
+                    <span className="font-semibold">{t('verify.standing_clear_title')}</span>{' '}
+                    {t('verify.standing_clear_desc')
+                      .replace('{issuer}', checked.issuer.name)
+                      .replace('{version}', String(checked.standing.listVersion))
+                      .replace('{date}', longDate(checked.standing.listIssuedAt))}
+                  </div>
+                ) : (
+                  <div className="border border-amber-200 rounded-[11px] p-4 bg-amber-50/60 text-sm text-amber-900">
+                    <span className="font-semibold">{t('verify.standing_unchecked_title')}</span>{' '}
+                    {checked.standing.why === 'expired'
+                      ? t('verify.standing_lapsed_desc')
+                          .replace('{issuer}', checked.issuer.name)
+                          .replace('{date}', longDate(checked.standing.listExpiredAt ?? 0))
+                      : t('verify.standing_none_desc').replace('{issuer}', checked.issuer.name)}
+                  </div>
+                )
+              )}
+
+              {checked && (
+                <div className="border border-stone-200 rounded-[11px] p-4 bg-white text-sm text-stone-700">
+                  {checked.holder.binding === 'bound' ? t('proof.holder_bound') : t('proof.holder_unbound')}
+                </div>
+              )}
+
               {/* The transplant check. A genuine code photographed off a real
                   certificate and printed on a forged one verifies perfectly,
                   because nothing about the paper is signed. Comparing these
@@ -990,6 +1031,11 @@ export default function VerifyCredential() {
                     {t('verify.issued_by_label')}
                   </span>
                   <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
+                  {issuer && (
+                    <span className="inline-block text-[11px] font-semibold text-stone-600 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                      {t(`proof.kind_${issuer.kind}`)}
+                    </span>
+                  )}
                   <a
                     href={`https://${issuer?.domain}`}
                     target="_blank"
@@ -1067,6 +1113,16 @@ export default function VerifyCredential() {
                               )}
                             />
                           )}
+                        </div>
+                      )
+                    }
+                    if (key === 'employment_status' || key === 'employment_type') {
+                      return (
+                        <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
+                          <span className="font-khmer text-stone-500 font-medium">{getFieldLabel(key, t)}</span>
+                          <span className="text-stone-900 font-semibold sm:text-right max-w-full sm:max-w-[65%] break-words">
+                            {displayClaim(t, key, value, assertion?.issuedAt ?? null)}
+                          </span>
                         </div>
                       )
                     }
@@ -1230,8 +1286,20 @@ export default function VerifyCredential() {
                   )}
                 </div>
                 <h2 className={`font-khmer text-xl font-bold ${failureKind === 'unavailable' ? 'text-amber-700' : 'text-rose-700'}`}>
-                  {failureKind === 'unavailable' ? t('verify.unavailable_title') : t('verify.failed_title')}
+                  {failureKind === 'unavailable'
+                    ? t('verify.unavailable_title')
+                    : failureKind === 'withdrawn'
+                      ? t('verify.withdrawn_title')
+                      : t('verify.failed_title')}
                 </h2>
+                {failureKind === 'withdrawn' && withdrawal && (
+                  <p className="text-sm text-stone-700 mt-2 max-w-sm mx-auto leading-relaxed">
+                    {t(`verify.withdrawn_${withdrawal.reason}`)}
+                    <span className="block text-xs text-stone-500 mt-0.5">
+                      {longDate(withdrawal.revokedAt)}
+                    </span>
+                  </p>
+                )}
                 <p className="font-khmer text-sm text-stone-500 mt-1 font-medium max-w-sm mx-auto leading-relaxed">
                   {getFailureSubtext()}
                 </p>

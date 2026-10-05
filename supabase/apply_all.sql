@@ -19,9 +19,11 @@
 -- anyone holding the anon key. If the copy has already happened, the step
 -- no-ops.
 --
--- After running, the app needs these five functions to exist:
---   get_share_for_verification, admin_list_profile_emails,
---   issuer_verification_count, record_verification, check_recipient_by_email
+-- After running, the app needs these functions to exist:
+--   get_share_for_verification, record_verification, admin_list_profile_emails,
+--   issuer_verification_count, check_recipient_by_email
+-- and, to verify anything at all, a published Root-signed trust list in
+-- `trust_documents` — see README, "The trust Root".
 --
 -- Regenerating: this file is maintained by hand alongside supabase/migrations/.
 -- A new migration goes in both places.
@@ -230,84 +232,8 @@ $$;
 revoke all on function public.check_recipient_by_email(text) from public, anon;
 grant execute on function public.check_recipient_by_email(text) to authenticated;
 
--- One share, by id, for an anonymous verifier. `shares` has no public read
--- policy: a blanket one let anyone select every holder's presentation, live or
--- not. A dead share never yields its presentation here — expiry and revocation
--- come back as a status so the verifier can say which it was, and when.
-create or replace function public.get_share_for_verification(p_share_id uuid)
-returns table (
-  id uuid,
-  presentation text,
-  issuer_did text,
-  disclosed_fields jsonb,
-  credential_id uuid,
-  expires_at timestamptz,
-  created_at timestamptz,
-  status text
-)
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  s public.shares%rowtype;
-  s_json jsonb;
-  fields jsonb;
-  revoked timestamptz;
-begin
-  select * into s from public.shares where public.shares.id = p_share_id;
-
-  if not found then
-    return query select null::uuid, null::text, null::text, null::jsonb,
-                        null::uuid, null::timestamptz, null::timestamptz, 'not_found'::text;
-    return;
-  end if;
-
-  -- `disclosed_fields` and `revealed` both exist in the wild.
-  s_json := to_jsonb(s);
-  fields := coalesce(s_json -> 'disclosed_fields', s_json -> 'revealed', '[]'::jsonb);
-  revoked := nullif(s_json ->> 'revoked_at', '')::timestamptz;
-
-  if revoked is not null then
-    return query select s.id, null::text, s.issuer_did, null::jsonb,
-                        s.credential_id, s.expires_at, s.created_at, 'revoked'::text;
-    return;
-  end if;
-
-  if s.expires_at <= now() then
-    return query select s.id, null::text, s.issuer_did, null::jsonb,
-                        s.credential_id, s.expires_at, s.created_at, 'expired'::text;
-    return;
-  end if;
-
-  return query select s.id, s.presentation, s.issuer_did, fields,
-                      s.credential_id, s.expires_at, s.created_at, 'ok'::text;
-end;
-$$;
-
-revoke all on function public.get_share_for_verification(uuid) from public;
-grant execute on function public.get_share_for_verification(uuid) to anon, authenticated;
-
--- Counts a verification. Gated on the share still being live, so it cannot
--- record a view of something that would not have verified.
-create or replace function public.record_verification(p_share_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  update public.shares
-  set view_count = coalesce(view_count, 0) + 1,
-      last_verified_at = now()
-  where id = p_share_id
-    and expires_at > now()
-    and revoked_at is null;
-end;
-$$;
-
-revoke all on function public.record_verification(uuid) from public;
-grant execute on function public.record_verification(uuid) to anon, authenticated;
+-- get_share_for_verification() and record_verification() are defined in
+-- section 6, in their current form (which also enforces single-use links).
 
 -- The issuer dashboard's "verified N times". An aggregate, not the rows: an
 -- issuer never needed its holders' presentations to get one number.
@@ -505,11 +431,25 @@ create policy "own issuer secrets" on public.issuer_secrets
   for all to authenticated
   using (auth.uid() = owner) with check (auth.uid() = owner);
 
--- pending_credentials: any authenticated user may issue one; the recipient
--- reads and deletes rows addressed to their email.
+-- pending_credentials: the issuer's outbox. Only the owner of an accredited
+-- issuer row may write under that row's DID — this used to be
+-- `with check (true)`, so anyone with an account could put a credential in
+-- anybody's wallet under any institution's name, and the wallet card, which
+-- renders the plain columns, had no way to tell. `issuer_did` unqualified is
+-- the new row's column; `issuers` has no column of that name.
+-- The recipient reads and deletes rows addressed to their email.
 drop policy if exists "issue pending" on public.pending_credentials;
 create policy "issue pending" on public.pending_credentials
-  for insert to authenticated with check (true);
+  for insert to authenticated
+  with check (
+    exists (
+      select 1
+      from public.issuers i
+      where i.did = issuer_did
+        and i.accredited
+        and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+    )
+  );
 
 drop policy if exists "read my pending" on public.pending_credentials;
 create policy "read my pending" on public.pending_credentials
@@ -561,3 +501,1065 @@ begin
   end if;
 end;
 $$;
+
+-- =============================================================================
+-- 6. Trust layer — supabase/migrations/20261004_trust_layer.sql
+-- =============================================================================
+-- Trust moves out of this database: verifiers believe a Root-signed trust list
+-- and issuer-signed withdrawal lists, and the tables below hold the proposals
+-- those lists are built from. Approving an institution in the dashboard no
+-- longer makes it trusted on its own; publishing the next signed list does.
+
+-- ---------------------------------------------------------------------------
+-- 6.1 profiles.role: a user picks student or issuer; nobody picks admin.
+-- ---------------------------------------------------------------------------
+-- The "own profile" policy lets a user write their own row — it has to, the
+-- vault envelopes live there and GoogleAuth.tsx upserts the role the user picks
+-- at sign-up. But it put no limit on *which* role, so
+--   update profiles set role = 'admin' where id = auth.uid()
+-- succeeded, is_admin() then returned true, and the new "admin" could accredit
+-- any institution, their own included — walking straight round the
+-- issuers_guard_registry_columns trigger.
+--
+-- A user may now move between no role, 'student' and 'issuer'. Becoming an
+-- admin, or ceasing to be one, happens only where auth.uid() is null: the SQL
+-- editor or a service-role key, i.e. somebody with the project's keys.
+create or replace function public.profiles_guard_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  self_service constant text[] := array['student', 'issuer'];
+begin
+  if auth.uid() is null then
+    return new;  -- SQL editor / service role
+  end if;
+
+  if tg_op = 'INSERT' then
+    if new.role is not null and not (new.role = any (self_service)) then
+      raise exception 'role % cannot be self-assigned', new.role using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if new.role is distinct from old.role then
+    if (old.role is not null and not (old.role = any (self_service)))
+       or (new.role is not null and not (new.role = any (self_service))) then
+      raise exception 'role % cannot be self-assigned', coalesce(new.role, 'null') using errcode = '42501';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_role on public.profiles;
+create trigger profiles_guard_role
+  before insert or update on public.profiles
+  for each row execute function public.profiles_guard_role();
+
+-- ---------------------------------------------------------------------------
+-- 6.2 Columns the app writes that the tracked schema never had
+-- ---------------------------------------------------------------------------
+-- IssueCredential.tsx writes `type_metadata` for the five non-degree types and
+-- Notifications.tsx copies it across on claim; no tracked SQL created it, so
+-- non-degree issuance failed on any project built from this repo.
+alter table public.pending_credentials add column if not exists type_metadata jsonb;
+alter table public.credentials         add column if not exists type_metadata jsonb;
+-- The credential's own identifier (its signed `jti`), so the issuer can later
+-- withdraw exactly it.
+alter table public.pending_credentials add column if not exists credential_jti uuid;
+-- The printed (KH1:) copy signed at issuance, delivered to the holder with the
+-- credential and moved into their encrypted vault on claim.
+alter table public.pending_credentials add column if not exists printed_code text
+  check (printed_code is null or (printed_code like 'KH1:%' and length(printed_code) <= 4096));
+-- A share link may be limited to N views; 1 makes it single-use.
+alter table public.shares add column if not exists max_views integer
+  check (max_views is null or max_views > 0);
+
+create or replace function public.try_jsonb(t text)
+returns jsonb
+language plpgsql
+immutable
+as $$
+begin
+  return t::jsonb;
+exception when others then
+  return null;
+end;
+$$;
+
+-- Is the caller the owner of an accredited issuer row with this DID?
+create or replace function public.owns_accredited_issuer(p_did text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.issuers i
+    where i.did = p_did
+      and i.accredited
+      and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+  )
+$$;
+
+revoke all on function public.owns_accredited_issuer(text) from public, anon;
+grant execute on function public.owns_accredited_issuer(text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6.3 issuer_keys: every key an issuer has used, so rotation strands nothing
+-- ---------------------------------------------------------------------------
+-- `issuers.public_jwk` held one key, overwritten on rotation, so every
+-- credential the old key had signed stopped verifying the moment an issuer
+-- regenerated. This table keeps the history. It is a *proposal*: the Root
+-- reads it when building the signed trust list, and only what the Root signs
+-- is trusted.
+create table if not exists public.issuer_keys (
+  id uuid primary key default gen_random_uuid(),
+  issuer_id uuid not null references public.issuers(id) on delete cascade,
+  public_jwk jsonb not null,
+  created_at timestamptz not null default now(),
+  retired_at timestamptz,   -- rotated out, not compromised
+  revoked_at timestamptz    -- compromised: nothing it signed stands
+);
+create index if not exists issuer_keys_issuer_idx on public.issuer_keys (issuer_id);
+
+-- Existing issuers get their current key as the first entry.
+insert into public.issuer_keys (issuer_id, public_jwk, created_at)
+select i.id,
+       coalesce(i.public_jwk, public.try_jsonb(i.public_key)),
+       coalesce(i.created_at, now())
+from public.issuers i
+where coalesce(i.public_jwk, public.try_jsonb(i.public_key)) is not null
+  and not exists (select 1 from public.issuer_keys k where k.issuer_id = i.id);
+
+-- An issuer may add keys and retire or revoke its own. It may not backdate a
+-- key (which would let a new key vouch for old credentials), alter one, or
+-- bring a retired or revoked key back. Its timestamps are the server's.
+create or replace function public.issuer_keys_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_admin(auth.uid()) then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    new.created_at := now();
+    new.retired_at := null;
+    new.revoked_at := null;
+    return new;
+  end if;
+
+  if new.issuer_id is distinct from old.issuer_id
+     or new.public_jwk is distinct from old.public_jwk
+     or new.created_at is distinct from old.created_at
+     or (old.retired_at is not null and new.retired_at is distinct from old.retired_at)
+     or (old.revoked_at is not null and new.revoked_at is distinct from old.revoked_at)
+  then
+    raise exception 'issuer keys are append-only; a key can be retired or revoked, never altered or restored'
+      using errcode = '42501';
+  end if;
+
+  if old.retired_at is null and new.retired_at is not null then new.retired_at := now(); end if;
+  if old.revoked_at is null and new.revoked_at is not null then new.revoked_at := now(); end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists issuer_keys_guard on public.issuer_keys;
+create trigger issuer_keys_guard
+  before insert or update on public.issuer_keys
+  for each row execute function public.issuer_keys_guard();
+
+alter table public.issuer_keys enable row level security;
+
+drop policy if exists "read issuer keys" on public.issuer_keys;
+create policy "read issuer keys" on public.issuer_keys for select using (true);
+
+drop policy if exists "issuer adds own keys" on public.issuer_keys;
+create policy "issuer adds own keys" on public.issuer_keys
+  for insert to authenticated
+  with check (exists (
+    select 1 from public.issuers i
+    where i.id = issuer_id
+      and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+  ));
+
+drop policy if exists "issuer retires own keys" on public.issuer_keys;
+create policy "issuer retires own keys" on public.issuer_keys
+  for update to authenticated
+  using (exists (
+    select 1 from public.issuers i
+    where i.id = issuer_id
+      and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+  ))
+  with check (exists (
+    select 1 from public.issuers i
+    where i.id = issuer_id
+      and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+  ));
+
+-- ---------------------------------------------------------------------------
+-- 6.4 trust_documents: where the Root-signed trust list is published
+-- ---------------------------------------------------------------------------
+-- Readable by everyone, writable by nobody through the API — only the SQL
+-- editor or a service-role key can publish. That is an operational limit, not
+-- the security: verifiers check the Root's signature against a key pinned in
+-- the app, so whoever can write here can withhold a list but cannot forge one.
+create table if not exists public.trust_documents (
+  kind text primary key check (kind = 'trustlist'),
+  document jsonb not null,
+  version bigint not null,
+  updated_at timestamptz not null default now()
+);
+
+-- `version` is read from the signed statement itself, and may only go up, so
+-- an older list cannot be republished by mistake.
+create or replace function public.trust_documents_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  stmt jsonb := public.try_jsonb(new.document ->> 'statement');
+begin
+  if stmt is null or (stmt ->> 'version') is null then
+    raise exception 'not a signed trust list: document.statement must be the signed JSON text';
+  end if;
+  new.version := (stmt ->> 'version')::bigint;
+  new.updated_at := now();
+  if tg_op = 'UPDATE' and new.version <= old.version then
+    raise exception 'trust list version % does not supersede published version %', new.version, old.version;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trust_documents_guard on public.trust_documents;
+create trigger trust_documents_guard
+  before insert or update on public.trust_documents
+  for each row execute function public.trust_documents_guard();
+
+alter table public.trust_documents enable row level security;
+drop policy if exists "read trust documents" on public.trust_documents;
+create policy "read trust documents" on public.trust_documents for select using (true);
+
+-- ---------------------------------------------------------------------------
+-- 6.5 revocation_lists: each issuer's signed list of withdrawn credentials
+-- ---------------------------------------------------------------------------
+-- Written by the issuer from its own browser, signed with its own key. The
+-- signature is what verifiers trust; the row-level rules here only stop one
+-- institution overwriting another's, and stop a version going backwards.
+create table if not exists public.revocation_lists (
+  issuer_did text primary key,
+  document jsonb not null,
+  version bigint not null,
+  updated_at timestamptz not null default now()
+);
+
+create or replace function public.revocation_lists_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  stmt jsonb := public.try_jsonb(new.document ->> 'statement');
+begin
+  if stmt is null or (stmt ->> 'version') is null then
+    raise exception 'not a signed revocation list';
+  end if;
+  if (stmt ->> 'type') is distinct from 'actik/revocations/2' then
+    raise exception 'revocation lists must be published as actik/revocations/2 (hashed entries)';
+  end if;
+  if jsonb_typeof(stmt -> 'revoked') is distinct from 'array' or exists (
+    select 1 from jsonb_array_elements(stmt -> 'revoked') e
+    where jsonb_typeof(e) <> 'object'
+       or exists (select 1 from jsonb_object_keys(e) k where k not in ('id', 'reason', 'revokedAt'))
+       or (e ->> 'id') !~ '^[0-9A-F]{64}$'
+       or (e ->> 'reason') not in ('withdrawn', 'corrected')
+  ) then
+    raise exception 'a revocation entry may carry only a hashed id, a fixed reason and a date';
+  end if;
+  if (stmt ->> 'issuer') is distinct from new.issuer_did then
+    raise exception 'revocation list names issuer %, stored under %', stmt ->> 'issuer', new.issuer_did;
+  end if;
+  new.version := (stmt ->> 'version')::bigint;
+  new.updated_at := now();
+  if tg_op = 'UPDATE' and new.version <= old.version then
+    raise exception 'revocation list version % does not supersede published version %', new.version, old.version;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists revocation_lists_guard on public.revocation_lists;
+create trigger revocation_lists_guard
+  before insert or update on public.revocation_lists
+  for each row execute function public.revocation_lists_guard();
+
+alter table public.revocation_lists enable row level security;
+
+-- Public reads see only hashed (version 2) lists; an institution still sees
+-- its own version-1 list, so it can renew it.
+drop policy if exists "read revocation lists" on public.revocation_lists;
+create policy "read revocation lists" on public.revocation_lists for select using (
+  public.try_jsonb(document ->> 'statement') ->> 'type' = 'actik/revocations/2'
+);
+-- owns_accredited_issuer() is not executable by anon, so the owner's own read
+-- is a separate policy that applies to signed-in users only.
+drop policy if exists "issuer reads own revocations" on public.revocation_lists;
+create policy "issuer reads own revocations" on public.revocation_lists
+  for select to authenticated using (public.owns_accredited_issuer(issuer_did));
+
+
+drop policy if exists "issuer publishes own revocations" on public.revocation_lists;
+create policy "issuer publishes own revocations" on public.revocation_lists
+  for insert to authenticated with check (public.owns_accredited_issuer(issuer_did));
+
+drop policy if exists "issuer updates own revocations" on public.revocation_lists;
+create policy "issuer updates own revocations" on public.revocation_lists
+  for update to authenticated
+  using (public.owns_accredited_issuer(issuer_did))
+  with check (public.owns_accredited_issuer(issuer_did));
+
+-- ---------------------------------------------------------------------------
+-- 6.6 issued_credentials: what an issuer has issued, written by the database
+-- ---------------------------------------------------------------------------
+-- Issuing — the irreversible, signed act — used to leave no record an issuer
+-- could read: the credential sat in the recipient's inbox, then in the
+-- recipient's vault, and both are the recipient's rows. So an issuer could
+-- not list what it had issued, and had nothing to withdraw from.
+--
+-- A trigger writes this log as the outbox row goes in, in the same
+-- transaction, so it cannot be skipped and cannot be written on its own:
+-- there is no insert policy at all.
+create table if not exists public.issued_credentials (
+  id uuid primary key default gen_random_uuid(),
+  issuer_did text not null,
+  jti uuid unique,
+  document_id text,
+  credential_type text,
+  label text,
+  recipient_email text,
+  issued_at timestamptz not null default now(),
+  issued_by uuid references auth.users(id) on delete set null
+);
+create index if not exists issued_credentials_issuer_idx on public.issued_credentials (issuer_did, issued_at desc);
+
+create or replace function public.log_issued_credential()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.issued_credentials
+    (issuer_did, jti, document_id, credential_type, label, recipient_email, issued_by)
+  values
+    (new.issuer_did,
+     new.credential_jti,
+     coalesce(nullif(new.certificate_id, ''), new.type_metadata ->> 'license_number'),
+     new.credential_type,
+     new.label,
+     new.recipient_email,
+     auth.uid());
+  return new;
+end;
+$$;
+
+drop trigger if exists log_issued_credential on public.pending_credentials;
+create trigger log_issued_credential
+  after insert on public.pending_credentials
+  for each row execute function public.log_issued_credential();
+
+alter table public.issued_credentials enable row level security;
+drop policy if exists "issuer reads own issuance log" on public.issued_credentials;
+create policy "issuer reads own issuance log" on public.issued_credentials
+  for select to authenticated
+  using (exists (
+    select 1 from public.issuers i
+    where i.did = issuer_did
+      and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+  ));
+
+-- ---------------------------------------------------------------------------
+-- 6.7 Single-use share links
+-- ---------------------------------------------------------------------------
+create or replace function public.get_share_for_verification(p_share_id uuid)
+returns table (
+  id uuid,
+  presentation text,
+  issuer_did text,
+  disclosed_fields jsonb,
+  credential_id uuid,
+  expires_at timestamptz,
+  created_at timestamptz,
+  status text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  s public.shares%rowtype;
+  s_json jsonb;
+  fields jsonb;
+  revoked timestamptz;
+  cap integer;
+begin
+  select * into s from public.shares where public.shares.id = p_share_id;
+
+  if not found then
+    return query select null::uuid, null::text, null::text, null::jsonb,
+                        null::uuid, null::timestamptz, null::timestamptz, 'not_found'::text;
+    return;
+  end if;
+
+  -- `disclosed_fields` and `revealed` both exist in the wild.
+  s_json := to_jsonb(s);
+  fields := coalesce(s_json -> 'disclosed_fields', s_json -> 'revealed', '[]'::jsonb);
+  revoked := nullif(s_json ->> 'revoked_at', '')::timestamptz;
+  cap := nullif(s_json ->> 'max_views', '')::integer;
+
+  if revoked is not null then
+    return query select s.id, null::text, s.issuer_did, null::jsonb,
+                        s.credential_id, s.expires_at, s.created_at, 'revoked'::text;
+    return;
+  end if;
+
+  if s.expires_at <= now() then
+    return query select s.id, null::text, s.issuer_did, null::jsonb,
+                        s.credential_id, s.expires_at, s.created_at, 'expired'::text;
+    return;
+  end if;
+
+  -- A capped link that has been used up behaves like an expired one: the
+  -- presentation is not handed out again.
+  if cap is not null and coalesce(s.view_count, 0) >= cap then
+    return query select s.id, null::text, s.issuer_did, null::jsonb,
+                        s.credential_id, s.expires_at, s.created_at, 'exhausted'::text;
+    return;
+  end if;
+
+  return query select s.id, s.presentation, s.issuer_did, fields,
+                      s.credential_id, s.expires_at, s.created_at, 'ok'::text;
+end;
+$$;
+
+revoke all on function public.get_share_for_verification(uuid) from public;
+grant execute on function public.get_share_for_verification(uuid) to anon, authenticated;
+
+create or replace function public.record_verification(p_share_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.shares
+  set view_count = coalesce(view_count, 0) + 1,
+      last_verified_at = now()
+  where id = p_share_id
+    and expires_at > now()
+    and revoked_at is null
+    and (max_views is null or coalesce(view_count, 0) < max_views);
+end;
+$$;
+
+revoke all on function public.record_verification(uuid) from public;
+grant execute on function public.record_verification(uuid) to anon, authenticated;
+
+-- =============================================================================
+-- 7. Proof requests (recruitment): see migrations/20261006_proof_requests.sql
+-- =============================================================================
+-- ---------------------------------------------------------------------------
+-- Allowlists
+-- ---------------------------------------------------------------------------
+create or replace function public.proof_always_revealed()
+returns text[]
+language sql
+immutable
+as $$
+  select array['institution','iss','iat','exp','name','degree_type','degree','graduation_date',
+    'certificate_id','sub_type','event_name','event_date','organizer','program_name','completion_date',
+    'achievement_title','date_awarded','reason','date','cert_name','issuing_body','date_certified',
+    'license_number','expiry_date']
+$$;
+
+-- The extra fields each credential type may be asked for; null for a type a
+-- request cannot name.
+create or replace function public.proof_requestable_extras(p_type text)
+returns text[]
+language sql
+immutable
+as $$
+  select case p_type
+    when 'academic_degree' then array['major','gpa']
+    when 'professional_certification' then array[]::text[]
+    when 'completion' then array['duration','department_or_role']
+    when 'attendance_participation' then array['role_description']
+    when 'merit_excellence' then array['basis_description']
+    when 'appreciation_service' then array['capacity']
+    else null
+  end
+$$;
+
+-- base64url → text. Raises on malformed input; callers catch it.
+create or replace function public.b64url_text(s text)
+returns text
+language sql
+immutable
+strict
+as $$
+  select convert_from(decode(rpad(translate(s, '-_', '+/'), ((length(s) + 3) / 4) * 4, '='), 'base64'), 'UTF8')
+$$;
+
+-- ---------------------------------------------------------------------------
+-- proof_requests
+-- ---------------------------------------------------------------------------
+create table if not exists public.proof_requests (
+  id uuid primary key default gen_random_uuid(),
+  owner uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Self-declared. Actik has not verified who the requester is, and says so.
+  requester_name text not null check (length(btrim(requester_name)) between 2 and 120),
+  title text not null check (length(btrim(title)) between 2 and 120),
+  description text not null default '' check (length(description) <= 2000),
+  requirements jsonb not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  closed_at timestamptz
+);
+
+create index if not exists proof_requests_owner_idx on public.proof_requests (owner);
+
+create or replace function public.proof_requests_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  r jsonb;
+  extras text[];
+  f text;
+begin
+  if tg_op = 'UPDATE' then
+    -- An employer may close a request, once. Nothing else changes after
+    -- candidates may have answered it.
+    if new.id is distinct from old.id or new.owner is distinct from old.owner
+       or new.requester_name is distinct from old.requester_name or new.title is distinct from old.title
+       or new.description is distinct from old.description or new.requirements is distinct from old.requirements
+       or new.created_at is distinct from old.created_at or new.expires_at is distinct from old.expires_at
+       or old.closed_at is not null then
+      raise exception 'a proof request can only be closed, once';
+    end if;
+    return new;
+  end if;
+
+  new.created_at := now();
+  if new.expires_at <= now() or new.expires_at > now() + interval '90 days 1 minute' then
+    raise exception 'a proof request must expire within 90 days';
+  end if;
+  if jsonb_typeof(new.requirements) is distinct from 'array'
+     or jsonb_array_length(new.requirements) not between 1 and 5 then
+    raise exception 'a proof request asks for between 1 and 5 credentials';
+  end if;
+  for r in select * from jsonb_array_elements(new.requirements) loop
+    if jsonb_typeof(r) <> 'object'
+       or exists (select 1 from jsonb_object_keys(r) k where k not in ('type', 'extras', 'note')) then
+      raise exception 'malformed requirement';
+    end if;
+    extras := public.proof_requestable_extras(r ->> 'type');
+    if extras is null then
+      raise exception 'credential type % cannot be requested', r ->> 'type';
+    end if;
+    if jsonb_typeof(r -> 'extras') is distinct from 'array'
+       or jsonb_typeof(r -> 'note') is distinct from 'string' or length(r ->> 'note') > 300 then
+      raise exception 'malformed requirement';
+    end if;
+    for f in select jsonb_array_elements_text(r -> 'extras') loop
+      if not (f = any (extras)) then
+        raise exception 'field % cannot be requested', f;
+      end if;
+    end loop;
+  end loop;
+  return new;
+end;
+$$;
+
+drop trigger if exists proof_requests_guard on public.proof_requests;
+create trigger proof_requests_guard
+  before insert or update on public.proof_requests
+  for each row execute function public.proof_requests_guard();
+
+alter table public.proof_requests enable row level security;
+
+drop policy if exists "owner reads own proof requests" on public.proof_requests;
+create policy "owner reads own proof requests" on public.proof_requests
+  for select to authenticated using (owner = auth.uid());
+
+drop policy if exists "signed-in user creates proof requests" on public.proof_requests;
+create policy "signed-in user creates proof requests" on public.proof_requests
+  for insert to authenticated with check (owner = auth.uid());
+
+drop policy if exists "owner closes own proof requests" on public.proof_requests;
+create policy "owner closes own proof requests" on public.proof_requests
+  for update to authenticated using (owner = auth.uid()) with check (owner = auth.uid());
+
+-- Anyone with the link may read a request — what is asked, by whom (as they
+-- describe themselves), until when. Not who made it, and not who answered.
+create or replace function public.get_proof_request(p_id uuid)
+returns table (
+  id uuid, requester_name text, title text, description text, requirements jsonb,
+  expires_at timestamptz, status text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.id, r.requester_name, r.title, r.description, r.requirements, r.expires_at,
+         case when r.closed_at is not null then 'closed'
+              when r.expires_at <= now() then 'expired'
+              else 'open' end
+  from public.proof_requests r
+  where r.id = p_id
+$$;
+
+revoke all on function public.get_proof_request(uuid) from public;
+grant execute on function public.get_proof_request(uuid) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- proof_responses
+-- ---------------------------------------------------------------------------
+create table if not exists public.proof_responses (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references public.proof_requests(id) on delete cascade,
+  responder uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- How the employer can reach the candidate, in the candidate's words.
+  contact text not null check (length(btrim(contact)) between 3 and 200),
+  items jsonb not null,
+  created_at timestamptz not null default now(),
+  unique (request_id, responder)
+);
+
+create index if not exists proof_responses_request_idx on public.proof_responses (request_id);
+
+-- Runs as definer: it must read the request, which the candidate cannot select.
+create or replace function public.proof_responses_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req public.proof_requests;
+  item jsonb;
+  idx int;
+  seen int[] := array[]::int[];
+  requirement jsonb;
+  allowed text[];
+  pres text;
+  payload jsonb;
+  disclosure text;
+  claim_name text;
+begin
+  select * into req from public.proof_requests where id = new.request_id;
+  if not found or req.closed_at is not null or req.expires_at <= now() then
+    raise exception 'this proof request is not open';
+  end if;
+  new.created_at := now();
+
+  if jsonb_typeof(new.items) is distinct from 'array'
+     or jsonb_array_length(new.items) not between 1 and jsonb_array_length(req.requirements) then
+    raise exception 'an answer has between 1 and % items', jsonb_array_length(req.requirements);
+  end if;
+
+  for item in select * from jsonb_array_elements(new.items) loop
+    if jsonb_typeof(item) <> 'object'
+       or exists (select 1 from jsonb_object_keys(item) k where k not in ('requirement', 'presentation'))
+       or jsonb_typeof(item -> 'requirement') is distinct from 'number'
+       or jsonb_typeof(item -> 'presentation') is distinct from 'string' then
+      raise exception 'malformed answer item';
+    end if;
+    idx := (item ->> 'requirement')::int;
+    if idx < 0 or idx >= jsonb_array_length(req.requirements) or idx = any (seen) then
+      raise exception 'answer item names no requirement, or one twice';
+    end if;
+    seen := seen || idx;
+    requirement := req.requirements -> idx;
+    allowed := public.proof_always_revealed()
+      || array(select jsonb_array_elements_text(requirement -> 'extras'));
+    pres := item ->> 'presentation';
+    if length(pres) > 100000 then
+      raise exception 'answer item too large';
+    end if;
+
+    begin
+      payload := public.b64url_text(split_part(split_part(pres, '~', 1), '.', 2))::jsonb;
+      if (payload ->> 'vct') is distinct from 'https://actik.kh/credentials/' || (requirement ->> 'type')
+         and not ((requirement ->> 'type') = 'academic_degree'
+                  and (payload ->> 'vct') = 'https://actik.kh/credentials/degree') then
+        raise exception using errcode = 'P0001', message = 'wrong credential type';
+      end if;
+      for disclosure in
+        select d from unnest(string_to_array(pres, '~')) with ordinality as t(d, n) where n > 1 and d <> ''
+      loop
+        claim_name := public.b64url_text(disclosure)::jsonb ->> 1;
+        if claim_name is null or not (claim_name = any (allowed)) then
+          raise exception using errcode = 'P0001', message = 'discloses a field the request cannot see';
+        end if;
+      end loop;
+    exception
+      when sqlstate 'P0001' then raise;
+      when others then raise exception 'malformed presentation';
+    end;
+  end loop;
+  return new;
+end;
+$$;
+
+drop trigger if exists proof_responses_guard on public.proof_responses;
+create trigger proof_responses_guard
+  before insert or update on public.proof_responses
+  for each row execute function public.proof_responses_guard();
+
+alter table public.proof_responses enable row level security;
+
+drop policy if exists "candidate answers as themselves" on public.proof_responses;
+create policy "candidate answers as themselves" on public.proof_responses
+  for insert to authenticated with check (responder = auth.uid());
+
+drop policy if exists "candidate and requester read answers" on public.proof_responses;
+create policy "candidate and requester read answers" on public.proof_responses
+  for select to authenticated using (
+    responder = auth.uid()
+    or exists (select 1 from public.proof_requests r where r.id = request_id and r.owner = auth.uid())
+  );
+
+-- A candidate may take an answer back. Nobody may edit one.
+drop policy if exists "candidate withdraws own answer" on public.proof_responses;
+create policy "candidate withdraws own answer" on public.proof_responses
+  for delete to authenticated using (responder = auth.uid());
+
+-- The candidate's own answers, with what they answered (they cannot select
+-- the requests themselves).
+create or replace function public.my_proof_responses()
+returns table (
+  id uuid, request_id uuid, title text, requester_name text, request_status text,
+  items_count int, created_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.request_id, r.title, r.requester_name,
+         case when r.closed_at is not null then 'closed'
+              when r.expires_at <= now() then 'expired'
+              else 'open' end,
+         jsonb_array_length(p.items), p.created_at
+  from public.proof_responses p
+  join public.proof_requests r on r.id = p.request_id
+  where p.responder = auth.uid()
+  order by p.created_at desc
+$$;
+
+revoke all on function public.my_proof_responses() from public, anon;
+grant execute on function public.my_proof_responses() to authenticated;
+
+-- =============================================================================
+-- 8. Employment records: see migrations/20261007_employment_records.sql
+-- =============================================================================
+-- ---------------------------------------------------------------------------
+-- 1. issuers.kind
+-- ---------------------------------------------------------------------------
+alter table public.issuers add column if not exists kind text not null default 'institution';
+alter table public.issuers drop constraint if exists issuers_kind_check;
+alter table public.issuers add constraint issuers_kind_check check (kind in ('institution', 'employer'));
+
+create or replace function public.issuers_guard_registry_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or public.is_admin(auth.uid()) then
+    return new;
+  end if;
+
+  if new.accredited    is distinct from old.accredited
+     or new.accredited_at is distinct from old.accredited_at
+     or new.accredited_by is distinct from old.accredited_by
+     or new.revoked_at    is distinct from old.revoked_at
+     or new.revoked_by    is distinct from old.revoked_by
+     or new.did           is distinct from old.did
+     or new.owner         is distinct from old.owner
+     or new.user_id       is distinct from old.user_id
+     or new.kind          is distinct from old.kind
+  then
+    raise exception 'accreditation and identity columns are admin-only'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. The outbox: an employer sends employment records only
+-- ---------------------------------------------------------------------------
+drop policy if exists "issue pending" on public.pending_credentials;
+create policy "issue pending" on public.pending_credentials
+  for insert to authenticated
+  with check (
+    exists (
+      select 1
+      from public.issuers i
+      where i.did = issuer_did
+        and i.accredited
+        and (auth.uid() = i.owner or (i.owner is null and auth.uid() = i.user_id))
+        and (i.kind = 'institution' or credential_type = 'employment_record')
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- 3. What an employment record may say
+-- ---------------------------------------------------------------------------
+create or replace function public.employment_record_claims()
+returns text[]
+language sql
+immutable
+as $$
+  select array['sub','name','institution','iss','iat','exp',
+    'job_title','employment_type','employment_start','employment_end','employment_status',
+    'department','role_description']
+$$;
+
+create or replace function public.pending_credentials_employment_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  token text := coalesce(new.sdjwt, '');
+  payload jsonb;
+  disclosure text;
+  claim_name text;
+  k text;
+begin
+  if new.credential_type is distinct from 'employment_record' then
+    return new;
+  end if;
+  if new.printed_code is not null then
+    raise exception 'an employment record has no printed code';
+  end if;
+  if new.type_metadata is not null then
+    for k in select jsonb_object_keys(new.type_metadata) loop
+      if not (k = any (public.employment_record_claims())) then
+        raise exception 'an employment record cannot carry %', k;
+      end if;
+    end loop;
+  end if;
+  begin
+    payload := public.b64url_text(split_part(split_part(token, '~', 1), '.', 2))::jsonb;
+    if (payload ->> 'vct') is distinct from 'https://actik.kh/credentials/employment_record' then
+      raise exception using errcode = 'P0001', message = 'an employment record must be signed as one';
+    end if;
+    for disclosure in
+      select d from unnest(string_to_array(token, '~')) with ordinality as t(d, n) where n > 1 and d <> ''
+    loop
+      claim_name := public.b64url_text(disclosure)::jsonb ->> 1;
+      if claim_name is null or not (claim_name = any (public.employment_record_claims())) then
+        raise exception using errcode = 'P0001', message = 'an employment record cannot carry ' || coalesce(claim_name, 'that');
+      end if;
+    end loop;
+  exception
+    when sqlstate 'P0001' then raise;
+    when others then raise exception 'malformed employment record';
+  end;
+  return new;
+end;
+$$;
+
+drop trigger if exists pending_credentials_employment_guard on public.pending_credentials;
+create trigger pending_credentials_employment_guard
+  before insert or update on public.pending_credentials
+  for each row execute function public.pending_credentials_employment_guard();
+
+-- ---------------------------------------------------------------------------
+-- 4. Proof requests may ask for employment records
+-- ---------------------------------------------------------------------------
+create or replace function public.proof_always_revealed()
+returns text[]
+language sql
+immutable
+as $$
+  select array['institution','iss','iat','exp','name','degree_type','degree','graduation_date',
+    'certificate_id','sub_type','event_name','event_date','organizer','program_name','completion_date',
+    'achievement_title','date_awarded','reason','date','cert_name','issuing_body','date_certified',
+    'license_number','expiry_date',
+    'job_title','employment_type','employment_start','employment_end','employment_status']
+$$;
+
+create or replace function public.proof_requestable_extras(p_type text)
+returns text[]
+language sql
+immutable
+as $$
+  select case p_type
+    when 'academic_degree' then array['major','gpa']
+    when 'professional_certification' then array[]::text[]
+    when 'completion' then array['duration','department_or_role']
+    when 'attendance_participation' then array['role_description']
+    when 'merit_excellence' then array['basis_description']
+    when 'appreciation_service' then array['capacity']
+    when 'employment_record' then array['department','role_description']
+    else null
+  end
+$$;
+
+-- =============================================================================
+-- 9. Holder binding: see migrations/20261008_holder_binding.sql
+-- =============================================================================
+-- Holder binding: credentials bound to the wallet they were issued to.
+--
+-- Each wallet has a holder key (src/lib/holderKey.ts). Its private half is
+-- encrypted with the wallet's own key before it leaves the device, so this
+-- table holds ciphertext the database cannot use; its public half is what an
+-- issuer writes into a credential as `cnf`. A bound credential must then be
+-- presented with a key-binding proof signed by that key, for that one share
+-- link or proof request (src/lib/sdjwt.ts: addKeyBinding / checkKeyBinding).
+
+create table if not exists public.holder_keys (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  -- Public only: an EC P-256 point and nothing that could be a private key.
+  public_jwk jsonb not null check (
+    public_jwk ->> 'kty' = 'EC' and public_jwk ->> 'crv' = 'P-256'
+    and public_jwk ? 'x' and public_jwk ? 'y' and not public_jwk ? 'd'
+  ),
+  private_cipher text not null,
+  private_iv text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.holder_keys enable row level security;
+
+drop policy if exists "holder reads own key" on public.holder_keys;
+create policy "holder reads own key" on public.holder_keys
+  for select to authenticated using (user_id = auth.uid());
+
+-- Made once. There is no update or delete policy: credentials are bound to
+-- this key, and replacing it would orphan every one of them.
+drop policy if exists "holder creates own key" on public.holder_keys;
+create policy "holder creates own key" on public.holder_keys
+  for insert to authenticated with check (user_id = auth.uid());
+
+-- The public key of a recipient, for an issuer about to bind a credential to
+-- it. Same callers as check_recipient_by_email.
+create or replace function public.holder_public_key(p_email text)
+returns table (public_jwk jsonb)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin_or_issuer(auth.uid()) then
+    raise exception 'not authorized to look up recipients';
+  end if;
+  return query
+    select k.public_jwk
+    from public.profiles p
+    join public.holder_keys k on k.user_id = p.id
+    where lower(p.email) = lower(p_email)
+    limit 1;
+end;
+$$;
+
+revoke all on function public.holder_public_key(text) from public, anon;
+grant execute on function public.holder_public_key(text) to authenticated;
+
+-- Proof answers may now carry a key-binding JWT after their disclosures.
+-- Runs as definer: it must read the request, which the candidate cannot select.
+create or replace function public.proof_responses_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req public.proof_requests;
+  item jsonb;
+  idx int;
+  seen int[] := array[]::int[];
+  requirement jsonb;
+  allowed text[];
+  pres text;
+  payload jsonb;
+  disclosure text;
+  claim_name text;
+begin
+  select * into req from public.proof_requests where id = new.request_id;
+  if not found or req.closed_at is not null or req.expires_at <= now() then
+    raise exception 'this proof request is not open';
+  end if;
+  new.created_at := now();
+
+  if jsonb_typeof(new.items) is distinct from 'array'
+     or jsonb_array_length(new.items) not between 1 and jsonb_array_length(req.requirements) then
+    raise exception 'an answer has between 1 and % items', jsonb_array_length(req.requirements);
+  end if;
+
+  for item in select * from jsonb_array_elements(new.items) loop
+    if jsonb_typeof(item) <> 'object'
+       or exists (select 1 from jsonb_object_keys(item) k where k not in ('requirement', 'presentation'))
+       or jsonb_typeof(item -> 'requirement') is distinct from 'number'
+       or jsonb_typeof(item -> 'presentation') is distinct from 'string' then
+      raise exception 'malformed answer item';
+    end if;
+    idx := (item ->> 'requirement')::int;
+    if idx < 0 or idx >= jsonb_array_length(req.requirements) or idx = any (seen) then
+      raise exception 'answer item names no requirement, or one twice';
+    end if;
+    seen := seen || idx;
+    requirement := req.requirements -> idx;
+    allowed := public.proof_always_revealed()
+      || array(select jsonb_array_elements_text(requirement -> 'extras'));
+    pres := item ->> 'presentation';
+    if length(pres) > 100000 then
+      raise exception 'answer item too large';
+    end if;
+
+    begin
+      payload := public.b64url_text(split_part(split_part(pres, '~', 1), '.', 2))::jsonb;
+      if (payload ->> 'vct') is distinct from 'https://actik.kh/credentials/' || (requirement ->> 'type')
+         and not ((requirement ->> 'type') = 'academic_degree'
+                  and (payload ->> 'vct') = 'https://actik.kh/credentials/degree') then
+        raise exception using errcode = 'P0001', message = 'wrong credential type';
+      end if;
+      -- A key-bound answer ends with the holder's KB-JWT instead of '~':
+      -- that last part is a signature, not a disclosure.
+      for disclosure in
+        select d from unnest(string_to_array(pres, '~')) with ordinality as t(d, n)
+        where n > 1 and d <> ''
+          and not (n = cardinality(string_to_array(pres, '~')) and right(pres, 1) <> '~')
+      loop
+        claim_name := public.b64url_text(disclosure)::jsonb ->> 1;
+        if claim_name is null or not (claim_name = any (allowed)) then
+          raise exception using errcode = 'P0001', message = 'discloses a field the request cannot see';
+        end if;
+      end loop;
+    exception
+      when sqlstate 'P0001' then raise;
+      when others then raise exception 'malformed presentation';
+    end;
+  end loop;
+  return new;
+end;
+$$;
+
