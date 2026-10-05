@@ -1,5 +1,7 @@
 # Actik — issue and manage digital assets (MVP)
 
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+
 Actik has two purposes:
 
 1. **Issue digital assets** — an institution signs an asset in its own name,
@@ -289,3 +291,11 @@ how CamboVerse should read it, and the open identity question (D5):
   independent mirrors would close both; neither is built.
 - Replace the hand-rolled SD-JWT with `@sd-jwt/sd-jwt-vc` for production.
 ```
+
+## License
+
+Actik is open source under the [Apache License 2.0](./LICENSE), maintained by the
+CamboVerse Center, National University of Management (NUM). The name and logo are
+covered by [TRADEMARK.md](./TRADEMARK.md). Third-party code is credited in
+[NOTICE](./NOTICE). See [CONTRIBUTING.md](./CONTRIBUTING.md) and
+[SECURITY.md](./SECURITY.md).

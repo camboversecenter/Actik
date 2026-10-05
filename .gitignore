@@ -23,3 +23,11 @@ scratch/
 # case where someone copies it in by hand.
 *.private.jwk.json
 trustlist-input.json
+
+# Personal / local AI tooling - never commit (AGENTS.md and CLAUDE.md stay tracked)
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+.claude/skills/
+.agents/skills/
+skills-lock.json
