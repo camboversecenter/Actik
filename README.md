@@ -51,12 +51,11 @@ certificates it implements the core lifecycle from the design proposal:
 npm install
 ```
 
-### 2. Add the encryption library
+### 2. The encryption library (already included)
 
-zk-vault-react ships as source you copy in. Follow `src/vault/README.md`:
-clone https://github.com/sengtha/zk-vault-react and copy its `src/zk-vault/`
-into `src/vault/zk-vault/` and its `src/components/` into `src/vault/components/`.
-(Until you do, the build fails on the vault imports — that's expected.)
+zk-vault-react is already vendored into `src/vault/zk-vault/` and
+`src/vault/components/` (MIT, credited in [NOTICE](./NOTICE)), so there is
+nothing to copy in. To update it from upstream, see `src/vault/README.md`.
 
 ### 3. Create the Supabase project
 
@@ -128,7 +127,7 @@ cp .env.example .env   # project URL, anon key, and VITE_TRUST_ROOT_KEYS from st
 
 ```bash
 npm run dev            # http://localhost:5173
-npm run build          # production build (after the vault library is added)
+npm run build          # production build
 npm run preview
 ```
 
