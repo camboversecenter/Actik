@@ -153,7 +153,7 @@ export default function RegisterIssuer() {
         type: type,
         // Employers may issue employment records only. The Root decides what
         // is signed into the trust list; this is what the registry proposes.
-        kind: type === 'Employer' ? 'employer' : 'institution',
+        kind: type === 'Employer' ? 'employer' : type === 'Identity verifier' ? 'identity_verifier' : 'institution',
         did: did,
         public_key: JSON.stringify(jwkToStore),
         accredited: false,
@@ -165,7 +165,7 @@ export default function RegisterIssuer() {
         res = await supabase.from('issuers').insert({
           owner: currentUser.id,
           name: name.trim(),
-          kind: type === 'Employer' ? 'employer' : 'institution',
+          kind: type === 'Employer' ? 'employer' : type === 'Identity verifier' ? 'identity_verifier' : 'institution',
           did: did,
           public_jwk: jwkToStore,
           accredited: false
@@ -441,10 +441,14 @@ export default function RegisterIssuer() {
               <option value="Ministry">Ministry</option>
               <option value="Training centre">Training centre</option>
               <option value="Employer">{t('dashboard.type_employer')}</option>
+              <option value="Identity verifier">{t('dashboard.type_identity_verifier')}</option>
               <option value="Other">Other</option>
             </select>
             {type === 'Employer' && (
               <p className="text-xs text-stone-500 mt-1 leading-relaxed">{t('dashboard.employer_note')}</p>
+            )}
+            {type === 'Identity verifier' && (
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed">{t('dashboard.identity_verifier_note')}</p>
             )}
             {errors.type && (
               <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.type}</p>

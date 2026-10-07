@@ -4,6 +4,7 @@
 
 import type { JWK } from 'jose'
 import {
+  isIssuerKind,
   keyId,
   publicOnly,
   signStatement,
@@ -21,7 +22,7 @@ export interface IssuerSnapshot {
   name: string
   domain?: string | null
   accredited: boolean
-  /** 'employer' admits a registered employer; anything else an institution. */
+  /** 'employer' or 'identity_verifier' admits that tier; null or absent an institution. */
   kind?: string | null
   revoked_at?: string | null
   keys: Array<{
@@ -74,7 +75,7 @@ export async function buildTrustList(options: {
     // issuer said about itself when it registered. A kind this build does not
     // recognise stops it, rather than admit anyone at the wider tier.
     const kind = s.kind ?? 'institution'
-    if (kind !== 'institution' && kind !== 'employer') {
+    if (!isIssuerKind(kind)) {
       throw new Error(`Issuer ${s.did} has unknown kind "${s.kind}"; nothing was signed.`)
     }
     issuers.push({ did: s.did, name: s.name, domain: s.domain ?? null, kind, keys })

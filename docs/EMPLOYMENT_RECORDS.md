@@ -14,8 +14,9 @@ The trust list now carries each issuer's **kind**, signed by the Root:
 
 | Kind | May issue | Shown to verifiers as |
 |---|---|---|
-| `institution` | every credential type, including employment records for its own staff | Accredited institution |
+| `institution` | every credential type except identity attestations, including employment records for its own staff | Accredited institution |
 | `employer` | **employment records only** | Registered employer |
+| `identity_verifier` | identity attestations only — see [`IDENTITY_VERIFIERS.md`](IDENTITY_VERIFIERS.md) | Identity verifier |
 
 - A company registers like an institution and picks **Employer** as its type.
   The kind is fixed at registration; after that only an admin can change it.

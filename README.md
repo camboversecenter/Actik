@@ -226,6 +226,52 @@ they accept it; they can decline. It never carries salary, reason for leaving or
 ratings (the database refuses them). "Current" is always shown as of the day it
 was signed. Details: [`docs/EMPLOYMENT_RECORDS.md`](docs/EMPLOYMENT_RECORDS.md).
 
+## Identity verifiers
+
+Individual ownership needs a valid person behind the wallet. An **identity
+verifier** — a third trust-list tier, admitted by the Root separately from
+institutions — sees a person in person with their original ID card or
+passport, and signs an **identity attestation** into that person's wallet: the
+name exactly as on the document, which document was seen, and when. Never the
+document number, a birth date, a photo or a biometric (the database refuses
+them), and always bound to the person's wallet key (unbound ones are refused).
+Institutions may no longer issue this type; identity verifiers may issue
+nothing else. In a proof request, the employer is told when a degree and an
+identity check were presented from the same wallet. Details:
+[`docs/IDENTITY_VERIFIERS.md`](docs/IDENTITY_VERIFIERS.md).
+
+## Key recovery
+
+A wallet key can be retired — **lost** (forgotten PIN, wallet reset),
+**compromised** (someone else has the wallet) or **replaced** — and never
+reactivated. The next unlock makes a new key, and the holder asks each issuer
+to reissue to it (**Account → Wallet key**), proving continuity with either the
+old key (if still available and not compromised) or a fresh identity check
+bound to the new key whose name matches. The issuer reissues the same claims
+to the new key and withdraws the old credential as corrected; the wallet swaps
+the old copy for the new one on accept. If the credentials were lost with the
+wallet, the issuer issues them again from its own records. Details:
+[`docs/KEY_RECOVERY.md`](docs/KEY_RECOVERY.md).
+
+## Verified contacts
+
+"Is it really you, right now?" — the deepfake check. People add each other in
+person by QR (or from a contact card carrying a bound identity check); the
+contact is stored end-to-end encrypted in their own wallet. **Check** sends a
+two-minute challenge addressed to the other person's wallet key; they approve
+with their PIN, their wallet signs `{nonce, aud, iat}`, and the asker's app
+verifies it against the key it stored and shows "confirmed at hh:mm". No
+register, no stored contact graph, never a spoken code. It cannot tell the
+person from someone holding their unlocked phone and PIN, and a first link made
+with an impostor confirms the impostor; the app says so. Details:
+[`docs/VERIFIED_CONTACTS.md`](docs/VERIFIED_CONTACTS.md).
+
+## Tokenized real-world assets (designed, not built)
+
+Waits for a legal partner who keeps an official register; a registrar tier,
+asset records as signed register extracts, and transfer in the register, not
+in ACTIK: [`docs/TOKENIZED_ASSETS.md`](docs/TOKENIZED_ASSETS.md).
+
 ## Proof requests (recruitment)
 
 An employer asks for proof — **Requests → New request**: up to five credential
@@ -272,13 +318,15 @@ how CamboVerse should read it, and the open identity question (D5):
   is signed by a key pinned in the app, not read from a table, nobody with
   database access can add an institution or swap its key.
 - **Recovery.** zk-vault has zero key-recovery by design, so the issuer remains
-  the source of truth: a lost vault is recovered by re-issuance, never by the DB.
+  the source of truth: a lost vault is recovered by re-issuance, never by the DB
+  — to a new wallet key, after the holder proves continuity (see Key recovery).
 
 ## Limitations (deliberate MVP scope)
 
-- **No Key Binding (KB-JWT).** Presentations aren't bound to the holder's key,
-  so a forwarded or leaked link can be replayed until it expires, is revoked,
-  or — if the holder chose *one view only* — has been opened once.
+- **Unbound credentials.** Credentials issued before their holder had a
+  wallet carry no holder key, so a forwarded or leaked link to one can be
+  replayed until it expires, is revoked, or — if the holder chose *one view
+  only* — has been opened once. Bound credentials cannot (see Holder binding).
 - **No `did:web` hosting.** Issuer keys come from the Root-signed trust list,
   not from `/.well-known/did.json`.
 - **Issuer key in the browser.** It is held as a non-extractable key in memory,

@@ -17,5 +17,9 @@ export function displayClaim(t: T, key: string, value: unknown, issuedAt: number
     const label = t(`proof.employment_type_${value}`)
     if (label !== `proof.employment_type_${value}`) return label
   }
+  if ((key === 'evidence_type' || key === 'verification_level') && typeof value === 'string' && /^[a-z_]+$/.test(value)) {
+    const label = t(`proof.${key}_${value}`)
+    if (label !== `proof.${key}_${value}`) return label
+  }
   return typeof value === 'string' || typeof value === 'number' ? String(value) : JSON.stringify(value)
 }

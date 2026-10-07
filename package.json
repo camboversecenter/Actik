@@ -10,13 +10,16 @@
     "preview": "vite preview",
     "test:sdjwt": "tsx test-sdjwt.ts",
     "test:claim": "tsx test-claim.ts",
-    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed && npm run test:museum && npm run test:proof && npm run test:employment && npm run test:binding",
+    "test": "npm run test:sdjwt && npm run test:claim && npm run test:trust && npm run test:printed && npm run test:museum && npm run test:proof && npm run test:employment && npm run test:binding && npm run test:identity && npm run test:recovery && npm run test:contacts",
     "test:trust": "tsx test-trust.ts",
     "test:printed": "tsx test-printed.ts",
     "test:museum": "tsx test-museum.ts",
     "test:proof": "tsx test-proof.ts",
     "test:employment": "tsx test-employment.ts",
     "test:binding": "tsx test-binding.ts",
+    "test:identity": "tsx test-identity.ts",
+    "test:recovery": "tsx test-recovery.ts",
+    "test:contacts": "tsx test-contacts.ts",
     "measure": "tsx scripts/measure.ts"
   },
   "dependencies": {

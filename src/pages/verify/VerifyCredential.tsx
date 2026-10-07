@@ -58,7 +58,7 @@ interface IssuerRecord {
   did: string
   accredited: boolean
   /** From the signed trust list: an accredited institution, or a registered employer. */
-  kind: 'institution' | 'employer'
+  kind: 'institution' | 'employer' | 'identity_verifier'
 }
 
 interface ParsedPresentation {
@@ -199,6 +199,9 @@ function getFieldLabel(key: string, t: (k: string) => string): string {
     case 'employment_end':
     case 'employment_status':
     case 'department':
+    case 'verification_level':
+    case 'evidence_type':
+    case 'verified_on':
       return t(`proof.field_${key}`)
     default:
       return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
@@ -1116,7 +1119,7 @@ export default function VerifyCredential() {
                         </div>
                       )
                     }
-                    if (key === 'employment_status' || key === 'employment_type') {
+                    if (key === 'employment_status' || key === 'employment_type' || key === 'evidence_type' || key === 'verification_level') {
                       return (
                         <div key={key} className="py-2.5 flex flex-col sm:flex-row sm:justify-between sm:items-start text-sm gap-1 sm:gap-0">
                           <span className="font-khmer text-stone-500 font-medium">{getFieldLabel(key, t)}</span>

@@ -30,7 +30,8 @@ const translations = {
       dashboard: 'Dashboard',
       issued: 'Issued',
       settings: 'Settings',
-      requests: 'Requests'
+      requests: 'Requests',
+      contacts: 'Contacts',
     },
     layout: {
       loading: 'Loading Actik...',
@@ -57,6 +58,7 @@ const translations = {
       view_all_notifications: 'View all notifications',
       category_academic_degree: 'Academic Degrees',
       category_employment_record: 'Employment',
+      category_identity_attestation: 'Identity',
       category_other: 'Other',
       see_all: 'See all ({count})',
       all_count: 'All {count}',
@@ -301,7 +303,7 @@ const translations = {
       return_wallet_claim: 'Return to wallet to claim your credentials',
       go_dashboard: 'Go to dashboard',
       delete_vault_warning: 'This will delete your vault',
-      reset_vault_desc: 'Resetting your vault will permanently delete all encrypted credentials stored in it. You will need to re-claim all credentials from your institutions. This action cannot be undone.',
+      reset_vault_desc: 'Resetting your vault will permanently delete all encrypted credentials stored in it, and retire your wallet key as lost. To get your credentials back, get a new identity check in person, then ask each issuer to reissue them (Account → Wallet key). This action cannot be undone.',
       type_reset_confirm: 'Type RESET to confirm',
       reset_btn: 'Reset',
       change_unlock_method_q: 'Change Unlock Method?',
@@ -345,6 +347,9 @@ const translations = {
       status_issued: 'Issued',
       status_withdrawn: 'Withdrawn',
       manage_withdrawals: 'Withdraw a credential, or renew your withdrawal list',
+      reissue_requests: 'Reissue requests (new wallet keys)',
+      reissue_banner: 'Reissuing to this person\'s new wallet key, from your own records. When you issue, the credential it replaces is withdrawn as “replaced by a corrected credential”, and the request is closed.',
+      reissue_not_withdrawn: 'Issued, but the replaced credential was not withdrawn yet — withdraw it under Withdrawals:',
       status_pending: 'Pending',
       stat_total_issued: 'Total issued',
       stat_claimed: 'Claimed',
@@ -506,6 +511,26 @@ const translations = {
       job_description_opt: 'Role, in a line (optional)',
       employment_never: 'An employment record never carries salary, reason for leaving, performance or disciplinary notes. When the job ends or the title changes, issue a new record and withdraw this one as “replaced by a corrected credential”.',
       employer_note: 'A registered employer issues employment records to its staff — job title and dates — and nothing else. Verifiers show it as a registered employer, not an accredited institution.',
+      type_identity_verifier: 'Identity verifier (checks ID documents in person)',
+      identity_verifier_note: 'An identity verifier sees a person in person with their original national ID card or passport, compares the photo with the face, and signs an identity check bound to that person’s wallet — and nothing else. It keeps no copy of the document. Admission is decided by the trust Root, separately from institutions.',
+      person_section: 'Person',
+      person_email: 'Person’s email',
+      person_email_req: 'Person’s email',
+      person_found: '✓ This person has an Actik wallet',
+      issuing_verifier: 'Identity verifier',
+      issue_desc_identity: 'Sign an identity check for a person who is in front of you with their original ID card or passport. It is bound to their wallet, and reaches it only if they accept it.',
+      name_as_on_document: 'Name, exactly as on the document',
+      type_identity: 'Identity check',
+      type_identity_desc: 'Confirms you saw this person in person with their original ID card or passport. Bound to their wallet.',
+      evidence_type_req: 'Document seen',
+      evidence_type_required: 'Choose the document you saw.',
+      verified_on_req: 'Checked on',
+      verified_on_required: 'Enter the day you saw the document (not in the future).',
+      verification_level: 'How it was checked',
+      saw_original_confirm: 'I have seen the original document in person and compared its photo with the person in front of me.',
+      saw_original_required: 'Confirm that you saw the original document in person and compared its photo.',
+      identity_needs_wallet: 'This person has no Actik wallet key yet. Ask them to open their Actik wallet once, then look them up again: an identity check is only ever issued bound to their wallet.',
+      identity_never: 'An identity check never carries the document number, date of birth, photo, face or fingerprint, address or notes. There is nowhere to enter them, and nothing to upload. Keep no copy of the document.',
       register_btn_text: 'Register Institution'
     },
     role: {
@@ -729,6 +754,15 @@ const translations = {
       type_employment_record: 'Employment record',
       kind_institution: 'Accredited institution',
       kind_employer: 'Registered employer',
+      kind_identity_verifier: 'Identity verifier',
+      type_identity_attestation: 'Identity check (in person)',
+      field_verification_level: 'How it was checked',
+      field_evidence_type: 'Document seen',
+      field_verified_on: 'Checked on',
+      evidence_type_national_id_card: 'National ID card',
+      evidence_type_passport: 'Passport',
+      verification_level_in_person_document: 'In person, with the original document',
+      one_wallet_with_identity: 'The credentials in this answer and the identity check are bound to the same wallet: each came with that wallet’s proof, made for this request. The identity verifier saw the person who holds this wallet, with their original document. This is evidence, not a verdict: compare the name, and meet the person.',
       holder_bound: 'Sent from the wallet it was issued to: the issuer bound it to that wallet’s key, and this came with that key’s proof, made for you. Someone who copied it could not have sent it.',
       holder_unbound: 'Not bound to a wallet: it was issued before its holder had an Actik wallet. Anyone holding a copy could send it, so check the person’s ID.',
       field_job_title: 'Job title',
@@ -744,6 +778,98 @@ const translations = {
       employment_type_contract: 'Contract',
       employment_type_internship: 'Internship',
       employment_type_volunteer: 'Volunteer',
+    },
+    walletkey: {
+      title: 'Wallet key',
+      intro: 'Your wallet has its own key. Credentials issued to you are bound to it, so only this wallet can present them. If the key is lost or someone else has your wallet, retire it: a new key is made, and you ask each issuer to reissue your credentials to it.',
+      unlock_first: 'Unlock your wallet first: your key is sealed inside it.',
+      current: 'Current key',
+      current_desc: 'Credentials issued to you from now on are bound to key',
+      replace: 'Replace my wallet key',
+      compromised: 'My wallet was compromised',
+      compromised_hint: 'Compromised means someone else may have your unlocked phone or your PIN. A compromised key can never again prove anything, so to recover you will need a new identity check in person. Change your PIN too.',
+      confirm_replaced: 'Replace your wallet key? Credentials bound to the current key will need to be reissued by their issuers. You can prove it is you with the old key, which stays in your wallet.',
+      confirm_compromised: 'Retire your wallet key as compromised? It can never prove anything again. To move your credentials you will need a fresh identity check in person.',
+      confirm_lost: 'Retire the key this wallet cannot open, as lost? A new key is made. To get your credentials reissued you will need a fresh identity check in person.',
+      confirm_mark_compromised: 'Mark this old key as compromised? It can then no longer prove continuity, and open requests that rely on it are declined.',
+      retired_ok: 'Done. Your wallet now has a new key.',
+      unreadable_title: 'This wallet cannot open your wallet key',
+      unreadable_desc: 'Your wallet was reset, or the PIN that sealed the key is gone. Credentials bound to that key cannot be presented any more. Retire it as lost; then get a new identity check in person and ask each issuer to reissue.',
+      retire_lost: 'Retire it as lost and make a new key',
+      history: 'Retired keys',
+      reason_lost: 'Lost',
+      reason_compromised: 'Compromised',
+      reason_replaced: 'Replaced',
+      mark_compromised: 'Mark compromised',
+      to_move: 'Credentials bound to an old key ({count})',
+      have_identity: 'You have an identity check bound to your current key: issuers can use it to confirm it is you.',
+      no_identity: 'If the old key is lost or compromised, get an identity check first: an identity verifier sees you in person with your original ID card or passport and issues it to this wallet.',
+      nothing_to_move: 'Nothing to move: every credential in your wallet is bound to your current key.',
+      asked: 'Asked',
+      ask_reissue: 'Ask the issuer to reissue',
+      need_identity: 'You need an identity check bound to your current key first. Visit an identity verifier with your original ID card or passport.',
+      request_sent: 'Request sent. The issuer checks it and, if it holds, sends the reissued credential to your inbox.',
+      lost_heading: 'Credentials lost with an old wallet',
+      lost_desc: 'If your wallet was reset, the credentials in it are gone too. Ask each issuer that issued you something: they find it in their own records and issue it again to your new key. Your identity check is how they know it is you.',
+      choose_issuer: 'Choose an issuer…',
+      ask_issuer: 'Ask this issuer',
+      requests: 'Your reissue requests',
+      status_open: 'Waiting for the issuer',
+      status_reissued: 'Reissued',
+      status_declined: 'Declined',
+      proof_old_key: 'proven with the old key',
+      proof_identity: 'proven with an identity check',
+      limits: 'What this cannot do: if someone has your unlocked phone or your PIN, they can present your credentials until you retire the key — and if they get to an identity verifier with your document before you do, they could ask for reissues too. Issuers withdraw the old credentials when they reissue, so a stolen copy stops verifying.',
+    },
+    contacts: {
+      title: 'Verified contacts',
+      intro: 'A call or a voice message can be faked. A signature from someone’s own wallet cannot, without their unlocked phone and PIN. Add people when you meet them, then ask “is it really you, right now?” — their wallet answers.',
+      list: 'Your contacts ({count})',
+      none: 'No contacts yet. Scan someone’s code when you meet them.',
+      via_identity: 'Identity checked by {verifier} on {date}',
+      via_in_person: 'Added in person',
+      check: 'Check it’s them',
+      remove: 'Remove',
+      remove_confirm: 'Remove {name} from your contacts?',
+      waiting: 'Waiting for {name} to approve on their phone…',
+      confirmed: '{name} confirmed at {time}, from the wallet you added. This is evidence, not a verdict: someone holding their unlocked phone and PIN could do the same.',
+      declined: '{name} declined. If you are on a call with “{name}”, treat it as not them.',
+      expired: 'No answer in time. If you are on a call with “{name}”, do not trust it until they confirm.',
+      add: 'Add a contact',
+      add_desc: 'In person: scan their code, and they scan yours. Or paste a contact card they sent you — if it carries an identity check, its name is used.',
+      read_card: 'Read card',
+      card_identity: '{name} — identity checked in person by {verifier} on {date}, bound to this wallet.',
+      card_plain: 'A wallet key, with no identity check. Add it only if you scanned it from the person, in front of you. What do you call them?',
+      name_placeholder: 'Their name',
+      save: 'Add contact',
+      own_card: 'That is your own card.',
+      already_known: 'This person is already in your contacts.',
+      my_card: 'Your card',
+      my_card_desc: 'Let the other person scan this when you meet. It carries your wallet’s public key only.',
+      id_card_ready: 'You can also send a card carrying your identity check, so someone you have not met can see who checked you.',
+      no_id_card: 'Get an identity check to send a card others can verify without meeting you.',
+      copy_id_card: 'Copy card with identity check',
+      scan_camera: 'Scan with camera',
+      stop: 'Stop',
+      camera_error: 'The camera could not be opened. Allow camera access, or paste the card instead.',
+      limits_title: 'What this cannot do',
+      limit_never_code: 'Never read out a code to prove who you are: whoever fakes the call can relay it. Only the wallet answers.',
+      limit_phone: 'It cannot tell the person from someone holding their unlocked phone and their PIN.',
+      limit_double: 'If the first link was made with an impostor — in person, or from a card without an identity check — every later check confirms the impostor.',
+    },
+    presence: {
+      asking: '{name} is asking you to confirm it’s you, right now',
+      unknown_asking: 'Someone who is not in your contacts is asking you to confirm it’s you',
+      unknown_warning: 'You have not added this person. If you did not expect this, decline: approving tells them your wallet is in your hands right now.',
+      explain: 'Approve only if you are in contact with them at this moment and expected it. Your wallet signs a one-time answer for them alone. Never read out a code instead.',
+      pin: 'Your PIN',
+      approve: 'Approve',
+      decline: 'Decline',
+      wrong_pin: 'That PIN is not right.',
+      signed_out: 'You are signed out.',
+      not_this_key: 'This request was made for a wallet key you no longer use.',
+      use_passkey: 'Approve with passkey instead',
+      passkey_failed: 'The passkey did not confirm it is you.',
     },
     museum: {
       title: 'Add to a CamboVerse museum',
@@ -906,7 +1032,8 @@ const translations = {
       dashboard: 'ផ្ទាំងគ្រប់គ្រង',
       issued: 'បានចេញ',
       settings: 'ការកំណត់',
-      requests: 'សំណើ' // TODO(km-review)
+      requests: 'សំណើ', // TODO(km-review)
+      contacts: 'ទំនាក់ទំនង', // TODO(km-review)
     },
     layout: {
       loading: 'កំពុងផ្ទុក Actik...',
@@ -933,6 +1060,7 @@ const translations = {
       view_all_notifications: 'មើលការជូនដំណឹងទាំងអស់', // TODO(km-review)
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
       category_employment_record: 'ការងារ', // TODO(km-review)
+      category_identity_attestation: 'អត្តសញ្ញាណ', // TODO(km-review)
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
       all_count: 'ទាំងអស់ {count}',
@@ -1177,7 +1305,7 @@ const translations = {
       return_wallet_claim: 'ត្រឡប់ទៅកាបូបដើម្បីទទួលវិញ្ញាបនបត្ររបស់អ្នក',
       go_dashboard: 'ទៅកាន់ផ្ទាំងគ្រប់គ្រង',
       delete_vault_warning: 'នេះនឹងលុបកាបូបរបស់អ្នកចោល',
-      reset_vault_desc: 'ការកំណត់កាបូបឡើងវិញនឹងលុបវិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបទាំងអស់ជារៀងរហូត។ អ្នកនឹងត្រូវទទួលវិញ្ញាបនបត្រឡើងវិញពីស្ថាប័នរបស់អ្នក។ សកម្មភាពនេះមិនអាចត្រឡប់ថយក្រោយបានទេ។',
+      reset_vault_desc: 'ការកំណត់កាបូបឡើងវិញនឹងលុបវិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបទាំងអស់ជារៀងរហូត ហើយដកកូនសោកាបូបរបស់អ្នកចេញជា “បាត់”។ ដើម្បីទទួលវិញ្ញាបនបត្រវិញ សូមធ្វើការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់ រួចស្នើឱ្យអ្នកចេញនីមួយៗចេញឡើងវិញ (គណនី → កូនសោកាបូប)។ សកម្មភាពនេះមិនអាចត្រឡប់ថយក្រោយបានទេ។', // TODO(km-review)
       type_reset_confirm: 'វាយបញ្ចូល RESET ដើម្បីបញ្ជាក់',
       reset_btn: 'កំណត់ឡើងវិញ',
       change_unlock_method_q: 'ផ្លាស់ប្តូរវិធីសាស្ត្របើកកាបូបមែនទេ?',
@@ -1221,6 +1349,9 @@ const translations = {
       status_issued: 'បានចេញ', // TODO(km-review)
       status_withdrawn: 'បានដកហូត', // TODO(km-review)
       manage_withdrawals: 'ដកហូតវិញ្ញាបនបត្រ ឬបន្តបញ្ជីដកហូតរបស់អ្នក', // TODO(km-review)
+      reissue_requests: 'សំណើចេញឡើងវិញ (កូនសោកាបូបថ្មី)', // TODO(km-review)
+      reissue_banner: 'កំពុងចេញឡើងវិញទៅកូនសោកាបូបថ្មីរបស់បុគ្គលនេះ ពីកំណត់ត្រារបស់អ្នក។ ពេលអ្នកចេញ លិខិតដែលវាជំនួសនឹងត្រូវដកវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ” ហើយសំណើត្រូវបានបិទ។', // TODO(km-review)
+      reissue_not_withdrawn: 'បានចេញ ប៉ុន្តែលិខិតដែលត្រូវជំនួសមិនទាន់ត្រូវបានដកវិញទេ — សូមដកវានៅក្នុង ការដកហូត៖', // TODO(km-review)
       status_pending: 'រង់ចាំ',
       stat_total_issued: 'ចេញសរុប', // TODO(km-review)
       stat_claimed: 'បានទទួល', // TODO(km-review)
@@ -1382,6 +1513,26 @@ const translations = {
       job_description_opt: 'តួនាទី មួយបន្ទាត់ (ស្រេចចិត្ត)', // TODO(km-review)
       employment_never: 'កំណត់ត្រាការងារមិនដែលមានប្រាក់ខែ មូលហេតុនៃការចាកចេញ ការវាយតម្លៃ ឬកំណត់ចំណាំវិន័យទេ។ នៅពេលការងារបញ្ចប់ ឬមុខតំណែងផ្លាស់ប្តូរ សូមចេញកំណត់ត្រាថ្មី ហើយដកកំណត់ត្រានេះវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ”។', // TODO(km-review)
       employer_note: 'និយោជកដែលបានចុះឈ្មោះចេញកំណត់ត្រាការងារជូនបុគ្គលិករបស់ខ្លួន — មុខតំណែង និងកាលបរិច្ឆេទ — ហើយគ្មានអ្វីផ្សេងទៀតទេ។ អ្នកផ្ទៀងផ្ទាត់បង្ហាញវាជានិយោជកដែលបានចុះឈ្មោះ មិនមែនជាស្ថាប័នដែលទទួលស្គាល់ទេ។', // TODO(km-review)
+      type_identity_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ (ពិនិត្យឯកសារអត្តសញ្ញាណដោយផ្ទាល់)', // TODO(km-review)
+      identity_verifier_note: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជួបមនុស្សដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម ប្រៀបធៀបរូបថតជាមួយមុខ ហើយចុះហត្ថលេខាលើការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកាបូបរបស់អ្នកនោះ — ហើយគ្មានអ្វីផ្សេងទៀតទេ។ វាមិនរក្សាទុកច្បាប់ចម្លងឯកសារទេ។', // TODO(km-review)
+      person_section: 'បុគ្គល', // TODO(km-review)
+      person_email: 'អ៊ីមែលរបស់បុគ្គល', // TODO(km-review)
+      person_email_req: 'អ៊ីមែលរបស់បុគ្គល', // TODO(km-review)
+      person_found: '✓ បុគ្គលនេះមានកាបូប Actik', // TODO(km-review)
+      issuing_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ', // TODO(km-review)
+      issue_desc_identity: 'ចុះហត្ថលេខាលើការពិនិត្យអត្តសញ្ញាណសម្រាប់បុគ្គលដែលនៅមុខអ្នក ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។ វាភ្ជាប់ទៅកាបូបរបស់ពួកគេ ហើយចូលកាបូប លុះត្រាតែពួកគេទទួលយក។', // TODO(km-review)
+      name_as_on_document: 'ឈ្មោះ ដូចក្នុងឯកសារ', // TODO(km-review)
+      type_identity: 'ការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      type_identity_desc: 'បញ្ជាក់ថាអ្នកបានជួបបុគ្គលនេះដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។ ភ្ជាប់ទៅកាបូបរបស់ពួកគេ។', // TODO(km-review)
+      evidence_type_req: 'ឯកសារដែលបានឃើញ', // TODO(km-review)
+      evidence_type_required: 'ជ្រើសរើសឯកសារដែលអ្នកបានឃើញ។', // TODO(km-review)
+      verified_on_req: 'ពិនិត្យនៅថ្ងៃ', // TODO(km-review)
+      verified_on_required: 'បញ្ចូលថ្ងៃដែលអ្នកបានឃើញឯកសារ (មិនមែនថ្ងៃអនាគត)។', // TODO(km-review)
+      verification_level: 'របៀបពិនិត្យ', // TODO(km-review)
+      saw_original_confirm: 'ខ្ញុំបានឃើញឯកសារដើមដោយផ្ទាល់ ហើយបានប្រៀបធៀបរូបថតរបស់វាជាមួយបុគ្គលដែលនៅមុខខ្ញុំ។', // TODO(km-review)
+      saw_original_required: 'បញ្ជាក់ថាអ្នកបានឃើញឯកសារដើមដោយផ្ទាល់ ហើយបានប្រៀបធៀបរូបថត។', // TODO(km-review)
+      identity_needs_wallet: 'បុគ្គលនេះមិនទាន់មានកូនសោកាបូប Actik នៅឡើយទេ។ សូមឱ្យពួកគេបើកកាបូបម្តង រួចស្វែងរកម្តងទៀត៖ ការពិនិត្យអត្តសញ្ញាណត្រូវបានចេញតែភ្ជាប់ទៅកាបូបរបស់ពួកគេប៉ុណ្ណោះ។', // TODO(km-review)
+      identity_never: 'ការពិនិត្យអត្តសញ្ញាណមិនដែលមានលេខឯកសារ ថ្ងៃខែឆ្នាំកំណើត រូបថត មុខ ឬស្នាមម្រាមដៃ អាសយដ្ឋាន ឬកំណត់ចំណាំទេ។ មិនមានកន្លែងបញ្ចូល ហើយគ្មានអ្វីត្រូវផ្ទុកឡើងទេ។ កុំរក្សាទុកច្បាប់ចម្លងឯកសារ។', // TODO(km-review)
       register_btn_text: 'ចុះឈ្មោះស្ថាប័ន'
     },
     role: {
@@ -1606,6 +1757,15 @@ const translations = {
       type_employment_record: 'កំណត់ត្រាការងារ', // TODO(km-review)
       kind_institution: 'ស្ថាប័នដែលទទួលស្គាល់', // TODO(km-review)
       kind_employer: 'និយោជកដែលបានចុះឈ្មោះ', // TODO(km-review)
+      kind_identity_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ', // TODO(km-review)
+      type_identity_attestation: 'ការពិនិត្យអត្តសញ្ញាណ (ដោយផ្ទាល់)', // TODO(km-review)
+      field_verification_level: 'របៀបពិនិត្យ', // TODO(km-review)
+      field_evidence_type: 'ឯកសារដែលបានឃើញ', // TODO(km-review)
+      field_verified_on: 'ពិនិត្យនៅថ្ងៃ', // TODO(km-review)
+      evidence_type_national_id_card: 'អត្តសញ្ញាណប័ណ្ណសញ្ជាតិខ្មែរ', // TODO(km-review)
+      evidence_type_passport: 'លិខិតឆ្លងដែន', // TODO(km-review)
+      verification_level_in_person_document: 'ដោយផ្ទាល់ ជាមួយឯកសារដើម', // TODO(km-review)
+      one_wallet_with_identity: 'លិខិតក្នុងចម្លើយនេះ និងការពិនិត្យអត្តសញ្ញាណ ត្រូវបានភ្ជាប់ទៅកាបូបតែមួយ៖ នីមួយៗមកជាមួយភស្តុតាងរបស់កាបូបនោះ ដែលបានធ្វើសម្រាប់សំណើនេះ។ អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណបានឃើញម្ចាស់កាបូបនេះ ជាមួយឯកសារដើម។ នេះជាភស្តុតាង មិនមែនជាសាលក្រមទេ៖ សូមប្រៀបធៀបឈ្មោះ ហើយជួបបុគ្គលនោះ។', // TODO(km-review)
       holder_bound: 'ផ្ញើពីកាបូបដែលវាត្រូវបានចេញជូន៖ អ្នកចេញបានភ្ជាប់វាទៅកូនសោរបស់កាបូបនោះ ហើយវាមកជាមួយភស្តុតាងនៃកូនសោនោះ ដែលបានធ្វើសម្រាប់អ្នក។ អ្នកដែលចម្លងវាមិនអាចផ្ញើវាបានទេ។', // TODO(km-review)
       holder_unbound: 'មិនបានភ្ជាប់ទៅកាបូបទេ៖ វាត្រូវបានចេញមុនពេលម្ចាស់មានកាបូប Actik។ អ្នកណាដែលមានច្បាប់ចម្លងអាចផ្ញើវាបាន ដូច្នេះសូមពិនិត្យអត្តសញ្ញាណប័ណ្ណ។', // TODO(km-review)
       field_job_title: 'មុខតំណែង', // TODO(km-review)
@@ -1621,6 +1781,98 @@ const translations = {
       employment_type_contract: 'កិច្ចសន្យា', // TODO(km-review)
       employment_type_internship: 'កម្មសិក្សា', // TODO(km-review)
       employment_type_volunteer: 'ស្ម័គ្រចិត្ត', // TODO(km-review)
+    },
+    walletkey: {
+      title: 'កូនសោកាបូប', // TODO(km-review)
+      intro: 'កាបូបរបស់អ្នកមានកូនសោផ្ទាល់ខ្លួន។ លិខិតដែលចេញជូនអ្នកត្រូវបានភ្ជាប់ទៅវា ដូច្នេះមានតែកាបូបនេះទេដែលអាចបង្ហាញវាបាន។ ប្រសិនបើកូនសោបាត់ ឬអ្នកផ្សេងមានកាបូបរបស់អ្នក សូមដកវាចេញ៖ កូនសោថ្មីនឹងត្រូវបង្កើត ហើយអ្នកស្នើឱ្យអ្នកចេញនីមួយៗចេញលិខិតឡើងវិញ។', // TODO(km-review)
+      unlock_first: 'សូមដោះសោកាបូបជាមុនសិន៖ កូនសោរបស់អ្នកត្រូវបានបិទជិតនៅខាងក្នុង។', // TODO(km-review)
+      current: 'កូនសោបច្ចុប្បន្ន', // TODO(km-review)
+      current_desc: 'លិខិតដែលចេញជូនអ្នកចាប់ពីពេលនេះត្រូវបានភ្ជាប់ទៅកូនសោ', // TODO(km-review)
+      replace: 'ប្តូរកូនសោកាបូបរបស់ខ្ញុំ', // TODO(km-review)
+      compromised: 'កាបូបរបស់ខ្ញុំត្រូវបានគេលួច ឬប្រើ', // TODO(km-review)
+      compromised_hint: 'មានន័យថាអ្នកផ្សេងអាចមានទូរស័ព្ទដែលបានដោះសោ ឬលេខ PIN របស់អ្នក។ កូនសោដែលត្រូវបានគេប្រើមិនអាចបញ្ជាក់អ្វីបានទៀតទេ ដូច្នេះដើម្បីស្តារ អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។ សូមប្តូរលេខ PIN ផងដែរ។', // TODO(km-review)
+      confirm_replaced: 'ប្តូរកូនសោកាបូប? លិខិតដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្ននឹងត្រូវចេញឡើងវិញដោយអ្នកចេញ។ អ្នកអាចបញ្ជាក់ថាជាអ្នកដោយប្រើកូនសោចាស់ ដែលនៅតែក្នុងកាបូប។', // TODO(km-review)
+      confirm_compromised: 'ដកកូនសោចេញជា “ត្រូវបានគេប្រើ”? វាមិនអាចបញ្ជាក់អ្វីបានទៀតទេ។ ដើម្បីផ្ទេរលិខិត អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។', // TODO(km-review)
+      confirm_lost: 'ដកកូនសោដែលកាបូបនេះមិនអាចបើកបាន ជា “បាត់”? កូនសោថ្មីនឹងត្រូវបង្កើត។ ដើម្បីឱ្យលិខិតចេញឡើងវិញ អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។', // TODO(km-review)
+      confirm_mark_compromised: 'សម្គាល់កូនសោចាស់នេះថាត្រូវបានគេប្រើ? បន្ទាប់មកវាមិនអាចបញ្ជាក់ការបន្តបានទៀតទេ ហើយសំណើដែលពឹងលើវានឹងត្រូវបដិសេធ។', // TODO(km-review)
+      retired_ok: 'រួចរាល់។ កាបូបរបស់អ្នកឥឡូវមានកូនសោថ្មី។', // TODO(km-review)
+      unreadable_title: 'កាបូបនេះមិនអាចបើកកូនសោកាបូបរបស់អ្នកបានទេ', // TODO(km-review)
+      unreadable_desc: 'កាបូបរបស់អ្នកត្រូវបានកំណត់ឡើងវិញ ឬលេខ PIN ដែលបិទកូនសោបានបាត់។ លិខិតដែលភ្ជាប់ទៅកូនសោនោះមិនអាចបង្ហាញបានទៀតទេ។ សូមដកវាចេញជា “បាត់” រួចធ្វើការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់ ហើយស្នើឱ្យអ្នកចេញនីមួយៗចេញឡើងវិញ។', // TODO(km-review)
+      retire_lost: 'ដកវាចេញជា “បាត់” ហើយបង្កើតកូនសោថ្មី', // TODO(km-review)
+      history: 'កូនសោដែលបានដកចេញ', // TODO(km-review)
+      reason_lost: 'បាត់', // TODO(km-review)
+      reason_compromised: 'ត្រូវបានគេប្រើ', // TODO(km-review)
+      reason_replaced: 'បានប្តូរ', // TODO(km-review)
+      mark_compromised: 'សម្គាល់ថាត្រូវបានគេប្រើ', // TODO(km-review)
+      to_move: 'លិខិតដែលភ្ជាប់ទៅកូនសោចាស់ ({count})', // TODO(km-review)
+      have_identity: 'អ្នកមានការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្ន៖ អ្នកចេញអាចប្រើវាដើម្បីបញ្ជាក់ថាជាអ្នក។', // TODO(km-review)
+      no_identity: 'ប្រសិនបើកូនសោចាស់បាត់ ឬត្រូវបានគេប្រើ សូមធ្វើការពិនិត្យអត្តសញ្ញាណជាមុន៖ អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជួបអ្នកដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម ហើយចេញវាទៅកាបូបនេះ។', // TODO(km-review)
+      nothing_to_move: 'គ្មានអ្វីត្រូវផ្ទេរទេ៖ លិខិតទាំងអស់ក្នុងកាបូបភ្ជាប់ទៅកូនសោបច្ចុប្បន្ន។', // TODO(km-review)
+      asked: 'បានស្នើ', // TODO(km-review)
+      ask_reissue: 'ស្នើឱ្យអ្នកចេញចេញឡើងវិញ', // TODO(km-review)
+      need_identity: 'អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្នជាមុនសិន។ សូមទៅជួបអ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។', // TODO(km-review)
+      request_sent: 'បានផ្ញើសំណើ។ អ្នកចេញពិនិត្យវា ហើយប្រសិនបើត្រឹមត្រូវ នឹងផ្ញើលិខិតដែលចេញឡើងវិញទៅប្រអប់សំបុត្ររបស់អ្នក។', // TODO(km-review)
+      lost_heading: 'លិខិតដែលបាត់ជាមួយកាបូបចាស់', // TODO(km-review)
+      lost_desc: 'ប្រសិនបើកាបូបរបស់អ្នកត្រូវបានកំណត់ឡើងវិញ លិខិតក្នុងនោះក៏បាត់ដែរ។ សូមស្នើអ្នកចេញនីមួយៗ៖ ពួកគេរកវាក្នុងកំណត់ត្រារបស់ខ្លួន ហើយចេញម្តងទៀតទៅកូនសោថ្មីរបស់អ្នក។ ការពិនិត្យអត្តសញ្ញាណរបស់អ្នក គឺជារបៀបដែលពួកគេដឹងថាជាអ្នក។', // TODO(km-review)
+      choose_issuer: 'ជ្រើសរើសអ្នកចេញ…', // TODO(km-review)
+      ask_issuer: 'ស្នើអ្នកចេញនេះ', // TODO(km-review)
+      requests: 'សំណើចេញឡើងវិញរបស់អ្នក', // TODO(km-review)
+      status_open: 'កំពុងរង់ចាំអ្នកចេញ', // TODO(km-review)
+      status_reissued: 'បានចេញឡើងវិញ', // TODO(km-review)
+      status_declined: 'បានបដិសេធ', // TODO(km-review)
+      proof_old_key: 'បញ្ជាក់ដោយកូនសោចាស់', // TODO(km-review)
+      proof_identity: 'បញ្ជាក់ដោយការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      limits: 'អ្វីដែលនេះមិនអាចធ្វើបាន៖ ប្រសិនបើនរណាម្នាក់មានទូរស័ព្ទដែលបានដោះសោ ឬលេខ PIN របស់អ្នក ពួកគេអាចបង្ហាញលិខិតរបស់អ្នកបាន រហូតដល់អ្នកដកកូនសោចេញ — ហើយប្រសិនបើពួកគេទៅដល់អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជាមួយឯកសាររបស់អ្នកមុនអ្នក ពួកគេក៏អាចស្នើចេញឡើងវិញបានដែរ។ អ្នកចេញដកលិខិតចាស់វិញពេលចេញឡើងវិញ ដូច្នេះច្បាប់ចម្លងដែលត្រូវបានលួចឈប់ផ្ទៀងផ្ទាត់បាន។', // TODO(km-review)
+    },
+    contacts: {
+      title: 'ទំនាក់ទំនងដែលបានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      intro: 'ការហៅ ឬសារជាសំឡេងអាចក្លែងបន្លំបាន។ ហត្ថលេខាពីកាបូបផ្ទាល់របស់នរណាម្នាក់មិនអាចក្លែងបានទេ បើគ្មានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេ។ បន្ថែមមនុស្សពេលអ្នកជួបពួកគេ រួចសួរថា “តើពិតជាអ្នកមែនទេ ឥឡូវនេះ?” — កាបូបរបស់ពួកគេឆ្លើយ។', // TODO(km-review)
+      list: 'ទំនាក់ទំនងរបស់អ្នក ({count})', // TODO(km-review)
+      none: 'មិនទាន់មានទំនាក់ទំនងនៅឡើយ។ ស្កេនកូដរបស់នរណាម្នាក់ពេលអ្នកជួបពួកគេ។', // TODO(km-review)
+      via_identity: 'អត្តសញ្ញាណត្រូវបានពិនិត្យដោយ {verifier} នៅថ្ងៃ {date}', // TODO(km-review)
+      via_in_person: 'បានបន្ថែមដោយផ្ទាល់', // TODO(km-review)
+      check: 'ពិនិត្យថាជាពួកគេ', // TODO(km-review)
+      remove: 'លុប', // TODO(km-review)
+      remove_confirm: 'លុប {name} ចេញពីទំនាក់ទំនងរបស់អ្នក?', // TODO(km-review)
+      waiting: 'កំពុងរង់ចាំ {name} យល់ព្រមលើទូរស័ព្ទរបស់ពួកគេ…', // TODO(km-review)
+      confirmed: '{name} បានបញ្ជាក់នៅម៉ោង {time} ពីកាបូបដែលអ្នកបានបន្ថែម។ នេះជាភស្តុតាង មិនមែនជាសាលក្រមទេ៖ អ្នកដែលមានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេ ក៏អាចធ្វើដូចគ្នាបាន។', // TODO(km-review)
+      declined: '{name} បានបដិសេធ។ ប្រសិនបើអ្នកកំពុងនិយាយទូរស័ព្ទជាមួយ “{name}” សូមចាត់ទុកថាមិនមែនជាពួកគេ។', // TODO(km-review)
+      expired: 'គ្មានចម្លើយទាន់ពេល។ ប្រសិនបើអ្នកកំពុងនិយាយទូរស័ព្ទជាមួយ “{name}” កុំទុកចិត្តរហូតដល់ពួកគេបញ្ជាក់។', // TODO(km-review)
+      add: 'បន្ថែមទំនាក់ទំនង', // TODO(km-review)
+      add_desc: 'ដោយផ្ទាល់៖ ស្កេនកូដរបស់ពួកគេ ហើយពួកគេស្កេនរបស់អ្នក។ ឬបិទភ្ជាប់កាតទំនាក់ទំនងដែលពួកគេបានផ្ញើ — ប្រសិនបើវាមានការពិនិត្យអត្តសញ្ញាណ ឈ្មោះរបស់វាត្រូវបានប្រើ។', // TODO(km-review)
+      read_card: 'អានកាត', // TODO(km-review)
+      card_identity: '{name} — អត្តសញ្ញាណត្រូវបានពិនិត្យដោយផ្ទាល់ដោយ {verifier} នៅថ្ងៃ {date} ភ្ជាប់ទៅកាបូបនេះ។', // TODO(km-review)
+      card_plain: 'កូនសោកាបូប ដោយគ្មានការពិនិត្យអត្តសញ្ញាណ។ បន្ថែមវាតែប្រសិនបើអ្នកបានស្កេនវាពីបុគ្គលនោះ នៅមុខអ្នក។ តើអ្នកហៅពួកគេថាអ្វី?', // TODO(km-review)
+      name_placeholder: 'ឈ្មោះរបស់ពួកគេ', // TODO(km-review)
+      save: 'បន្ថែមទំនាក់ទំនង', // TODO(km-review)
+      own_card: 'នោះជាកាតរបស់អ្នកផ្ទាល់។', // TODO(km-review)
+      already_known: 'បុគ្គលនេះមាននៅក្នុងទំនាក់ទំនងរបស់អ្នករួចហើយ។', // TODO(km-review)
+      my_card: 'កាតរបស់អ្នក', // TODO(km-review)
+      my_card_desc: 'ឱ្យអ្នកម្ខាងទៀតស្កេនវាពេលអ្នកជួបគ្នា។ វាមានតែកូនសោសាធារណៈនៃកាបូបរបស់អ្នកប៉ុណ្ណោះ។', // TODO(km-review)
+      id_card_ready: 'អ្នកក៏អាចផ្ញើកាតដែលមានការពិនិត្យអត្តសញ្ញាណរបស់អ្នក ដូច្នេះអ្នកដែលមិនធ្លាប់ជួបអ្នកអាចឃើញថាអ្នកណាបានពិនិត្យអ្នក។', // TODO(km-review)
+      no_id_card: 'ធ្វើការពិនិត្យអត្តសញ្ញាណ ដើម្បីផ្ញើកាតដែលអ្នកដទៃអាចផ្ទៀងផ្ទាត់បានដោយមិនចាំបាច់ជួបអ្នក។', // TODO(km-review)
+      copy_id_card: 'ចម្លងកាតដែលមានការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      scan_camera: 'ស្កេនដោយកាមេរ៉ា', // TODO(km-review)
+      stop: 'ឈប់', // TODO(km-review)
+      camera_error: 'មិនអាចបើកកាមេរ៉ាបានទេ។ អនុញ្ញាតការចូលប្រើកាមេរ៉ា ឬបិទភ្ជាប់កាតជំនួសវិញ។', // TODO(km-review)
+      limits_title: 'អ្វីដែលនេះមិនអាចធ្វើបាន', // TODO(km-review)
+      limit_never_code: 'កុំអានលេខកូដឮៗដើម្បីបញ្ជាក់ថាអ្នកជានរណា៖ អ្នកដែលក្លែងការហៅអាចបញ្ជូនវាបន្ត។ មានតែកាបូបទេដែលឆ្លើយ។', // TODO(km-review)
+      limit_phone: 'វាមិនអាចបែងចែកបុគ្គលនោះ ពីអ្នកដែលមានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេបានទេ។', // TODO(km-review)
+      limit_double: 'ប្រសិនបើការភ្ជាប់ដំបូងត្រូវបានធ្វើជាមួយអ្នកក្លែងបន្លំ — ដោយផ្ទាល់ ឬពីកាតដែលគ្មានការពិនិត្យអត្តសញ្ញាណ — រាល់ការពិនិត្យនៅពេលក្រោយនឹងបញ្ជាក់អ្នកក្លែងបន្លំនោះ។', // TODO(km-review)
+    },
+    presence: {
+      asking: '{name} កំពុងសុំឱ្យអ្នកបញ្ជាក់ថាជាអ្នក ឥឡូវនេះ', // TODO(km-review)
+      unknown_asking: 'នរណាម្នាក់ដែលមិនមាននៅក្នុងទំនាក់ទំនងរបស់អ្នក កំពុងសុំឱ្យអ្នកបញ្ជាក់ថាជាអ្នក', // TODO(km-review)
+      unknown_warning: 'អ្នកមិនបានបន្ថែមបុគ្គលនេះទេ។ ប្រសិនបើអ្នកមិនរំពឹងទុក សូមបដិសេធ៖ ការយល់ព្រមប្រាប់ពួកគេថាកាបូបរបស់អ្នកនៅក្នុងដៃអ្នកឥឡូវនេះ។', // TODO(km-review)
+      explain: 'យល់ព្រមតែប្រសិនបើអ្នកកំពុងទាក់ទងជាមួយពួកគេនៅពេលនេះ ហើយបានរំពឹងទុក។ កាបូបរបស់អ្នកចុះហត្ថលេខាលើចម្លើយតែម្តង សម្រាប់តែពួកគេប៉ុណ្ណោះ។ កុំអានលេខកូដឮៗជំនួសវិញ។', // TODO(km-review)
+      pin: 'លេខ PIN របស់អ្នក', // TODO(km-review)
+      approve: 'យល់ព្រម', // TODO(km-review)
+      decline: 'បដិសេធ', // TODO(km-review)
+      wrong_pin: 'លេខ PIN នោះមិនត្រឹមត្រូវទេ។', // TODO(km-review)
+      signed_out: 'អ្នកបានចាកចេញ។', // TODO(km-review)
+      not_this_key: 'សំណើនេះត្រូវបានធ្វើសម្រាប់កូនសោកាបូបដែលអ្នកលែងប្រើហើយ។', // TODO(km-review)
+      use_passkey: 'យល់ព្រមដោយប្រើ passkey ជំនួសវិញ', // TODO(km-review)
+      passkey_failed: 'Passkey មិនបានបញ្ជាក់ថាជាអ្នកទេ។', // TODO(km-review)
     },
     museum: {
       title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)

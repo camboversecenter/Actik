@@ -92,7 +92,10 @@ console.log(`valid ${fmt(statement.issuedAt)} → ${fmt(statement.expires)}\n`)
 console.log(`${statement.issuers.length} issuer(s) will be trusted:`)
 for (const i of statement.issuers) {
   // The tier is part of what the Root signs: check it as carefully as the name.
-  const tier = i.kind === 'employer' ? 'registered employer — employment records only' : 'accredited institution — every credential type'
+  const tier =
+    i.kind === 'employer' ? 'registered employer — employment records only'
+    : i.kind === 'identity_verifier' ? 'identity verifier — identity attestations only (checks documents in person)'
+    : 'accredited institution — every credential type except identity attestations'
   console.log(`  ${i.name}  ${i.did}\n    ${tier}`)
   for (const k of i.keys) {
     console.log(`    ${k.status.padEnd(7)} ${k.kid}  signs credentials dated ${fmt(k.notBefore)} → ${fmt(k.notAfter)}`)

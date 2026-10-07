@@ -15,8 +15,11 @@ interface Issuer {
   name: string
   domain: string
   type: string
-  /** 'employer' may issue employment records only; signed into the trust list as such. */
-  kind: 'institution' | 'employer'
+  /**
+   * 'employer' may issue employment records only, 'identity_verifier' identity
+   * attestations only; signed into the trust list as such.
+   */
+  kind: 'institution' | 'employer' | 'identity_verifier'
   did: string
   public_key: string
   accredited: boolean
@@ -78,7 +81,7 @@ function mapDbIssuer(db: Record<string, unknown>): Issuer {
     name,
     domain: extractedDomain,
     type,
-    kind: db.kind === 'employer' ? 'employer' : 'institution',
+    kind: db.kind === 'employer' || db.kind === 'identity_verifier' ? db.kind : 'institution',
     did,
     public_key: publicKeyStr,
     accredited: !!db.accredited,
@@ -808,6 +811,11 @@ export default function AdminDashboard() {
                           {issuer.kind === 'employer' && (
                             <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border shrink-0 bg-amber-50 text-amber-800 border-amber-200">
                               Employment records only
+                            </span>
+                          )}
+                          {issuer.kind === 'identity_verifier' && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border shrink-0 bg-sky-50 text-sky-800 border-sky-200">
+                              Identity verifier · identity checks only
                             </span>
                           )}
                         </div>
