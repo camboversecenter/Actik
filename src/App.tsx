@@ -30,6 +30,8 @@ import ProofRequestPublic from './pages/requests/ProofRequestPublic'
 import AnswerProofRequest from './pages/requests/AnswerProofRequest'
 import { VaultProvider } from './vault/zk-vault'
 import HolderKeyKeeper from './components/HolderKeyKeeper'
+import PresencePrompt from './components/PresencePrompt'
+import Contacts from './pages/app/Contacts'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
 
@@ -387,6 +389,7 @@ export default function App() {
                 autoLockTimeoutMs={1800000}
               >
                 <HolderKeyKeeper />
+                <PresencePrompt />
                 <Layout />
               </VaultProvider>
             </PrivateRoute>
@@ -424,6 +427,7 @@ export default function App() {
           <Route path="credential/:id" element={<CredentialDetail />} />
           <Route path="vault-setup" element={<VaultSetup />} />
           <Route path="wallet-key" element={<WalletKey />} />
+          <Route path="contacts" element={<Contacts />} />
           <Route path="share/:credentialId" element={<ShareCredential />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="activity" element={<Activity />} />

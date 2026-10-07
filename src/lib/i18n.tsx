@@ -30,7 +30,8 @@ const translations = {
       dashboard: 'Dashboard',
       issued: 'Issued',
       settings: 'Settings',
-      requests: 'Requests'
+      requests: 'Requests',
+      contacts: 'Contacts',
     },
     layout: {
       loading: 'Loading Actik...',
@@ -820,6 +821,56 @@ const translations = {
       proof_identity: 'proven with an identity check',
       limits: 'What this cannot do: if someone has your unlocked phone or your PIN, they can present your credentials until you retire the key — and if they get to an identity verifier with your document before you do, they could ask for reissues too. Issuers withdraw the old credentials when they reissue, so a stolen copy stops verifying.',
     },
+    contacts: {
+      title: 'Verified contacts',
+      intro: 'A call or a voice message can be faked. A signature from someone’s own wallet cannot, without their unlocked phone and PIN. Add people when you meet them, then ask “is it really you, right now?” — their wallet answers.',
+      list: 'Your contacts ({count})',
+      none: 'No contacts yet. Scan someone’s code when you meet them.',
+      via_identity: 'Identity checked by {verifier} on {date}',
+      via_in_person: 'Added in person',
+      check: 'Check it’s them',
+      remove: 'Remove',
+      remove_confirm: 'Remove {name} from your contacts?',
+      waiting: 'Waiting for {name} to approve on their phone…',
+      confirmed: '{name} confirmed at {time}, from the wallet you added. This is evidence, not a verdict: someone holding their unlocked phone and PIN could do the same.',
+      declined: '{name} declined. If you are on a call with “{name}”, treat it as not them.',
+      expired: 'No answer in time. If you are on a call with “{name}”, do not trust it until they confirm.',
+      add: 'Add a contact',
+      add_desc: 'In person: scan their code, and they scan yours. Or paste a contact card they sent you — if it carries an identity check, its name is used.',
+      read_card: 'Read card',
+      card_identity: '{name} — identity checked in person by {verifier} on {date}, bound to this wallet.',
+      card_plain: 'A wallet key, with no identity check. Add it only if you scanned it from the person, in front of you. What do you call them?',
+      name_placeholder: 'Their name',
+      save: 'Add contact',
+      own_card: 'That is your own card.',
+      already_known: 'This person is already in your contacts.',
+      my_card: 'Your card',
+      my_card_desc: 'Let the other person scan this when you meet. It carries your wallet’s public key only.',
+      id_card_ready: 'You can also send a card carrying your identity check, so someone you have not met can see who checked you.',
+      no_id_card: 'Get an identity check to send a card others can verify without meeting you.',
+      copy_id_card: 'Copy card with identity check',
+      scan_camera: 'Scan with camera',
+      stop: 'Stop',
+      camera_error: 'The camera could not be opened. Allow camera access, or paste the card instead.',
+      limits_title: 'What this cannot do',
+      limit_never_code: 'Never read out a code to prove who you are: whoever fakes the call can relay it. Only the wallet answers.',
+      limit_phone: 'It cannot tell the person from someone holding their unlocked phone and their PIN.',
+      limit_double: 'If the first link was made with an impostor — in person, or from a card without an identity check — every later check confirms the impostor.',
+    },
+    presence: {
+      asking: '{name} is asking you to confirm it’s you, right now',
+      unknown_asking: 'Someone who is not in your contacts is asking you to confirm it’s you',
+      unknown_warning: 'You have not added this person. If you did not expect this, decline: approving tells them your wallet is in your hands right now.',
+      explain: 'Approve only if you are in contact with them at this moment and expected it. Your wallet signs a one-time answer for them alone. Never read out a code instead.',
+      pin: 'Your PIN',
+      approve: 'Approve',
+      decline: 'Decline',
+      wrong_pin: 'That PIN is not right.',
+      signed_out: 'You are signed out.',
+      not_this_key: 'This request was made for a wallet key you no longer use.',
+      use_passkey: 'Approve with passkey instead',
+      passkey_failed: 'The passkey did not confirm it is you.',
+    },
     museum: {
       title: 'Add to a CamboVerse museum',
       intro: 'You decide what can be shown. The original file stays in your wallet — the exhibit carries only its fingerprint, the picture you prepare here and, if you choose, the institution’s signed code.',
@@ -981,7 +1032,8 @@ const translations = {
       dashboard: 'ផ្ទាំងគ្រប់គ្រង',
       issued: 'បានចេញ',
       settings: 'ការកំណត់',
-      requests: 'សំណើ' // TODO(km-review)
+      requests: 'សំណើ', // TODO(km-review)
+      contacts: 'ទំនាក់ទំនង', // TODO(km-review)
     },
     layout: {
       loading: 'កំពុងផ្ទុក Actik...',
@@ -1771,6 +1823,56 @@ const translations = {
       proof_old_key: 'បញ្ជាក់ដោយកូនសោចាស់', // TODO(km-review)
       proof_identity: 'បញ្ជាក់ដោយការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
       limits: 'អ្វីដែលនេះមិនអាចធ្វើបាន៖ ប្រសិនបើនរណាម្នាក់មានទូរស័ព្ទដែលបានដោះសោ ឬលេខ PIN របស់អ្នក ពួកគេអាចបង្ហាញលិខិតរបស់អ្នកបាន រហូតដល់អ្នកដកកូនសោចេញ — ហើយប្រសិនបើពួកគេទៅដល់អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជាមួយឯកសាររបស់អ្នកមុនអ្នក ពួកគេក៏អាចស្នើចេញឡើងវិញបានដែរ។ អ្នកចេញដកលិខិតចាស់វិញពេលចេញឡើងវិញ ដូច្នេះច្បាប់ចម្លងដែលត្រូវបានលួចឈប់ផ្ទៀងផ្ទាត់បាន។', // TODO(km-review)
+    },
+    contacts: {
+      title: 'ទំនាក់ទំនងដែលបានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      intro: 'ការហៅ ឬសារជាសំឡេងអាចក្លែងបន្លំបាន។ ហត្ថលេខាពីកាបូបផ្ទាល់របស់នរណាម្នាក់មិនអាចក្លែងបានទេ បើគ្មានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេ។ បន្ថែមមនុស្សពេលអ្នកជួបពួកគេ រួចសួរថា “តើពិតជាអ្នកមែនទេ ឥឡូវនេះ?” — កាបូបរបស់ពួកគេឆ្លើយ។', // TODO(km-review)
+      list: 'ទំនាក់ទំនងរបស់អ្នក ({count})', // TODO(km-review)
+      none: 'មិនទាន់មានទំនាក់ទំនងនៅឡើយ។ ស្កេនកូដរបស់នរណាម្នាក់ពេលអ្នកជួបពួកគេ។', // TODO(km-review)
+      via_identity: 'អត្តសញ្ញាណត្រូវបានពិនិត្យដោយ {verifier} នៅថ្ងៃ {date}', // TODO(km-review)
+      via_in_person: 'បានបន្ថែមដោយផ្ទាល់', // TODO(km-review)
+      check: 'ពិនិត្យថាជាពួកគេ', // TODO(km-review)
+      remove: 'លុប', // TODO(km-review)
+      remove_confirm: 'លុប {name} ចេញពីទំនាក់ទំនងរបស់អ្នក?', // TODO(km-review)
+      waiting: 'កំពុងរង់ចាំ {name} យល់ព្រមលើទូរស័ព្ទរបស់ពួកគេ…', // TODO(km-review)
+      confirmed: '{name} បានបញ្ជាក់នៅម៉ោង {time} ពីកាបូបដែលអ្នកបានបន្ថែម។ នេះជាភស្តុតាង មិនមែនជាសាលក្រមទេ៖ អ្នកដែលមានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេ ក៏អាចធ្វើដូចគ្នាបាន។', // TODO(km-review)
+      declined: '{name} បានបដិសេធ។ ប្រសិនបើអ្នកកំពុងនិយាយទូរស័ព្ទជាមួយ “{name}” សូមចាត់ទុកថាមិនមែនជាពួកគេ។', // TODO(km-review)
+      expired: 'គ្មានចម្លើយទាន់ពេល។ ប្រសិនបើអ្នកកំពុងនិយាយទូរស័ព្ទជាមួយ “{name}” កុំទុកចិត្តរហូតដល់ពួកគេបញ្ជាក់។', // TODO(km-review)
+      add: 'បន្ថែមទំនាក់ទំនង', // TODO(km-review)
+      add_desc: 'ដោយផ្ទាល់៖ ស្កេនកូដរបស់ពួកគេ ហើយពួកគេស្កេនរបស់អ្នក។ ឬបិទភ្ជាប់កាតទំនាក់ទំនងដែលពួកគេបានផ្ញើ — ប្រសិនបើវាមានការពិនិត្យអត្តសញ្ញាណ ឈ្មោះរបស់វាត្រូវបានប្រើ។', // TODO(km-review)
+      read_card: 'អានកាត', // TODO(km-review)
+      card_identity: '{name} — អត្តសញ្ញាណត្រូវបានពិនិត្យដោយផ្ទាល់ដោយ {verifier} នៅថ្ងៃ {date} ភ្ជាប់ទៅកាបូបនេះ។', // TODO(km-review)
+      card_plain: 'កូនសោកាបូប ដោយគ្មានការពិនិត្យអត្តសញ្ញាណ។ បន្ថែមវាតែប្រសិនបើអ្នកបានស្កេនវាពីបុគ្គលនោះ នៅមុខអ្នក។ តើអ្នកហៅពួកគេថាអ្វី?', // TODO(km-review)
+      name_placeholder: 'ឈ្មោះរបស់ពួកគេ', // TODO(km-review)
+      save: 'បន្ថែមទំនាក់ទំនង', // TODO(km-review)
+      own_card: 'នោះជាកាតរបស់អ្នកផ្ទាល់។', // TODO(km-review)
+      already_known: 'បុគ្គលនេះមាននៅក្នុងទំនាក់ទំនងរបស់អ្នករួចហើយ។', // TODO(km-review)
+      my_card: 'កាតរបស់អ្នក', // TODO(km-review)
+      my_card_desc: 'ឱ្យអ្នកម្ខាងទៀតស្កេនវាពេលអ្នកជួបគ្នា។ វាមានតែកូនសោសាធារណៈនៃកាបូបរបស់អ្នកប៉ុណ្ណោះ។', // TODO(km-review)
+      id_card_ready: 'អ្នកក៏អាចផ្ញើកាតដែលមានការពិនិត្យអត្តសញ្ញាណរបស់អ្នក ដូច្នេះអ្នកដែលមិនធ្លាប់ជួបអ្នកអាចឃើញថាអ្នកណាបានពិនិត្យអ្នក។', // TODO(km-review)
+      no_id_card: 'ធ្វើការពិនិត្យអត្តសញ្ញាណ ដើម្បីផ្ញើកាតដែលអ្នកដទៃអាចផ្ទៀងផ្ទាត់បានដោយមិនចាំបាច់ជួបអ្នក។', // TODO(km-review)
+      copy_id_card: 'ចម្លងកាតដែលមានការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      scan_camera: 'ស្កេនដោយកាមេរ៉ា', // TODO(km-review)
+      stop: 'ឈប់', // TODO(km-review)
+      camera_error: 'មិនអាចបើកកាមេរ៉ាបានទេ។ អនុញ្ញាតការចូលប្រើកាមេរ៉ា ឬបិទភ្ជាប់កាតជំនួសវិញ។', // TODO(km-review)
+      limits_title: 'អ្វីដែលនេះមិនអាចធ្វើបាន', // TODO(km-review)
+      limit_never_code: 'កុំអានលេខកូដឮៗដើម្បីបញ្ជាក់ថាអ្នកជានរណា៖ អ្នកដែលក្លែងការហៅអាចបញ្ជូនវាបន្ត។ មានតែកាបូបទេដែលឆ្លើយ។', // TODO(km-review)
+      limit_phone: 'វាមិនអាចបែងចែកបុគ្គលនោះ ពីអ្នកដែលមានទូរស័ព្ទដែលបានដោះសោ និងលេខ PIN របស់ពួកគេបានទេ។', // TODO(km-review)
+      limit_double: 'ប្រសិនបើការភ្ជាប់ដំបូងត្រូវបានធ្វើជាមួយអ្នកក្លែងបន្លំ — ដោយផ្ទាល់ ឬពីកាតដែលគ្មានការពិនិត្យអត្តសញ្ញាណ — រាល់ការពិនិត្យនៅពេលក្រោយនឹងបញ្ជាក់អ្នកក្លែងបន្លំនោះ។', // TODO(km-review)
+    },
+    presence: {
+      asking: '{name} កំពុងសុំឱ្យអ្នកបញ្ជាក់ថាជាអ្នក ឥឡូវនេះ', // TODO(km-review)
+      unknown_asking: 'នរណាម្នាក់ដែលមិនមាននៅក្នុងទំនាក់ទំនងរបស់អ្នក កំពុងសុំឱ្យអ្នកបញ្ជាក់ថាជាអ្នក', // TODO(km-review)
+      unknown_warning: 'អ្នកមិនបានបន្ថែមបុគ្គលនេះទេ។ ប្រសិនបើអ្នកមិនរំពឹងទុក សូមបដិសេធ៖ ការយល់ព្រមប្រាប់ពួកគេថាកាបូបរបស់អ្នកនៅក្នុងដៃអ្នកឥឡូវនេះ។', // TODO(km-review)
+      explain: 'យល់ព្រមតែប្រសិនបើអ្នកកំពុងទាក់ទងជាមួយពួកគេនៅពេលនេះ ហើយបានរំពឹងទុក។ កាបូបរបស់អ្នកចុះហត្ថលេខាលើចម្លើយតែម្តង សម្រាប់តែពួកគេប៉ុណ្ណោះ។ កុំអានលេខកូដឮៗជំនួសវិញ។', // TODO(km-review)
+      pin: 'លេខ PIN របស់អ្នក', // TODO(km-review)
+      approve: 'យល់ព្រម', // TODO(km-review)
+      decline: 'បដិសេធ', // TODO(km-review)
+      wrong_pin: 'លេខ PIN នោះមិនត្រឹមត្រូវទេ។', // TODO(km-review)
+      signed_out: 'អ្នកបានចាកចេញ។', // TODO(km-review)
+      not_this_key: 'សំណើនេះត្រូវបានធ្វើសម្រាប់កូនសោកាបូបដែលអ្នកលែងប្រើហើយ។', // TODO(km-review)
+      use_passkey: 'យល់ព្រមដោយប្រើ passkey ជំនួសវិញ', // TODO(km-review)
+      passkey_failed: 'Passkey មិនបានបញ្ជាក់ថាជាអ្នកទេ។', // TODO(km-review)
     },
     museum: {
       title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)

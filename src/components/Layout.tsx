@@ -9,7 +9,7 @@ import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
 import {
   Wallet, Activity, Fingerprint, LayoutDashboard, FileSignature, Settings,
-  ShieldCheck, LogOut, Building2, Lock, Briefcase,
+  ShieldCheck, LogOut, Building2, Lock, Briefcase, UserCheck,
 } from 'lucide-react'
 
 export default function Layout() {
@@ -222,6 +222,10 @@ export default function Layout() {
             <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.requests')}
           </NavLink>
+          <NavLink to="/app/contacts" className={sidebarLinkClass}>
+            <UserCheck size={20} strokeWidth={1.9} className="shrink-0" />
+            {t('nav.contacts')}
+          </NavLink>
           <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
             <Fingerprint size={20} strokeWidth={1.9} className="shrink-0" />
             {t('nav.account')}
@@ -378,6 +382,10 @@ export default function Layout() {
             <NavLink to="/app/requests" className={bottomNavLinkClass}>
               <Briefcase size={20} strokeWidth={1.9} />
               <span className="mt-1">{t('nav.requests')}</span>
+            </NavLink>
+            <NavLink to="/app/contacts" className={bottomNavLinkClass}>
+              <UserCheck size={20} strokeWidth={1.9} />
+              <span className="mt-1">{t('nav.contacts')}</span>
             </NavLink>
             <NavLink to="/app/vault-setup" className={bottomNavLinkClass}>
               <Fingerprint size={20} strokeWidth={1.9} />

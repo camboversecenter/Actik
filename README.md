@@ -253,6 +253,25 @@ the old copy for the new one on accept. If the credentials were lost with the
 wallet, the issuer issues them again from its own records. Details:
 [`docs/KEY_RECOVERY.md`](docs/KEY_RECOVERY.md).
 
+## Verified contacts
+
+"Is it really you, right now?" — the deepfake check. People add each other in
+person by QR (or from a contact card carrying a bound identity check); the
+contact is stored end-to-end encrypted in their own wallet. **Check** sends a
+two-minute challenge addressed to the other person's wallet key; they approve
+with their PIN, their wallet signs `{nonce, aud, iat}`, and the asker's app
+verifies it against the key it stored and shows "confirmed at hh:mm". No
+register, no stored contact graph, never a spoken code. It cannot tell the
+person from someone holding their unlocked phone and PIN, and a first link made
+with an impostor confirms the impostor; the app says so. Details:
+[`docs/VERIFIED_CONTACTS.md`](docs/VERIFIED_CONTACTS.md).
+
+## Tokenized real-world assets (designed, not built)
+
+Waits for a legal partner who keeps an official register; a registrar tier,
+asset records as signed register extracts, and transfer in the register, not
+in ACTIK: [`docs/TOKENIZED_ASSETS.md`](docs/TOKENIZED_ASSETS.md).
+
 ## Proof requests (recruitment)
 
 An employer asks for proof — **Requests → New request**: up to five credential
