@@ -77,7 +77,9 @@ export default function WalletCategory() {
 
   // Type label formatting
   const typeLabels: Record<string, string> = {
-    'academic_degree': t('wallet.category_academic_degree')
+    'academic_degree': t('wallet.category_academic_degree'),
+    'employment_record': t('wallet.category_employment_record'),
+    'identity_attestation': t('wallet.category_identity_attestation')
   };
   const isOther = !credentialType || credentialType === 'other'
   const displayLabel = isOther ? t('wallet.category_other') : (typeLabels[credentialType] || t('wallet.category_other'));

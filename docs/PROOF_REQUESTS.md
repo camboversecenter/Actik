@@ -41,6 +41,7 @@ A request names fields from a per-type allowlist and nothing else:
 | Merit or excellence | name, institution, achievement, date awarded | basis of award |
 | Appreciation or service | name, institution, type, reason, date | capacity |
 | Employment record | name, employer, job title, employment type, start, status, end | department, role |
+| Identity check (in person) | name as on the document, identity verifier, document seen (ID card or passport), how and when it was checked — never the document number, birth date or photo | — |
 
 So there is no way to ask for **date of birth or age, sex, marital status, a
 photograph, national ID, student number, place of birth, religion or

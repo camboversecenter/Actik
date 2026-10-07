@@ -56,6 +56,8 @@ export const REQUESTABLE: Record<string, { label: string; extras: string[] }> = 
   merit_excellence: { label: 'Merit or excellence award', extras: ['basis_description'] },
   appreciation_service: { label: 'Appreciation or service', extras: ['capacity'] },
   employment_record: { label: 'Employment record', extras: ['department', 'role_description'] },
+  // Nothing extra to ask for: an identity check carries a name and how it was checked.
+  identity_attestation: { label: 'Identity check (in person)', extras: [] },
 }
 
 /** Fields a request can never name, listed so the interface can say so plainly. */

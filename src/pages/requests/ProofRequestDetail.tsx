@@ -174,6 +174,11 @@ export default function ProofRequestDetail() {
               </div>
               <span className="text-xs text-stone-500 shrink-0">{new Date(resp.createdAt).toLocaleDateString()}</span>
             </div>
+            {resp.oneWalletWithIdentity && (
+              <p className="text-xs rounded-lg border border-sky-200 bg-sky-50 text-sky-900 p-2.5" data-testid="one-wallet">
+                {t('proof.one_wallet_with_identity')}
+              </p>
+            )}
             {request.requirements.map((_, i) => (
               <div key={i} className="border-t border-stone-100 pt-3 space-y-2">
                 <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide"><RequirementLabel request={request} index={i} /></p>

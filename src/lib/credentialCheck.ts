@@ -23,6 +23,7 @@ import {
   type TrustListKey,
   issuerMayIssue,
 } from './trustList'
+import { IDENTITY_TYPE, claimsOutsideIdentity } from './identity'
 import { credentialStatus, type CredentialStatus, type OpenedRevocations, type WithdrawalReason } from './revocation'
 
 /**
@@ -123,7 +124,11 @@ export function messageForRefusal(reason: string): string {
     case 'HOLDER_PROOF_WRONG_AUDIENCE':
       return 'This was presented to someone else, and has been copied here. Ask the holder to send it to you directly.'
     case 'TYPE_NOT_ALLOWED_FOR_ISSUER':
-      return 'This issuer is registered as an employer, which may issue employment records only — not this kind of credential. It did not verify.'
+      return 'This issuer is not admitted to issue this kind of credential: an employer issues employment records only, an identity verifier identity checks only, and only an identity verifier issues identity checks. It did not verify.'
+    case 'IDENTITY_NOT_BOUND':
+      return 'This identity check is not bound to a wallet, so it says nothing about who is presenting it. It was not accepted.'
+    case 'IDENTITY_CLAIM_NOT_ALLOWED':
+      return 'This identity check carries a field an identity check may never carry (such as an ID number, a birth date or a photo). It was not accepted.'
     case 'ISSUER_MISMATCH':
       return 'This names a different issuer from the one it was sent under, so it cannot be trusted.'
     case 'NO_CREDENTIAL':
@@ -202,6 +207,13 @@ export async function checkCredential(
   //    signs employment records, never degrees: its key on the trust list
   //    does not make it a university.
   if (!issuerMayIssue(list.issuers.get(issuerDid)?.kind, assertion.credentialType)) refuse('TYPE_NOT_ALLOWED_FOR_ISSUER')
+
+  //    An identity attestation is only worth anything bound to a wallet, and
+  //    never carries more than a name and how it was checked.
+  if (assertion.credentialType === IDENTITY_TYPE) {
+    if (!assertion.holderKey) refuse('IDENTITY_NOT_BOUND')
+    if (claimsOutsideIdentity(Object.keys(assertion.claims)).length > 0) refuse('IDENTITY_CLAIM_NOT_ALLOWED')
+  }
 
   //    The key was valid when this was signed — on the *verified* iat. A
   //    retired key only vouches for what it signed before it was retired.

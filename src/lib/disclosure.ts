@@ -44,4 +44,7 @@ export const ALWAYS_REVEALED = [
   'cert_name', 'issuing_body', 'date_certified', 'license_number', 'expiry_date',
   // employment record ('current' is as of the day it was signed)
   'job_title', 'employment_type', 'employment_start', 'employment_end', 'employment_status',
+  // identity attestation: a name as on the document, and how it was checked —
+  // never the document's number, a birth date or a photo (identity.ts)
+  'verification_level', 'evidence_type', 'verified_on',
 ]

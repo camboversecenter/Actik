@@ -226,6 +226,20 @@ they accept it; they can decline. It never carries salary, reason for leaving or
 ratings (the database refuses them). "Current" is always shown as of the day it
 was signed. Details: [`docs/EMPLOYMENT_RECORDS.md`](docs/EMPLOYMENT_RECORDS.md).
 
+## Identity verifiers
+
+Individual ownership needs a valid person behind the wallet. An **identity
+verifier** — a third trust-list tier, admitted by the Root separately from
+institutions — sees a person in person with their original ID card or
+passport, and signs an **identity attestation** into that person's wallet: the
+name exactly as on the document, which document was seen, and when. Never the
+document number, a birth date, a photo or a biometric (the database refuses
+them), and always bound to the person's wallet key (unbound ones are refused).
+Institutions may no longer issue this type; identity verifiers may issue
+nothing else. In a proof request, the employer is told when a degree and an
+identity check were presented from the same wallet. Details:
+[`docs/IDENTITY_VERIFIERS.md`](docs/IDENTITY_VERIFIERS.md).
+
 ## Proof requests (recruitment)
 
 An employer asks for proof — **Requests → New request**: up to five credential
@@ -276,9 +290,10 @@ how CamboVerse should read it, and the open identity question (D5):
 
 ## Limitations (deliberate MVP scope)
 
-- **No Key Binding (KB-JWT).** Presentations aren't bound to the holder's key,
-  so a forwarded or leaked link can be replayed until it expires, is revoked,
-  or — if the holder chose *one view only* — has been opened once.
+- **Unbound credentials.** Credentials issued before their holder had a
+  wallet carry no holder key, so a forwarded or leaked link to one can be
+  replayed until it expires, is revoked, or — if the holder chose *one view
+  only* — has been opened once. Bound credentials cannot (see Holder binding).
 - **No `did:web` hosting.** Issuer keys come from the Root-signed trust list,
   not from `/.well-known/did.json`.
 - **Issuer key in the browser.** It is held as a non-extractable key in memory,

@@ -2,6 +2,7 @@
 // employer. The rules live in proofRequest.ts and in the database
 // (supabase/migrations/20261006_proof_requests.sql); this file only moves data.
 
+import { boundToOneWallet } from './identity'
 import { supabase } from './supabase'
 import { loadRevocationState, loadTrustState } from './trustAnchor'
 import type { RevocationState } from './credentialCheck'
@@ -47,6 +48,11 @@ export interface CheckedResponse {
   contact: string
   createdAt: string
   answers: CheckedAnswer[]
+  /**
+   * Every checked credential in this answer was presented, with its holder's
+   * proof, from one wallet key — and one of them is an identity attestation.
+   */
+  oneWalletWithIdentity: boolean
 }
 
 const statusOf = (closedAt: string | null, expiresAt: string): ProofRequest['status'] =>
@@ -137,12 +143,17 @@ export async function checkResponses(request: ProofRequest, rows: ResponseRow[])
   const now = Math.floor(Date.now() / 1000)
   const revocationsFor = (did: string) => revocations.get(did) ?? { list: null, failure: null }
   return Promise.all(
-    rows.map(async (row) => ({
-      id: row.id,
-      contact: row.contact,
-      createdAt: row.createdAt,
-      answers: await Promise.all(row.items.map((item) => checkAnswer(request, item, trust, revocationsFor, now))),
-    }))
+    rows.map(async (row) => {
+      const answers = await Promise.all(row.items.map((item) => checkAnswer(request, item, trust, revocationsFor, now)))
+      const checked = answers.flatMap((a) => (a.kind === 'checked' ? [a.checked] : []))
+      return {
+        id: row.id,
+        contact: row.contact,
+        createdAt: row.createdAt,
+        answers,
+        oneWalletWithIdentity: (await boundToOneWallet(checked)).withIdentity,
+      }
+    })
   )
 }
 

@@ -118,6 +118,9 @@ export async function issuePrintedCredential(options: {
   claims: CredentialClaims
 }): Promise<string> {
   const c = options.claims
+  if (c.documentType === 'identity_attestation') {
+    throw new PrintRefused('An identity check is never printed: paper cannot prove it is being shown by the person who was checked.')
+  }
   const required: Array<[string, string]> = [
     ['issuer', c.issuer],
     ['document type', c.documentType],
@@ -295,6 +298,8 @@ export async function verifyPrintedCredential(
   const issuer = list.issuers.get(assertion.issuer)
   if (!issuer) refuse('ISSUER_NOT_LISTED')
   if (!issuerMayIssue(issuer.kind, assertion.documentType)) refuse('TYPE_NOT_ALLOWED_FOR_ISSUER')
+  // Paper cannot carry a holder proof, and an unbound identity check is worthless.
+  if (assertion.documentType === 'identity_attestation') refuse('IDENTITY_NOT_BOUND')
   let key: TrustListKey | undefined
   for (const k of issuer.keys) {
     if (k.status !== 'revoked' && (await printedKeyId(k.jwk)) === assertion.kid) key = k

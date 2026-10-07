@@ -57,6 +57,7 @@ const translations = {
       view_all_notifications: 'View all notifications',
       category_academic_degree: 'Academic Degrees',
       category_employment_record: 'Employment',
+      category_identity_attestation: 'Identity',
       category_other: 'Other',
       see_all: 'See all ({count})',
       all_count: 'All {count}',
@@ -506,6 +507,26 @@ const translations = {
       job_description_opt: 'Role, in a line (optional)',
       employment_never: 'An employment record never carries salary, reason for leaving, performance or disciplinary notes. When the job ends or the title changes, issue a new record and withdraw this one as “replaced by a corrected credential”.',
       employer_note: 'A registered employer issues employment records to its staff — job title and dates — and nothing else. Verifiers show it as a registered employer, not an accredited institution.',
+      type_identity_verifier: 'Identity verifier (checks ID documents in person)',
+      identity_verifier_note: 'An identity verifier sees a person in person with their original national ID card or passport, compares the photo with the face, and signs an identity check bound to that person’s wallet — and nothing else. It keeps no copy of the document. Admission is decided by the trust Root, separately from institutions.',
+      person_section: 'Person',
+      person_email: 'Person’s email',
+      person_email_req: 'Person’s email',
+      person_found: '✓ This person has an Actik wallet',
+      issuing_verifier: 'Identity verifier',
+      issue_desc_identity: 'Sign an identity check for a person who is in front of you with their original ID card or passport. It is bound to their wallet, and reaches it only if they accept it.',
+      name_as_on_document: 'Name, exactly as on the document',
+      type_identity: 'Identity check',
+      type_identity_desc: 'Confirms you saw this person in person with their original ID card or passport. Bound to their wallet.',
+      evidence_type_req: 'Document seen',
+      evidence_type_required: 'Choose the document you saw.',
+      verified_on_req: 'Checked on',
+      verified_on_required: 'Enter the day you saw the document (not in the future).',
+      verification_level: 'How it was checked',
+      saw_original_confirm: 'I have seen the original document in person and compared its photo with the person in front of me.',
+      saw_original_required: 'Confirm that you saw the original document in person and compared its photo.',
+      identity_needs_wallet: 'This person has no Actik wallet key yet. Ask them to open their Actik wallet once, then look them up again: an identity check is only ever issued bound to their wallet.',
+      identity_never: 'An identity check never carries the document number, date of birth, photo, face or fingerprint, address or notes. There is nowhere to enter them, and nothing to upload. Keep no copy of the document.',
       register_btn_text: 'Register Institution'
     },
     role: {
@@ -729,6 +750,15 @@ const translations = {
       type_employment_record: 'Employment record',
       kind_institution: 'Accredited institution',
       kind_employer: 'Registered employer',
+      kind_identity_verifier: 'Identity verifier',
+      type_identity_attestation: 'Identity check (in person)',
+      field_verification_level: 'How it was checked',
+      field_evidence_type: 'Document seen',
+      field_verified_on: 'Checked on',
+      evidence_type_national_id_card: 'National ID card',
+      evidence_type_passport: 'Passport',
+      verification_level_in_person_document: 'In person, with the original document',
+      one_wallet_with_identity: 'The credentials in this answer and the identity check are bound to the same wallet: each came with that wallet’s proof, made for this request. The identity verifier saw the person who holds this wallet, with their original document. This is evidence, not a verdict: compare the name, and meet the person.',
       holder_bound: 'Sent from the wallet it was issued to: the issuer bound it to that wallet’s key, and this came with that key’s proof, made for you. Someone who copied it could not have sent it.',
       holder_unbound: 'Not bound to a wallet: it was issued before its holder had an Actik wallet. Anyone holding a copy could send it, so check the person’s ID.',
       field_job_title: 'Job title',
@@ -933,6 +963,7 @@ const translations = {
       view_all_notifications: 'មើលការជូនដំណឹងទាំងអស់', // TODO(km-review)
       category_academic_degree: 'សញ្ញាបត្រសិក្សា',
       category_employment_record: 'ការងារ', // TODO(km-review)
+      category_identity_attestation: 'អត្តសញ្ញាណ', // TODO(km-review)
       category_other: 'ផ្សេងៗ',
       see_all: 'មើលទាំងអស់ ({count})',
       all_count: 'ទាំងអស់ {count}',
@@ -1382,6 +1413,26 @@ const translations = {
       job_description_opt: 'តួនាទី មួយបន្ទាត់ (ស្រេចចិត្ត)', // TODO(km-review)
       employment_never: 'កំណត់ត្រាការងារមិនដែលមានប្រាក់ខែ មូលហេតុនៃការចាកចេញ ការវាយតម្លៃ ឬកំណត់ចំណាំវិន័យទេ។ នៅពេលការងារបញ្ចប់ ឬមុខតំណែងផ្លាស់ប្តូរ សូមចេញកំណត់ត្រាថ្មី ហើយដកកំណត់ត្រានេះវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ”។', // TODO(km-review)
       employer_note: 'និយោជកដែលបានចុះឈ្មោះចេញកំណត់ត្រាការងារជូនបុគ្គលិករបស់ខ្លួន — មុខតំណែង និងកាលបរិច្ឆេទ — ហើយគ្មានអ្វីផ្សេងទៀតទេ។ អ្នកផ្ទៀងផ្ទាត់បង្ហាញវាជានិយោជកដែលបានចុះឈ្មោះ មិនមែនជាស្ថាប័នដែលទទួលស្គាល់ទេ។', // TODO(km-review)
+      type_identity_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ (ពិនិត្យឯកសារអត្តសញ្ញាណដោយផ្ទាល់)', // TODO(km-review)
+      identity_verifier_note: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជួបមនុស្សដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម ប្រៀបធៀបរូបថតជាមួយមុខ ហើយចុះហត្ថលេខាលើការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកាបូបរបស់អ្នកនោះ — ហើយគ្មានអ្វីផ្សេងទៀតទេ។ វាមិនរក្សាទុកច្បាប់ចម្លងឯកសារទេ។', // TODO(km-review)
+      person_section: 'បុគ្គល', // TODO(km-review)
+      person_email: 'អ៊ីមែលរបស់បុគ្គល', // TODO(km-review)
+      person_email_req: 'អ៊ីមែលរបស់បុគ្គល', // TODO(km-review)
+      person_found: '✓ បុគ្គលនេះមានកាបូប Actik', // TODO(km-review)
+      issuing_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ', // TODO(km-review)
+      issue_desc_identity: 'ចុះហត្ថលេខាលើការពិនិត្យអត្តសញ្ញាណសម្រាប់បុគ្គលដែលនៅមុខអ្នក ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។ វាភ្ជាប់ទៅកាបូបរបស់ពួកគេ ហើយចូលកាបូប លុះត្រាតែពួកគេទទួលយក។', // TODO(km-review)
+      name_as_on_document: 'ឈ្មោះ ដូចក្នុងឯកសារ', // TODO(km-review)
+      type_identity: 'ការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      type_identity_desc: 'បញ្ជាក់ថាអ្នកបានជួបបុគ្គលនេះដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។ ភ្ជាប់ទៅកាបូបរបស់ពួកគេ។', // TODO(km-review)
+      evidence_type_req: 'ឯកសារដែលបានឃើញ', // TODO(km-review)
+      evidence_type_required: 'ជ្រើសរើសឯកសារដែលអ្នកបានឃើញ។', // TODO(km-review)
+      verified_on_req: 'ពិនិត្យនៅថ្ងៃ', // TODO(km-review)
+      verified_on_required: 'បញ្ចូលថ្ងៃដែលអ្នកបានឃើញឯកសារ (មិនមែនថ្ងៃអនាគត)។', // TODO(km-review)
+      verification_level: 'របៀបពិនិត្យ', // TODO(km-review)
+      saw_original_confirm: 'ខ្ញុំបានឃើញឯកសារដើមដោយផ្ទាល់ ហើយបានប្រៀបធៀបរូបថតរបស់វាជាមួយបុគ្គលដែលនៅមុខខ្ញុំ។', // TODO(km-review)
+      saw_original_required: 'បញ្ជាក់ថាអ្នកបានឃើញឯកសារដើមដោយផ្ទាល់ ហើយបានប្រៀបធៀបរូបថត។', // TODO(km-review)
+      identity_needs_wallet: 'បុគ្គលនេះមិនទាន់មានកូនសោកាបូប Actik នៅឡើយទេ។ សូមឱ្យពួកគេបើកកាបូបម្តង រួចស្វែងរកម្តងទៀត៖ ការពិនិត្យអត្តសញ្ញាណត្រូវបានចេញតែភ្ជាប់ទៅកាបូបរបស់ពួកគេប៉ុណ្ណោះ។', // TODO(km-review)
+      identity_never: 'ការពិនិត្យអត្តសញ្ញាណមិនដែលមានលេខឯកសារ ថ្ងៃខែឆ្នាំកំណើត រូបថត មុខ ឬស្នាមម្រាមដៃ អាសយដ្ឋាន ឬកំណត់ចំណាំទេ។ មិនមានកន្លែងបញ្ចូល ហើយគ្មានអ្វីត្រូវផ្ទុកឡើងទេ។ កុំរក្សាទុកច្បាប់ចម្លងឯកសារ។', // TODO(km-review)
       register_btn_text: 'ចុះឈ្មោះស្ថាប័ន'
     },
     role: {
@@ -1606,6 +1657,15 @@ const translations = {
       type_employment_record: 'កំណត់ត្រាការងារ', // TODO(km-review)
       kind_institution: 'ស្ថាប័នដែលទទួលស្គាល់', // TODO(km-review)
       kind_employer: 'និយោជកដែលបានចុះឈ្មោះ', // TODO(km-review)
+      kind_identity_verifier: 'អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ', // TODO(km-review)
+      type_identity_attestation: 'ការពិនិត្យអត្តសញ្ញាណ (ដោយផ្ទាល់)', // TODO(km-review)
+      field_verification_level: 'របៀបពិនិត្យ', // TODO(km-review)
+      field_evidence_type: 'ឯកសារដែលបានឃើញ', // TODO(km-review)
+      field_verified_on: 'ពិនិត្យនៅថ្ងៃ', // TODO(km-review)
+      evidence_type_national_id_card: 'អត្តសញ្ញាណប័ណ្ណសញ្ជាតិខ្មែរ', // TODO(km-review)
+      evidence_type_passport: 'លិខិតឆ្លងដែន', // TODO(km-review)
+      verification_level_in_person_document: 'ដោយផ្ទាល់ ជាមួយឯកសារដើម', // TODO(km-review)
+      one_wallet_with_identity: 'លិខិតក្នុងចម្លើយនេះ និងការពិនិត្យអត្តសញ្ញាណ ត្រូវបានភ្ជាប់ទៅកាបូបតែមួយ៖ នីមួយៗមកជាមួយភស្តុតាងរបស់កាបូបនោះ ដែលបានធ្វើសម្រាប់សំណើនេះ។ អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណបានឃើញម្ចាស់កាបូបនេះ ជាមួយឯកសារដើម។ នេះជាភស្តុតាង មិនមែនជាសាលក្រមទេ៖ សូមប្រៀបធៀបឈ្មោះ ហើយជួបបុគ្គលនោះ។', // TODO(km-review)
       holder_bound: 'ផ្ញើពីកាបូបដែលវាត្រូវបានចេញជូន៖ អ្នកចេញបានភ្ជាប់វាទៅកូនសោរបស់កាបូបនោះ ហើយវាមកជាមួយភស្តុតាងនៃកូនសោនោះ ដែលបានធ្វើសម្រាប់អ្នក។ អ្នកដែលចម្លងវាមិនអាចផ្ញើវាបានទេ។', // TODO(km-review)
       holder_unbound: 'មិនបានភ្ជាប់ទៅកាបូបទេ៖ វាត្រូវបានចេញមុនពេលម្ចាស់មានកាបូប Actik។ អ្នកណាដែលមានច្បាប់ចម្លងអាចផ្ញើវាបាន ដូច្នេះសូមពិនិត្យអត្តសញ្ញាណប័ណ្ណ។', // TODO(km-review)
       field_job_title: 'មុខតំណែង', // TODO(km-review)

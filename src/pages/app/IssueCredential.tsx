@@ -6,6 +6,7 @@ import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
+import { identityClaims, IdentityInvalid, IDENTITY_TYPE } from '../../lib/identity'
 import { issuePrintedCredential, printedDocumentHash, PrintRefused } from '../../lib/printedCredential'
 import PrintableCertificate from '../../components/PrintableCertificate'
 import CredentialCard from '../../components/CredentialCard'
@@ -13,7 +14,7 @@ import Banner from '../../components/ui/Banner'
 import {
   AlertTriangle, CheckCircle2, GraduationCap, UserCheck, Star,
   HeartHandshake, Briefcase, Loader2, Check, ArrowLeft, FileText, Upload,
-  Landmark, ShieldCheck, BadgeCheck,
+  Landmark, ShieldCheck, BadgeCheck, IdCard,
 } from 'lucide-react'
 
 interface IssuerInfo {
@@ -21,8 +22,8 @@ interface IssuerInfo {
   domain: string
   did: string
   accredited: boolean
-  /** A registered employer may issue employment records only. */
-  kind: 'institution' | 'employer'
+  /** A registered employer issues employment records only; an identity verifier identity checks only. */
+  kind: 'institution' | 'employer' | 'identity_verifier'
   rawIssuerData: any
 }
 
@@ -61,7 +62,21 @@ export default function IssueCredential() {
 
   // New Certificate Types State
   const [selectedType, setSelectedType] = useState<string | null>(null)
-  const label = (key: string) => t(selectedType === 'employment_record' && EMPLOYMENT_LABELS[key] ? EMPLOYMENT_LABELS[key] : key)
+  // An identity check is about a person, not a student, and comes from a verifier.
+  const IDENTITY_LABELS: Record<string, string> = {
+    'dashboard.student_section': 'dashboard.person_section',
+    'dashboard.student_email': 'dashboard.person_email',
+    'dashboard.student_email_req': 'dashboard.person_email_req',
+    'dashboard.student_found': 'dashboard.person_found',
+    'dashboard.issuing_institution': 'dashboard.issuing_verifier',
+    'dashboard.issue_credential_desc_form': 'dashboard.issue_desc_identity',
+    'dashboard.full_name_req': 'dashboard.name_as_on_document',
+  }
+  const label = (key: string) => t(
+    selectedType === 'employment_record' && EMPLOYMENT_LABELS[key] ? EMPLOYMENT_LABELS[key]
+    : selectedType === IDENTITY_TYPE && IDENTITY_LABELS[key] ? IDENTITY_LABELS[key]
+    : key
+  )
   
   const [subType, setSubType] = useState('')
   const [eventName, setEventName] = useState('')
@@ -98,6 +113,13 @@ export default function IssueCredential() {
   const [employmentEnd, setEmploymentEnd] = useState('')
   const [department, setDepartment] = useState('')
   const [jobDescription, setJobDescription] = useState('')
+
+  // Identity attestation. A name as on the document and how it was checked:
+  // never the document number, a birth date, a photo or a note. The in-person
+  // confirmation is never saved in a draft — it is given at the moment of issuing.
+  const [evidenceType, setEvidenceType] = useState('')
+  const [verifiedOn, setVerifiedOn] = useState(() => new Date().toISOString().slice(0, 10))
+  const [sawOriginal, setSawOriginal] = useState(false)
 
   // Certificate document upload (PDF or image)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
@@ -153,6 +175,7 @@ export default function IssueCredential() {
     reason, capacity, appreciationDate,
     certName, issuingBody, licenseNumber, dateCertified, expiryDate,
     jobTitle, employmentType, employmentStart, stillEmployed, employmentEnd, department, jobDescription,
+    evidenceType, verifiedOn,
   })
 
   // Anything worth saving/warning about — an empty form isn't a "draft".
@@ -212,6 +235,9 @@ export default function IssueCredential() {
     setEmploymentEnd(data.employmentEnd || '')
     setDepartment(data.department || '')
     setJobDescription(data.jobDescription || '')
+    setEvidenceType(data.evidenceType || '')
+    if (data.verifiedOn) setVerifiedOn(data.verifiedOn)
+    setSawOriginal(false)
     if (data.studentEmail) lookupStudent(String(data.studentEmail).trim().toLowerCase())
   }
 
@@ -245,6 +271,7 @@ export default function IssueCredential() {
     duration, completionDate, departmentOrRole, achievementTitle, basisDescription, dateAwarded, reason, capacity,
     appreciationDate, certName, issuingBody, licenseNumber, dateCertified, expiryDate,
     jobTitle, employmentType, employmentStart, stillEmployed, employmentEnd, department, jobDescription,
+    evidenceType, verifiedOn,
   ])
 
   // Catches an actual tab close/refresh/URL-bar navigation — separate from
@@ -322,7 +349,7 @@ export default function IssueCredential() {
           domain: issuerData.domain || '',
           did: issuerData.did || held?.did || '',
           accredited: issuerData.accredited,
-          kind: issuerData.kind === 'employer' ? 'employer' : 'institution',
+          kind: issuerData.kind === 'employer' || issuerData.kind === 'identity_verifier' ? issuerData.kind : 'institution',
           rawIssuerData: issuerData
         })
         setGateState('valid')
@@ -389,7 +416,7 @@ export default function IssueCredential() {
       nextErrors.studentEmail = 'Could not verify this email — retry before issuing.'
     }
     if (fullName.trim().length < 2) {
-      nextErrors.fullName = 'Student name must be at least 2 characters.'
+      nextErrors.fullName = 'Name must be at least 2 characters.'
     }
     if (selectedType === 'academic_degree') {
       if (!degreeTitle) nextErrors.degreeTitle = 'Please select a degree type.'
@@ -425,6 +452,12 @@ export default function IssueCredential() {
       if (!employmentStart) nextErrors.employmentStart = 'Start date is required'
       if (!stillEmployed && !employmentEnd) nextErrors.employmentEnd = 'End date is required'
       if (!stillEmployed && employmentEnd && employmentEnd < employmentStart) nextErrors.employmentEnd = 'End date is before the start date'
+    } else if (selectedType === IDENTITY_TYPE) {
+      // Bound or not at all: an identity check anyone could present is worthless.
+      if (studentFoundStatus !== 'found' || !holderJwk) nextErrors.studentEmail = t('dashboard.identity_needs_wallet')
+      if (!evidenceType) nextErrors.evidenceType = t('dashboard.evidence_type_required')
+      if (!verifiedOn || verifiedOn > new Date().toISOString().slice(0, 10)) nextErrors.verifiedOn = t('dashboard.verified_on_required')
+      if (!sawOriginal) nextErrors.sawOriginal = t('dashboard.saw_original_required')
     }
 
     setErrors(nextErrors)
@@ -461,7 +494,7 @@ export default function IssueCredential() {
         exp: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60 * 5)
       }
 
-      if (photoDataUrl) claims.photo = photoDataUrl
+      if (photoDataUrl && selectedType !== IDENTITY_TYPE) claims.photo = photoDataUrl
 
       if (selectedType === 'academic_degree') {
         claims.degree_type = degreeTitle
@@ -522,6 +555,20 @@ export default function IssueCredential() {
         if (!stillEmployed) typeMetadata.employment_end = employmentEnd
         if (department.trim()) typeMetadata.department = department.trim()
         if (jobDescription.trim()) typeMetadata.role_description = jobDescription.trim()
+      } else if (selectedType === IDENTITY_TYPE) {
+        // identityClaims() is the whole list: it refuses without the wallet
+        // key and the in-person confirmation, and has nowhere for anything else.
+        const identity = identityClaims({
+          sub: claims.sub, name: fullName, verifierName: issuerInfo.name, evidenceType, verifiedOn,
+          sawOriginalInPerson: sawOriginal, holderPublicJwk: holderJwk,
+        })
+        for (const k of Object.keys(claims)) if (!['iss', 'iat', 'exp'].includes(k)) delete claims[k]
+        Object.assign(claims, identity)
+        typeMetadata = {
+          verification_level: identity.verification_level,
+          evidence_type: identity.evidence_type,
+          verified_on: identity.verified_on,
+        }
       }
 
       if (typeMetadata) {
@@ -562,7 +609,9 @@ export default function IssueCredential() {
         : ''
       const printedTitle =
         selectedType === 'academic_degree' ? formatDegreeTitle(degreeTitle) : certName.trim()
-      if (!documentNumber) {
+      if (selectedType === IDENTITY_TYPE) {
+        // Never printed: paper cannot prove who is showing it.
+      } else if (!documentNumber) {
         printUnavailableWhy = 'no_number'
       } else {
         try {
@@ -633,7 +682,8 @@ export default function IssueCredential() {
         credentialData.certificate_id = certificateId.trim()
       } else {
         credentialData.type_metadata = typeMetadata
-        credentialData.label = typeMetadata.job_title || typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
+        credentialData.label = selectedType === IDENTITY_TYPE ? 'Identity check'
+          : typeMetadata.job_title || typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
       }
 
       const res = await supabase.from('pending_credentials').insert(credentialData)
@@ -652,7 +702,7 @@ export default function IssueCredential() {
       setIssueSuccess(true)
       setIsSubmitting(false)
     } catch (err: any) {
-      setSubmitError(err.message || 'Issuance failed. Please check details and try again.')
+      setSubmitError(err instanceof IdentityInvalid ? err.message : err.message || 'Issuance failed. Please check details and try again.')
       setIsSubmitting(false)
     }
   }
@@ -696,6 +746,9 @@ export default function IssueCredential() {
     setEmploymentEnd('')
     setDepartment('')
     setJobDescription('')
+    setEvidenceType('')
+    setVerifiedOn(new Date().toISOString().slice(0, 10))
+    setSawOriginal(false)
     
     setSelectedType(null)
     setStudentFoundStatus(null)
@@ -815,6 +868,7 @@ export default function IssueCredential() {
     : selectedType === 'appreciation_service' ? reason
     : selectedType === 'professional_certification' ? certName
     : selectedType === 'employment_record' ? jobTitle
+    : selectedType === IDENTITY_TYPE ? t('dashboard.type_identity')
     : ''
 
   // Success Screen
@@ -951,6 +1005,12 @@ export default function IssueCredential() {
     )
     if (department.trim()) reviewRows.push({ label: t('dashboard.department_opt'), value: department })
     if (jobDescription.trim()) reviewRows.push({ label: t('dashboard.job_description_opt'), value: jobDescription })
+  } else if (selectedType === IDENTITY_TYPE) {
+    reviewRows.push(
+      { label: t('dashboard.evidence_type_req'), value: evidenceType ? t(`proof.evidence_type_${evidenceType}`) : '' },
+      { label: t('dashboard.verified_on_req'), value: verifiedOn },
+      { label: t('dashboard.verification_level'), value: t('proof.verification_level_in_person_document') },
+    )
   }
 
   // Step indicator — derived purely from selectedType/showConfirm, no new
@@ -1010,7 +1070,7 @@ export default function IssueCredential() {
               )}
             </div>
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.full_name_req')}</span>
+              <span className="text-xs text-gray-400 block font-medium">{label('dashboard.full_name_req')}</span>
               <strong className="text-gray-900">{fullName}</strong>
             </div>
             <div>
@@ -1027,7 +1087,7 @@ export default function IssueCredential() {
                 <strong className="text-gray-900 break-words">{row.value || '—'}</strong>
               </div>
             ))}
-            {selectedType !== 'academic_degree' && notes.trim() && (
+            {selectedType !== 'academic_degree' && selectedType !== IDENTITY_TYPE && notes.trim() && (
               <div>
                 <span className="text-xs text-gray-400 block font-medium">{t('dashboard.additional_notes_opt')}</span>
                 <strong className="text-gray-900 break-words whitespace-pre-wrap">{notes}</strong>
@@ -1116,7 +1176,9 @@ export default function IssueCredential() {
           {t('dashboard.issue_credential_title')}
         </h2>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">
-          {issuerInfo?.kind === 'employer' ? t('dashboard.issue_desc_employment') : label('dashboard.issue_credential_desc_form')}
+          {issuerInfo?.kind === 'employer' ? t('dashboard.issue_desc_employment')
+            : issuerInfo?.kind === 'identity_verifier' ? t('dashboard.issue_desc_identity')
+            : label('dashboard.issue_credential_desc_form')}
         </p>
       </div>
 
@@ -1177,10 +1239,16 @@ export default function IssueCredential() {
             { id: 'merit_excellence', icon: Star, title: t('dashboard.type_merit'), desc: t('dashboard.type_merit_desc') },
             { id: 'appreciation_service', icon: HeartHandshake, title: t('dashboard.type_appreciation'), desc: t('dashboard.type_appreciation_desc') },
             { id: 'professional_certification', icon: Briefcase, title: t('dashboard.type_professional'), desc: t('dashboard.type_professional_desc') },
-            { id: 'employment_record', icon: BadgeCheck, title: t('dashboard.type_employment'), desc: t('dashboard.type_employment_desc') }
+            { id: 'employment_record', icon: BadgeCheck, title: t('dashboard.type_employment'), desc: t('dashboard.type_employment_desc') },
+            { id: IDENTITY_TYPE, icon: IdCard, title: t('dashboard.type_identity'), desc: t('dashboard.type_identity_desc') }
           ]
-            // A registered employer issues employment records and nothing else.
-            .filter(c => issuerInfo?.kind !== 'employer' || c.id === 'employment_record')
+            // Each tier issues only its own types: an employer employment
+            // records, an identity verifier identity checks, and an
+            // institution everything else.
+            .filter(c =>
+              issuerInfo?.kind === 'employer' ? c.id === 'employment_record'
+              : issuerInfo?.kind === 'identity_verifier' ? c.id === IDENTITY_TYPE
+              : c.id !== IDENTITY_TYPE)
             .map(c => (
             <button
               key={c.id}
@@ -1250,8 +1318,11 @@ export default function IssueCredential() {
               )}
               {studentFoundStatus === 'not_found' && (
                 <p className="text-amber-600 text-xs mt-1 font-semibold italic leading-normal">
-                  {t('dashboard.student_not_found_warning')}
+                  {selectedType === IDENTITY_TYPE ? t('dashboard.identity_needs_wallet') : t('dashboard.student_not_found_warning')}
                 </p>
+              )}
+              {selectedType === IDENTITY_TYPE && studentFoundStatus === 'found' && !holderJwk && (
+                <p className="text-amber-600 text-xs mt-1 font-semibold italic leading-normal">{t('dashboard.identity_needs_wallet')}</p>
               )}
               {studentFoundStatus === 'error' && (
                 <p className="text-rose-600 text-xs mt-1 font-semibold italic leading-normal">
@@ -1265,7 +1336,7 @@ export default function IssueCredential() {
 
             {/* Full Name */}
             <div>
-              <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.full_name_req')} <span className="text-rose-500">*</span></label>
+              <label className="text-xs md:text-sm font-bold text-gray-700 block">{label('dashboard.full_name_req')} <span className="text-rose-500">*</span></label>
               <input
                 type="text"
                 value={fullName}
@@ -1567,10 +1638,38 @@ export default function IssueCredential() {
               </>
             )}
 
+            {selectedType === IDENTITY_TYPE && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.evidence_type_req')} <span className="text-rose-500">*</span></label>
+                    <select name="evidenceType" value={evidenceType} onChange={e => setEvidenceType(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900">
+                      <option value="">{t('dashboard.select_type')}</option>
+                      {['national_id_card', 'passport'].map(v => (
+                        <option key={v} value={v}>{t(`proof.evidence_type_${v}`)}</option>
+                      ))}
+                    </select>
+                    {errors.evidenceType && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.evidenceType}</p>}
+                  </div>
+                  <div>
+                    <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.verified_on_req')} <span className="text-rose-500">*</span></label>
+                    <input type="date" name="verifiedOn" value={verifiedOn} max={new Date().toISOString().slice(0, 10)} onChange={e => setVerifiedOn(e.target.value)} className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900" />
+                    {errors.verifiedOn && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.verifiedOn}</p>}
+                  </div>
+                </div>
+                <label className="flex items-start gap-3 rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-800">
+                  <input type="checkbox" name="sawOriginal" className="mt-1" checked={sawOriginal} onChange={e => setSawOriginal(e.target.checked)} />
+                  <span>{t('dashboard.saw_original_confirm')}</span>
+                </label>
+                {errors.sawOriginal && <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.sawOriginal}</p>}
+                <p className="text-xs text-stone-500 leading-relaxed">{t('dashboard.identity_never')}</p>
+              </>
+            )}
+
             {/* Additional Notes - hidden for academic_degree per spec, and for
                 employment records, where free text is where a salary or a
                 reason for leaving would end up. */}
-            {selectedType !== 'academic_degree' && selectedType !== 'employment_record' && (
+            {selectedType !== 'academic_degree' && selectedType !== 'employment_record' && selectedType !== IDENTITY_TYPE && (
               <div>
                 <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.additional_notes_opt')}</label>
                 <textarea
@@ -1584,7 +1683,7 @@ export default function IssueCredential() {
             )}
 
             {/* Certificate Document Upload */}
-            {selectedType !== 'employment_record' && (
+            {selectedType !== 'employment_record' && selectedType !== IDENTITY_TYPE && (
             <div>
               <label className="text-xs md:text-sm font-bold text-gray-700 block">
                 {t('dashboard.cert_doc_req')} {selectedType === 'academic_degree' ? <span className="text-rose-500">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
@@ -1726,6 +1825,8 @@ export default function IssueCredential() {
                 ? { title: certName, subtitle: issuingBody, date: dateCertified }
                 : selectedType === 'employment_record'
                 ? { title: jobTitle, subtitle: department, date: '' }
+                : selectedType === IDENTITY_TYPE
+                ? { title: t('dashboard.type_identity'), subtitle: evidenceType ? t(`proof.evidence_type_${evidenceType}`) : '', date: verifiedOn }
                 : null
 
             if (!preview) return null

@@ -136,6 +136,10 @@ export interface ExhibitInput {
 /** Assemble the package. Pure apart from hashing. */
 export async function buildExhibitPackage(input: ExhibitInput): Promise<ExhibitPackage> {
   const asText = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+  // An identity check is about a person, not an achievement: never an exhibit.
+  if (input.credentialType === 'identity_attestation') {
+    throw new ExportRefused('An identity check is not something to exhibit. It stays in your wallet.')
+  }
 
   let fileSha256: string | null = null
   let fileType: string | null = null

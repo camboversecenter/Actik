@@ -425,8 +425,9 @@ export default function CredentialDetail() {
           </button>
           <button
             type="button"
+            disabled={credential?.credential_type === 'identity_attestation'}
             onClick={() => setShowMuseum(true)}
-            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2"
+            className="h-11 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
           >
             <Frame size={15} /> {t('museum.export_button')}
           </button>
@@ -554,7 +555,7 @@ export default function CredentialDetail() {
                   <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
                     {renderField(t('wallet.student_name'), 'Full name', detail.name)}
                     {renderField(t('wallet.student_email'), 'Email', detail.email || credential.holder_email)}
-                    {credential.credential_type !== 'employment_record' && renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
+                    {credential.credential_type !== 'employment_record' && credential.credential_type !== 'identity_attestation' && renderField(t('wallet.student_id'), 'Student ID', detail.student_id, true)}
                   </div>
                 </div>
 
@@ -570,7 +571,13 @@ export default function CredentialDetail() {
                         disclosures are fixed forever at signing time, a code
                         fix alone can't correct already-issued ones. Falling
                         back to it here is the only way those still render. */}
-                    {credential.credential_type === 'employment_record' ? (
+                    {credential.credential_type === 'identity_attestation' ? (
+                      <>
+                        {renderField(t('proof.field_evidence_type'), 'Document seen', detail.evidence_type ? displayClaim(t, 'evidence_type', detail.evidence_type, null) : null)}
+                        {renderField(t('proof.field_verification_level'), 'How it was checked', detail.verification_level ? displayClaim(t, 'verification_level', detail.verification_level, null) : null)}
+                        {renderField(t('proof.field_verified_on'), 'Checked on', detail.verified_on ? formatDate(detail.verified_on) : null)}
+                      </>
+                    ) : credential.credential_type === 'employment_record' ? (
                       <>
                         {renderField(t('proof.field_job_title'), 'Job title', detail.job_title)}
                         {renderField(t('proof.field_employment_type'), 'Employment type', detail.employment_type ? displayClaim(t, 'employment_type', detail.employment_type, null) : null)}
