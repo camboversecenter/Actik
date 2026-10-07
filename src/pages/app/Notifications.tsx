@@ -7,6 +7,7 @@ import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
 import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
 import { ensureHolderKey, isOwnHolderKey } from '../../lib/holderKey'
+import { peekJwt } from '../../lib/sdjwt'
 
 interface PendingCredential {
   id: string
@@ -31,6 +32,8 @@ interface PendingCredential {
   graduation_date?: string
   certificate_id?: string
   printed_code?: string | null
+  /** Set when an issuer reissued this to a new wallet key: the credential it replaces. */
+  replaces_jti?: string | null
 }
 
 export default function Notifications() {
@@ -154,7 +157,8 @@ export default function Notifications() {
         claimed_at: null,
         created_at: p.created_at,
         credential_type: p.credential_type,
-        printed_code: p.printed_code ?? null
+        printed_code: p.printed_code ?? null,
+        replaces_jti: p.replaces_jti ?? null
       }))
 
       setPendingList(unclaimedList)
@@ -296,6 +300,28 @@ export default function Notifications() {
 
       // Fallback schema detection
       const isFallback = (cred.cipher !== undefined || cred.iv !== undefined) || (!cred.sd_jwt) || (cred.issuer_id === '')
+
+      // A reissue (new wallet key) replaces the copy already in the wallet:
+      // the old one is withdrawn as corrected, and one wallet cannot hold two
+      // copies of the same document from the same issuer. Only the copy it
+      // names goes — or one this wallet can no longer open at all (it was
+      // sealed by a wallet that has since been reset).
+      const certificateId = signedOr(assertion, 'certificate_id', cred.certificate_id) as string | null
+      if (isFallback && cred.replaces_jti && certificateId) {
+        const { data: olds } = await supabase.from('credentials')
+          .select('id, cipher, iv')
+          .eq('owner', currentUser.id).eq('issuer_did', cred.issuer_did).eq('certificate_id', certificateId)
+        for (const old of olds ?? []) {
+          let replaced = false
+          try {
+            const opened = await decryptPayload({ cipher: old.cipher, iv: old.iv }) as { sdjwt?: string }
+            replaced = !!opened.sdjwt && peekJwt(opened.sdjwt).jti === cred.replaces_jti
+          } catch {
+            replaced = true
+          }
+          if (replaced) await supabase.from('credentials').delete().eq('id', old.id)
+        }
+      }
 
       if (isFallback) {
         // The display columns are written from the *verified* claims, falling

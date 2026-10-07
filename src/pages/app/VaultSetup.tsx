@@ -7,6 +7,7 @@ import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PinDotsInput from '../../components/PinDotsInput'
 import { verifyIssuedCredential } from '../../lib/claimVerification'
+import { forgetHolderKey } from '../../lib/holderKey'
 
 // Note: The prompt expects import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -284,6 +285,12 @@ export default function VaultSetup() {
     try {
       setIsResetting(true)
 
+      // 0. The wallet key is sealed with this wallet: resetting it loses the
+      //    key for good. Retire it as lost, so the next unlock makes a new one
+      //    and issuers can be asked to reissue (docs/KEY_RECOVERY.md).
+      await supabase.rpc('retire_holder_key', { p_reason: 'lost' })
+      forgetHolderKey()
+
       // 1. Delete from vaults table (if exists)
       await supabase.from('vaults').delete().eq('user_id', currentUser.id)
 
@@ -430,6 +437,11 @@ export default function VaultSetup() {
               className="font-khmer w-full bg-indigo-600 hover:bg-indigo-650 active:bg-indigo-700 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/wallet')}>
               {t('account.go_wallet')}
+            </button>
+            <button
+              className="font-khmer w-full border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
+              onClick={() => navigate('/app/wallet-key')}>
+              <KeyRound size={15} /> {t('walletkey.title')}
             </button>
             <button
               className="font-khmer w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"

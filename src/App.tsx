@@ -8,6 +8,7 @@ import RegisterIssuer from './pages/app/RegisterIssuer'
 import IssueCredential from './pages/app/IssueCredential'
 import Wallet from './pages/app/Wallet'
 import VaultSetup from './pages/app/VaultSetup'
+import WalletKey from './pages/app/WalletKey'
 import ShareCredential from './pages/app/ShareCredential'
 import ScanCertificate from './pages/scan/ScanCertificate'
 import VerifyCredential from './pages/verify/VerifyCredential'
@@ -21,6 +22,7 @@ import CredentialDetail from './pages/app/CredentialDetail'
 import IssuedCredentials from './pages/app/IssuedCredentials'
 import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
 import Withdrawals from './pages/app/Withdrawals'
+import ReissueRequests from './pages/app/ReissueRequests'
 import ProofRequests from './pages/requests/ProofRequests'
 import NewProofRequest from './pages/requests/NewProofRequest'
 import ProofRequestDetail from './pages/requests/ProofRequestDetail'
@@ -415,11 +417,13 @@ export default function App() {
           <Route path="issued" element={<IssuedCredentials />} />
           <Route path="issued/type/:credentialType" element={<IssuedCredentialsCategory />} />
           <Route path="withdrawals" element={<Withdrawals />} />
+          <Route path="reissue-requests" element={<ReissueRequests />} />
           {/* Student routes */}
           <Route path="wallet" element={<Wallet />} />
           <Route path="wallet/type/:credentialType" element={<WalletCategory />} />
           <Route path="credential/:id" element={<CredentialDetail />} />
           <Route path="vault-setup" element={<VaultSetup />} />
+          <Route path="wallet-key" element={<WalletKey />} />
           <Route path="share/:credentialId" element={<ShareCredential />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="activity" element={<Activity />} />

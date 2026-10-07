@@ -1,12 +1,13 @@
 import type { JWK } from 'jose'
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { issueSdJwt } from '../../lib/sdjwt'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
 import { identityClaims, IdentityInvalid, IDENTITY_TYPE } from '../../lib/identity'
+import { completeReissue } from '../../lib/reissueApi'
 import { issuePrintedCredential, printedDocumentHash, PrintRefused } from '../../lib/printedCredential'
 import PrintableCertificate from '../../components/PrintableCertificate'
 import CredentialCard from '../../components/CredentialCard'
@@ -240,6 +241,26 @@ export default function IssueCredential() {
     setSawOriginal(false)
     if (data.studentEmail) lookupStudent(String(data.studentEmail).trim().toLowerCase())
   }
+
+  // Reissue from the issuer's own records (Reissue requests → Issue again):
+  // the person's email and the name from their identity check are filled in;
+  // on success the replaced credential is withdrawn and the request closed.
+  const [searchParams] = useSearchParams()
+  const [reissueWarning, setReissueWarning] = useState<string | null>(null)
+  const reissue = searchParams.get('reissue')
+    ? { requestId: searchParams.get('reissue')!, replaces: searchParams.get('replaces') || null }
+    : null
+  useEffect(() => {
+    if (!reissue) return
+    const email = (searchParams.get('email') || '').trim().toLowerCase()
+    setStudentEmail(email)
+    setFullName(searchParams.get('name') || '')
+    const type = searchParams.get('type')
+    if (type && type !== IDENTITY_TYPE) setSelectedType(type)
+    setDraftDismissed(true)
+    if (email) lookupStudent(email)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Offer a saved draft back once we know who the user is (once, per mount).
   useEffect(() => {
@@ -686,6 +707,7 @@ export default function IssueCredential() {
           : typeMetadata.job_title || typeMetadata.sub_type || typeMetadata.cert_name || 'Certificate'
       }
 
+      if (reissue?.replaces) credentialData.replaces_jti = reissue.replaces
       const res = await supabase.from('pending_credentials').insert(credentialData)
 
       if (res.error) {
@@ -693,6 +715,15 @@ export default function IssueCredential() {
           throw new Error('A certificate with this ID has already been issued by your institution.')
         }
         throw res.error
+      }
+
+      if (reissue) {
+        // The new one is out; now the old one stops verifying.
+        try {
+          await completeReissue(issuerInfo.did, reissue.requestId, reissue.replaces)
+        } catch (e) {
+          setReissueWarning(`${t('dashboard.reissue_not_withdrawn')} ${e instanceof Error ? e.message : String(e)}`)
+        }
       }
 
       setPrinted(printedCopy)
@@ -880,6 +911,9 @@ export default function IssueCredential() {
             <CheckCircle2 size={28} className="text-emerald-600" />
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.credential_issued')}</h2>
+          {reissueWarning && (
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-900">{reissueWarning}</p>
+          )}
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
             <div>
@@ -1224,6 +1258,12 @@ export default function IssueCredential() {
           <code className="font-mono bg-indigo-100/50 px-2 py-0.5 rounded text-[10px] break-all">
             {truncateDid(issuerInfo.did)}
           </code>
+        </div>
+      )}
+
+      {reissue && (
+        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900" data-testid="reissue-banner">
+          {t('dashboard.reissue_banner')}
         </div>
       )}
 

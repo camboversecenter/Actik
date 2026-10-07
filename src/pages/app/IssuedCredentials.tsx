@@ -77,6 +77,9 @@ export default function IssuedCredentials() {
         <Link to="/app/withdrawals" className="inline-block mt-3 text-sm font-semibold text-rose-700 hover:text-rose-800">
           {t('dashboard.manage_withdrawals')} →
         </Link>
+        <Link to="/app/reissue-requests" className="inline-block mt-3 ml-4 text-sm font-semibold text-indigo-700 hover:text-indigo-800">
+          {t('dashboard.reissue_requests')} →
+        </Link>
       </div>
 
       {records.length === 0 ? (

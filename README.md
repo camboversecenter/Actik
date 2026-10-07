@@ -240,6 +240,19 @@ nothing else. In a proof request, the employer is told when a degree and an
 identity check were presented from the same wallet. Details:
 [`docs/IDENTITY_VERIFIERS.md`](docs/IDENTITY_VERIFIERS.md).
 
+## Key recovery
+
+A wallet key can be retired — **lost** (forgotten PIN, wallet reset),
+**compromised** (someone else has the wallet) or **replaced** — and never
+reactivated. The next unlock makes a new key, and the holder asks each issuer
+to reissue to it (**Account → Wallet key**), proving continuity with either the
+old key (if still available and not compromised) or a fresh identity check
+bound to the new key whose name matches. The issuer reissues the same claims
+to the new key and withdraws the old credential as corrected; the wallet swaps
+the old copy for the new one on accept. If the credentials were lost with the
+wallet, the issuer issues them again from its own records. Details:
+[`docs/KEY_RECOVERY.md`](docs/KEY_RECOVERY.md).
+
 ## Proof requests (recruitment)
 
 An employer asks for proof — **Requests → New request**: up to five credential
@@ -286,7 +299,8 @@ how CamboVerse should read it, and the open identity question (D5):
   is signed by a key pinned in the app, not read from a table, nobody with
   database access can add an institution or swap its key.
 - **Recovery.** zk-vault has zero key-recovery by design, so the issuer remains
-  the source of truth: a lost vault is recovered by re-issuance, never by the DB.
+  the source of truth: a lost vault is recovered by re-issuance, never by the DB
+  — to a new wallet key, after the holder proves continuity (see Key recovery).
 
 ## Limitations (deliberate MVP scope)
 

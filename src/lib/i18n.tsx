@@ -302,7 +302,7 @@ const translations = {
       return_wallet_claim: 'Return to wallet to claim your credentials',
       go_dashboard: 'Go to dashboard',
       delete_vault_warning: 'This will delete your vault',
-      reset_vault_desc: 'Resetting your vault will permanently delete all encrypted credentials stored in it. You will need to re-claim all credentials from your institutions. This action cannot be undone.',
+      reset_vault_desc: 'Resetting your vault will permanently delete all encrypted credentials stored in it, and retire your wallet key as lost. To get your credentials back, get a new identity check in person, then ask each issuer to reissue them (Account → Wallet key). This action cannot be undone.',
       type_reset_confirm: 'Type RESET to confirm',
       reset_btn: 'Reset',
       change_unlock_method_q: 'Change Unlock Method?',
@@ -346,6 +346,9 @@ const translations = {
       status_issued: 'Issued',
       status_withdrawn: 'Withdrawn',
       manage_withdrawals: 'Withdraw a credential, or renew your withdrawal list',
+      reissue_requests: 'Reissue requests (new wallet keys)',
+      reissue_banner: 'Reissuing to this person\'s new wallet key, from your own records. When you issue, the credential it replaces is withdrawn as “replaced by a corrected credential”, and the request is closed.',
+      reissue_not_withdrawn: 'Issued, but the replaced credential was not withdrawn yet — withdraw it under Withdrawals:',
       status_pending: 'Pending',
       stat_total_issued: 'Total issued',
       stat_claimed: 'Claimed',
@@ -774,6 +777,48 @@ const translations = {
       employment_type_contract: 'Contract',
       employment_type_internship: 'Internship',
       employment_type_volunteer: 'Volunteer',
+    },
+    walletkey: {
+      title: 'Wallet key',
+      intro: 'Your wallet has its own key. Credentials issued to you are bound to it, so only this wallet can present them. If the key is lost or someone else has your wallet, retire it: a new key is made, and you ask each issuer to reissue your credentials to it.',
+      unlock_first: 'Unlock your wallet first: your key is sealed inside it.',
+      current: 'Current key',
+      current_desc: 'Credentials issued to you from now on are bound to key',
+      replace: 'Replace my wallet key',
+      compromised: 'My wallet was compromised',
+      compromised_hint: 'Compromised means someone else may have your unlocked phone or your PIN. A compromised key can never again prove anything, so to recover you will need a new identity check in person. Change your PIN too.',
+      confirm_replaced: 'Replace your wallet key? Credentials bound to the current key will need to be reissued by their issuers. You can prove it is you with the old key, which stays in your wallet.',
+      confirm_compromised: 'Retire your wallet key as compromised? It can never prove anything again. To move your credentials you will need a fresh identity check in person.',
+      confirm_lost: 'Retire the key this wallet cannot open, as lost? A new key is made. To get your credentials reissued you will need a fresh identity check in person.',
+      confirm_mark_compromised: 'Mark this old key as compromised? It can then no longer prove continuity, and open requests that rely on it are declined.',
+      retired_ok: 'Done. Your wallet now has a new key.',
+      unreadable_title: 'This wallet cannot open your wallet key',
+      unreadable_desc: 'Your wallet was reset, or the PIN that sealed the key is gone. Credentials bound to that key cannot be presented any more. Retire it as lost; then get a new identity check in person and ask each issuer to reissue.',
+      retire_lost: 'Retire it as lost and make a new key',
+      history: 'Retired keys',
+      reason_lost: 'Lost',
+      reason_compromised: 'Compromised',
+      reason_replaced: 'Replaced',
+      mark_compromised: 'Mark compromised',
+      to_move: 'Credentials bound to an old key ({count})',
+      have_identity: 'You have an identity check bound to your current key: issuers can use it to confirm it is you.',
+      no_identity: 'If the old key is lost or compromised, get an identity check first: an identity verifier sees you in person with your original ID card or passport and issues it to this wallet.',
+      nothing_to_move: 'Nothing to move: every credential in your wallet is bound to your current key.',
+      asked: 'Asked',
+      ask_reissue: 'Ask the issuer to reissue',
+      need_identity: 'You need an identity check bound to your current key first. Visit an identity verifier with your original ID card or passport.',
+      request_sent: 'Request sent. The issuer checks it and, if it holds, sends the reissued credential to your inbox.',
+      lost_heading: 'Credentials lost with an old wallet',
+      lost_desc: 'If your wallet was reset, the credentials in it are gone too. Ask each issuer that issued you something: they find it in their own records and issue it again to your new key. Your identity check is how they know it is you.',
+      choose_issuer: 'Choose an issuer…',
+      ask_issuer: 'Ask this issuer',
+      requests: 'Your reissue requests',
+      status_open: 'Waiting for the issuer',
+      status_reissued: 'Reissued',
+      status_declined: 'Declined',
+      proof_old_key: 'proven with the old key',
+      proof_identity: 'proven with an identity check',
+      limits: 'What this cannot do: if someone has your unlocked phone or your PIN, they can present your credentials until you retire the key — and if they get to an identity verifier with your document before you do, they could ask for reissues too. Issuers withdraw the old credentials when they reissue, so a stolen copy stops verifying.',
     },
     museum: {
       title: 'Add to a CamboVerse museum',
@@ -1208,7 +1253,7 @@ const translations = {
       return_wallet_claim: 'ត្រឡប់ទៅកាបូបដើម្បីទទួលវិញ្ញាបនបត្ររបស់អ្នក',
       go_dashboard: 'ទៅកាន់ផ្ទាំងគ្រប់គ្រង',
       delete_vault_warning: 'នេះនឹងលុបកាបូបរបស់អ្នកចោល',
-      reset_vault_desc: 'ការកំណត់កាបូបឡើងវិញនឹងលុបវិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបទាំងអស់ជារៀងរហូត។ អ្នកនឹងត្រូវទទួលវិញ្ញាបនបត្រឡើងវិញពីស្ថាប័នរបស់អ្នក។ សកម្មភាពនេះមិនអាចត្រឡប់ថយក្រោយបានទេ។',
+      reset_vault_desc: 'ការកំណត់កាបូបឡើងវិញនឹងលុបវិញ្ញាបនបត្រដែលបានអ៊ិនគ្រីបទាំងអស់ជារៀងរហូត ហើយដកកូនសោកាបូបរបស់អ្នកចេញជា “បាត់”។ ដើម្បីទទួលវិញ្ញាបនបត្រវិញ សូមធ្វើការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់ រួចស្នើឱ្យអ្នកចេញនីមួយៗចេញឡើងវិញ (គណនី → កូនសោកាបូប)។ សកម្មភាពនេះមិនអាចត្រឡប់ថយក្រោយបានទេ។', // TODO(km-review)
       type_reset_confirm: 'វាយបញ្ចូល RESET ដើម្បីបញ្ជាក់',
       reset_btn: 'កំណត់ឡើងវិញ',
       change_unlock_method_q: 'ផ្លាស់ប្តូរវិធីសាស្ត្របើកកាបូបមែនទេ?',
@@ -1252,6 +1297,9 @@ const translations = {
       status_issued: 'បានចេញ', // TODO(km-review)
       status_withdrawn: 'បានដកហូត', // TODO(km-review)
       manage_withdrawals: 'ដកហូតវិញ្ញាបនបត្រ ឬបន្តបញ្ជីដកហូតរបស់អ្នក', // TODO(km-review)
+      reissue_requests: 'សំណើចេញឡើងវិញ (កូនសោកាបូបថ្មី)', // TODO(km-review)
+      reissue_banner: 'កំពុងចេញឡើងវិញទៅកូនសោកាបូបថ្មីរបស់បុគ្គលនេះ ពីកំណត់ត្រារបស់អ្នក។ ពេលអ្នកចេញ លិខិតដែលវាជំនួសនឹងត្រូវដកវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ” ហើយសំណើត្រូវបានបិទ។', // TODO(km-review)
+      reissue_not_withdrawn: 'បានចេញ ប៉ុន្តែលិខិតដែលត្រូវជំនួសមិនទាន់ត្រូវបានដកវិញទេ — សូមដកវានៅក្នុង ការដកហូត៖', // TODO(km-review)
       status_pending: 'រង់ចាំ',
       stat_total_issued: 'ចេញសរុប', // TODO(km-review)
       stat_claimed: 'បានទទួល', // TODO(km-review)
@@ -1681,6 +1729,48 @@ const translations = {
       employment_type_contract: 'កិច្ចសន្យា', // TODO(km-review)
       employment_type_internship: 'កម្មសិក្សា', // TODO(km-review)
       employment_type_volunteer: 'ស្ម័គ្រចិត្ត', // TODO(km-review)
+    },
+    walletkey: {
+      title: 'កូនសោកាបូប', // TODO(km-review)
+      intro: 'កាបូបរបស់អ្នកមានកូនសោផ្ទាល់ខ្លួន។ លិខិតដែលចេញជូនអ្នកត្រូវបានភ្ជាប់ទៅវា ដូច្នេះមានតែកាបូបនេះទេដែលអាចបង្ហាញវាបាន។ ប្រសិនបើកូនសោបាត់ ឬអ្នកផ្សេងមានកាបូបរបស់អ្នក សូមដកវាចេញ៖ កូនសោថ្មីនឹងត្រូវបង្កើត ហើយអ្នកស្នើឱ្យអ្នកចេញនីមួយៗចេញលិខិតឡើងវិញ។', // TODO(km-review)
+      unlock_first: 'សូមដោះសោកាបូបជាមុនសិន៖ កូនសោរបស់អ្នកត្រូវបានបិទជិតនៅខាងក្នុង។', // TODO(km-review)
+      current: 'កូនសោបច្ចុប្បន្ន', // TODO(km-review)
+      current_desc: 'លិខិតដែលចេញជូនអ្នកចាប់ពីពេលនេះត្រូវបានភ្ជាប់ទៅកូនសោ', // TODO(km-review)
+      replace: 'ប្តូរកូនសោកាបូបរបស់ខ្ញុំ', // TODO(km-review)
+      compromised: 'កាបូបរបស់ខ្ញុំត្រូវបានគេលួច ឬប្រើ', // TODO(km-review)
+      compromised_hint: 'មានន័យថាអ្នកផ្សេងអាចមានទូរស័ព្ទដែលបានដោះសោ ឬលេខ PIN របស់អ្នក។ កូនសោដែលត្រូវបានគេប្រើមិនអាចបញ្ជាក់អ្វីបានទៀតទេ ដូច្នេះដើម្បីស្តារ អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។ សូមប្តូរលេខ PIN ផងដែរ។', // TODO(km-review)
+      confirm_replaced: 'ប្តូរកូនសោកាបូប? លិខិតដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្ននឹងត្រូវចេញឡើងវិញដោយអ្នកចេញ។ អ្នកអាចបញ្ជាក់ថាជាអ្នកដោយប្រើកូនសោចាស់ ដែលនៅតែក្នុងកាបូប។', // TODO(km-review)
+      confirm_compromised: 'ដកកូនសោចេញជា “ត្រូវបានគេប្រើ”? វាមិនអាចបញ្ជាក់អ្វីបានទៀតទេ។ ដើម្បីផ្ទេរលិខិត អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។', // TODO(km-review)
+      confirm_lost: 'ដកកូនសោដែលកាបូបនេះមិនអាចបើកបាន ជា “បាត់”? កូនសោថ្មីនឹងត្រូវបង្កើត។ ដើម្បីឱ្យលិខិតចេញឡើងវិញ អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់។', // TODO(km-review)
+      confirm_mark_compromised: 'សម្គាល់កូនសោចាស់នេះថាត្រូវបានគេប្រើ? បន្ទាប់មកវាមិនអាចបញ្ជាក់ការបន្តបានទៀតទេ ហើយសំណើដែលពឹងលើវានឹងត្រូវបដិសេធ។', // TODO(km-review)
+      retired_ok: 'រួចរាល់។ កាបូបរបស់អ្នកឥឡូវមានកូនសោថ្មី។', // TODO(km-review)
+      unreadable_title: 'កាបូបនេះមិនអាចបើកកូនសោកាបូបរបស់អ្នកបានទេ', // TODO(km-review)
+      unreadable_desc: 'កាបូបរបស់អ្នកត្រូវបានកំណត់ឡើងវិញ ឬលេខ PIN ដែលបិទកូនសោបានបាត់។ លិខិតដែលភ្ជាប់ទៅកូនសោនោះមិនអាចបង្ហាញបានទៀតទេ។ សូមដកវាចេញជា “បាត់” រួចធ្វើការពិនិត្យអត្តសញ្ញាណថ្មីដោយផ្ទាល់ ហើយស្នើឱ្យអ្នកចេញនីមួយៗចេញឡើងវិញ។', // TODO(km-review)
+      retire_lost: 'ដកវាចេញជា “បាត់” ហើយបង្កើតកូនសោថ្មី', // TODO(km-review)
+      history: 'កូនសោដែលបានដកចេញ', // TODO(km-review)
+      reason_lost: 'បាត់', // TODO(km-review)
+      reason_compromised: 'ត្រូវបានគេប្រើ', // TODO(km-review)
+      reason_replaced: 'បានប្តូរ', // TODO(km-review)
+      mark_compromised: 'សម្គាល់ថាត្រូវបានគេប្រើ', // TODO(km-review)
+      to_move: 'លិខិតដែលភ្ជាប់ទៅកូនសោចាស់ ({count})', // TODO(km-review)
+      have_identity: 'អ្នកមានការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្ន៖ អ្នកចេញអាចប្រើវាដើម្បីបញ្ជាក់ថាជាអ្នក។', // TODO(km-review)
+      no_identity: 'ប្រសិនបើកូនសោចាស់បាត់ ឬត្រូវបានគេប្រើ សូមធ្វើការពិនិត្យអត្តសញ្ញាណជាមុន៖ អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជួបអ្នកដោយផ្ទាល់ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម ហើយចេញវាទៅកាបូបនេះ។', // TODO(km-review)
+      nothing_to_move: 'គ្មានអ្វីត្រូវផ្ទេរទេ៖ លិខិតទាំងអស់ក្នុងកាបូបភ្ជាប់ទៅកូនសោបច្ចុប្បន្ន។', // TODO(km-review)
+      asked: 'បានស្នើ', // TODO(km-review)
+      ask_reissue: 'ស្នើឱ្យអ្នកចេញចេញឡើងវិញ', // TODO(km-review)
+      need_identity: 'អ្នកត្រូវការការពិនិត្យអត្តសញ្ញាណដែលភ្ជាប់ទៅកូនសោបច្ចុប្បន្នជាមុនសិន។ សូមទៅជួបអ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ ជាមួយអត្តសញ្ញាណប័ណ្ណ ឬលិខិតឆ្លងដែនដើម។', // TODO(km-review)
+      request_sent: 'បានផ្ញើសំណើ។ អ្នកចេញពិនិត្យវា ហើយប្រសិនបើត្រឹមត្រូវ នឹងផ្ញើលិខិតដែលចេញឡើងវិញទៅប្រអប់សំបុត្ររបស់អ្នក។', // TODO(km-review)
+      lost_heading: 'លិខិតដែលបាត់ជាមួយកាបូបចាស់', // TODO(km-review)
+      lost_desc: 'ប្រសិនបើកាបូបរបស់អ្នកត្រូវបានកំណត់ឡើងវិញ លិខិតក្នុងនោះក៏បាត់ដែរ។ សូមស្នើអ្នកចេញនីមួយៗ៖ ពួកគេរកវាក្នុងកំណត់ត្រារបស់ខ្លួន ហើយចេញម្តងទៀតទៅកូនសោថ្មីរបស់អ្នក។ ការពិនិត្យអត្តសញ្ញាណរបស់អ្នក គឺជារបៀបដែលពួកគេដឹងថាជាអ្នក។', // TODO(km-review)
+      choose_issuer: 'ជ្រើសរើសអ្នកចេញ…', // TODO(km-review)
+      ask_issuer: 'ស្នើអ្នកចេញនេះ', // TODO(km-review)
+      requests: 'សំណើចេញឡើងវិញរបស់អ្នក', // TODO(km-review)
+      status_open: 'កំពុងរង់ចាំអ្នកចេញ', // TODO(km-review)
+      status_reissued: 'បានចេញឡើងវិញ', // TODO(km-review)
+      status_declined: 'បានបដិសេធ', // TODO(km-review)
+      proof_old_key: 'បញ្ជាក់ដោយកូនសោចាស់', // TODO(km-review)
+      proof_identity: 'បញ្ជាក់ដោយការពិនិត្យអត្តសញ្ញាណ', // TODO(km-review)
+      limits: 'អ្វីដែលនេះមិនអាចធ្វើបាន៖ ប្រសិនបើនរណាម្នាក់មានទូរស័ព្ទដែលបានដោះសោ ឬលេខ PIN របស់អ្នក ពួកគេអាចបង្ហាញលិខិតរបស់អ្នកបាន រហូតដល់អ្នកដកកូនសោចេញ — ហើយប្រសិនបើពួកគេទៅដល់អ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណជាមួយឯកសាររបស់អ្នកមុនអ្នក ពួកគេក៏អាចស្នើចេញឡើងវិញបានដែរ។ អ្នកចេញដកលិខិតចាស់វិញពេលចេញឡើងវិញ ដូច្នេះច្បាប់ចម្លងដែលត្រូវបានលួចឈប់ផ្ទៀងផ្ទាត់បាន។', // TODO(km-review)
     },
     museum: {
       title: 'បន្ថែមទៅសារមន្ទីរ CamboVerse', // TODO(km-review)

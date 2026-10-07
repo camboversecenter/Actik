@@ -16,7 +16,10 @@ key-binding JWT (`kb+jwt`) on each presentation.
    credentials — and stored in `holder_keys`; the database holds ciphertext it
    cannot use. The holder's PIN or passkey opens it on any of their devices. In
    memory it is a non-extractable CryptoKey: it signs, and cannot be read out.
-   It is never replaced: credentials are bound to it.
+   It is never changed or silently replaced: credentials are bound to it. It
+   can only be *retired* — lost, compromised or replaced on purpose — after
+   which a new key is made and issuers are asked to reissue
+   ([`KEY_RECOVERY.md`](KEY_RECOVERY.md)).
 2. **The issuer binds the credential.** When the recipient already has a
    wallet, the issuing form looks up their public key (`holder_public_key`,
    callable by issuers only) and signs it into the credential as
