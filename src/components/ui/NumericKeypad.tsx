@@ -39,10 +39,10 @@ export default function NumericKeypad({
   }
 
   const keyClasses =
-    'h-14 rounded-2xl bg-white/8 hover:bg-white/14 active:bg-white/20 flex flex-col items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+    'h-14 [@media(max-height:700px)]:h-12 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] active:bg-white/25 flex flex-col items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
 
   return (
-    <div className={`grid grid-cols-3 gap-3 ${className}`} role="group" aria-label="Numeric keypad">
+    <div className={`grid grid-cols-3 gap-3 [@media(max-height:700px)]:gap-2 w-full max-w-[280px] ${className}`} role="group" aria-label="Numeric keypad">
       {KEYS.map((k) => (
         <button
           key={k}
@@ -52,7 +52,7 @@ export default function NumericKeypad({
           className={keyClasses}
         >
           <span className="font-mono text-xl font-normal text-white">{k}</span>
-          <span className="font-khmer text-[9px] text-white/45 -mt-0.5">{KHMER_DIGITS[k]}</span>
+          <span className="font-khmer text-[9px] text-white/50 -mt-0.5">{KHMER_DIGITS[k]}</span>
         </button>
       ))}
 
@@ -61,7 +61,7 @@ export default function NumericKeypad({
           type="button"
           disabled={disabled}
           onClick={onBiometric}
-          className="h-14 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="h-14 [@media(max-height:700px)]:h-12 rounded-2xl active:bg-white/10 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Unlock with biometrics"
         >
           <Fingerprint size={24} className="text-teal-400" strokeWidth={1.7} />
@@ -83,7 +83,7 @@ export default function NumericKeypad({
         type="button"
         disabled={disabled || value.length === 0}
         onClick={backspace}
-        className="h-14 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        className="h-14 [@media(max-height:700px)]:h-12 rounded-2xl active:bg-white/10 flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         aria-label="Delete last digit"
       >
         <Delete size={22} className="text-white/70" strokeWidth={1.7} />

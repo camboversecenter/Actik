@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 
@@ -8,7 +8,7 @@ import { useLanguage } from '../../lib/i18n'
 import { readDisclosures } from '../../lib/sdjwt'
 import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { Briefcase, ShieldAlert } from 'lucide-react'
+import { Briefcase, ShieldAlert, Lock, Unlock } from 'lucide-react'
 
 // Institution/major/issuer_did are meant to come from plain DB columns
 // (fast, no decrypt needed) — but those columns went unpopulated for every
@@ -164,7 +164,9 @@ export default function Wallet() {
       // Query credentials using the actual schema.sql column (owner)
       const claimedRes = await supabase
         .from('credentials')
-        .select('*')
+        // List columns only — `cipher` holds the whole encrypted credential
+        // (photo included, ~0.7 MB each) and is fetched on demand below.
+        .select('id, owner, label, iv, created_at, graduation_date, credential_type, major, issuer_did, institution_name')
         .eq('owner', user.id)
         .order('created_at', { ascending: false })
 
@@ -223,17 +225,28 @@ export default function Wallet() {
   // DecryptedPreview above) and fill in the real values from inside the
   // credential itself. Best-effort per credential: one failing to decrypt
   // just leaves that card showing what it already had.
+  const previewAttempted = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isUnlocked) return
     const toDecrypt = claimedCredentials.filter(
-      (c) => !c.institution_name && !decryptedPreviews[c.id] && (c.cipher || c.sd_jwt)
+      (c) => !c.institution_name && !decryptedPreviews[c.id] && !previewAttempted.current.has(c.id)
     )
     if (toDecrypt.length === 0) return
+    toDecrypt.forEach((c) => previewAttempted.current.add(c.id))
 
     let active = true
     ;(async () => {
+      // The list query leaves `cipher` out (it's the heavy column); fetch it
+      // only for the few legacy rows that need decrypting for their preview.
+      const { data: cipherRows } = await supabase
+        .from('credentials')
+        .select('id, cipher, iv')
+        .in('id', toDecrypt.map((c) => c.id))
+      const cipherById = new Map((cipherRows || []).map((r: any) => [r.id, r]))
       const results: Record<string, DecryptedPreview> = {}
-      for (const cred of toDecrypt) {
+      for (const listed of toDecrypt) {
+        const cred = { ...listed, ...(cipherById.get(listed.id) || {}) }
+        if (!cred.cipher && !cred.sd_jwt) continue
         try {
           let sdjwtString: string
           if (cred.cipher && cred.iv) {
@@ -417,59 +430,59 @@ export default function Wallet() {
   })()
 
   return (
-    <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
-      {/* Header — a full-width app-bar strip (border-bottom only, no card
-          radius), not a card like the rest of the page, per spec. */}
-      <div className="bg-white border-b border-stone-200 pt-2.5 px-5 pb-4 -mx-4 md:mx-0">
-        <h2 className="font-khmer text-[22px] font-bold tracking-[-0.01em] text-stone-900">{t('wallet.title')}</h2>
-        <p className="text-[11.5px] text-stone-500 mt-0.5">
+    <div className="w-full md:max-w-4xl mx-auto">
+      {/* Large title, straight on the background — the iOS pattern for a
+          top-level tab. */}
+      <div className="mb-5 px-1">
+        <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('wallet.title')}</h1>
+        <p className="text-[13px] text-stone-500 mt-1">
           {t('wallet.subtitle_count', { count: claimedCredentials.length })}
         </p>
       </div>
 
-      {/* Vault status strip */}
+      {/* Vault status — one inset card, the control next to what it affects. */}
       {!vaultStatusLoading && (
-        <div className="mb-6">
+        <div className="mb-7">
           {vaultExists === false && (
-            <div className="-mx-4 md:mx-0 px-5 md:px-0 py-3 md:py-0">
-              <button
-                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-11 px-4 rounded-lg text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer flex items-center justify-center gap-2"
-                onClick={() => navigate('/app/vault-setup')}
-              >
-                <ShieldAlert size={16} />
-                {t('wallet.vault_not_setup')}
-              </button>
-            </div>
+            <button
+              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold h-12 px-5 rounded-2xl text-sm shadow-sm cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => navigate('/app/vault-setup')}
+            >
+              <ShieldAlert size={17} />
+              {t('wallet.vault_not_setup')}
+            </button>
           )}
           {vaultExists === true && !isUnlocked && (
-            <div className="flex items-center gap-2.5 py-3 px-5 bg-white border-b border-stone-200 -mx-4 md:mx-0">
-              <span className="w-[7px] h-[7px] rounded-full bg-stone-400 shrink-0" />
+            <div className="flex items-center gap-3 p-3 pl-4 bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04)]">
+              <span className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center shrink-0">
+                <Lock size={16} className="text-stone-500" strokeWidth={2} />
+              </span>
               <div className="flex-1 min-w-0">
-                <div className="font-khmer text-[12.5px] font-semibold text-stone-900">{t('wallet.vault_locked')}</div>
-                <div className="font-mono text-[10px] text-stone-500 mt-0.5">
-                  Vault locked · tap to unlock
-                </div>
+                <div className="font-khmer text-[14px] font-semibold text-stone-900 leading-snug">{t('wallet.vault_locked')}</div>
+                <div className="text-[12px] text-stone-500 mt-0.5 truncate">Vault locked · tap to unlock</div>
               </div>
               <button
                 onClick={() => setShowUnlockModal(true)}
-                className="shrink-0 bg-indigo-600 hover:bg-indigo-650 text-white font-semibold h-[30px] px-[11px] rounded-lg text-[11px] transition-colors cursor-pointer"
+                className="shrink-0 bg-indigo-600 hover:bg-indigo-650 text-white font-semibold h-10 px-4 rounded-full text-[13px] cursor-pointer"
               >
                 {t('wallet.unlock_btn')}
               </button>
             </div>
           )}
           {vaultExists === true && isUnlocked && (
-            <div className="flex items-center gap-2.5 py-3 px-5 bg-white border-b border-stone-200 -mx-4 md:mx-0">
-              <span className="w-[7px] h-[7px] rounded-full bg-emerald-600 shrink-0 shadow-[0_0_0_3px_rgba(5,150,105,0.14)]" />
+            <div className="flex items-center gap-3 p-3 pl-4 bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.04)]">
+              <span className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <Unlock size={16} className="text-emerald-600" strokeWidth={2} />
+              </span>
               <div className="flex-1 min-w-0">
-                <div className="font-khmer text-[12.5px] font-semibold text-stone-900">{t('wallet.vault_unlocked')}</div>
-                <div className="font-mono text-[10px] text-stone-500 mt-0.5">
+                <div className="font-khmer text-[14px] font-semibold text-stone-900 leading-snug">{t('wallet.vault_unlocked')}</div>
+                <div className="text-[12px] text-stone-500 mt-0.5 tabular-nums truncate">
                   Vault unlocked{autoLockCountdown !== null ? ` · auto-locks in ${autoLockCountdown}` : ''}
                 </div>
               </div>
               <button
                 onClick={lock}
-                className="shrink-0 border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-semibold h-[30px] px-[11px] rounded-lg text-[11px] transition-colors cursor-pointer"
+                className="shrink-0 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold h-10 px-4 rounded-full text-[13px] cursor-pointer"
               >
                 {t('wallet.lock_now')}
               </button>
@@ -481,8 +494,21 @@ export default function Wallet() {
       {/* Main loading spinner */}
       {loading && claimedCredentials.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600" />
-          <p className="text-stone-500 mt-4 font-medium">{t('wallet.loading')}</p>
+          <div className="animate-spin rounded-full h-7 w-7 border-[2.5px] border-indigo-200 border-t-indigo-600" />
+          <p className="text-stone-500 mt-4 text-sm">{t('wallet.loading')}</p>
+        </div>
+      )}
+
+      {!loading && loadError && (
+        <div className="bg-white border border-stone-200/80 rounded-3xl p-8 text-center">
+          <p className="text-sm font-semibold text-stone-900">{t('wallet.failed_load_wallet')}</p>
+          <p className="text-sm text-stone-500 mt-1">{t('wallet.refresh_to_try_again')}</p>
+          <button
+            onClick={() => currentUser && loadCredentials(currentUser)}
+            className="mt-5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-11 px-6 rounded-full text-sm cursor-pointer"
+          >
+            {t('wallet.retry_btn')}
+          </button>
         </div>
       )}
 
@@ -494,7 +520,7 @@ export default function Wallet() {
           <div>
             {/* Empty State */}
             {claimedCredentials.length === 0 && (
-              <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-8 md:p-12 text-center">
+              <div className="bg-white border border-stone-200/80 rounded-3xl p-8 md:p-12 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center mx-auto mb-4">
                   <Briefcase size={26} className="text-stone-400" />
                 </div>
@@ -503,7 +529,7 @@ export default function Wallet() {
                   {t('wallet.empty_desc')}
                 </p>
                 <button 
-                  className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-lg text-sm cursor-pointer" 
+                  className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-full text-sm cursor-pointer"
                   onClick={() => navigate('/app/notifications')}
                 >
                   {t('wallet.view_notifications')}
@@ -621,7 +647,7 @@ export default function Wallet() {
          ======================================================= */}
       {showSetupNeededModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in">
             <div className="text-center mb-6">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
                 <ShieldAlert size={22} className="text-indigo-600" />
@@ -634,7 +660,7 @@ export default function Wallet() {
 
             <div className="flex flex-col gap-2">
               <button
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
                 onClick={() => {
                   setShowSetupNeededModal(false)
                   navigate('/app/vault-setup')
@@ -644,7 +670,7 @@ export default function Wallet() {
               </button>
 
               <button
-                className="w-full text-gray-500 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full text-stone-500 font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
                 onClick={() => setShowSetupNeededModal(false)}
               >
                 {t('wallet.cancel')}

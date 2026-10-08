@@ -160,28 +160,28 @@ export default function GoogleAuth() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-stone-50 p-4 md:p-6">
       <style>{spinStyles}</style>
       
-      <div className="w-full max-w-md p-6 md:p-8 text-center bg-transparent md:bg-white md:rounded-xl md:shadow-sm md:border md:border-gray-200">
+      <div className="w-full max-w-md p-6 md:p-8 text-center bg-transparent md:bg-white md:rounded-xl md:shadow-sm md:border md:border-stone-200">
         {/* Actik Logo */}
         <div className="flex justify-center mb-4">
           <img src="/logo.png" alt="Actik Logo" className="h-20 md:h-24 w-auto" />
         </div>
 
         {/* Tagline */}
-        <p className="text-xs text-gray-500 uppercase tracking-wider mb-6">
+        <p className="text-xs text-stone-500 uppercase tracking-wider mb-6">
           Proof of ownership
         </p>
 
         {/* Divider */}
-        <div className="h-[1px] bg-gray-200 mb-6 hidden md:block" />
+        <div className="h-[1px] bg-stone-200 mb-6 hidden md:block" />
 
         {/* Heading & Subtext */}
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2 mt-8 md:mt-0">
+        <h2 className="text-2xl font-semibold text-stone-900 mb-2 mt-8 md:mt-0">
           Welcome
         </h2>
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-sm text-stone-500 mb-8">
           Sign in with your Google account to continue
         </p>
 
@@ -190,7 +190,7 @@ export default function GoogleAuth() {
         <button
           onClick={() => handleGoogleSignIn()}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 text-gray-700 font-semibold h-[52px] rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
+          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-stone-50 active:bg-stone-100 border border-stone-300 text-stone-700 font-semibold h-[52px] rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
         >
           {loading ? (
             <svg
@@ -217,7 +217,7 @@ export default function GoogleAuth() {
         {loading && (
           <button
             onClick={handleCancelSignIn}
-            className="text-sm text-gray-500 hover:text-gray-700 mt-4 cursor-pointer underline"
+            className="text-sm text-stone-500 hover:text-stone-700 mt-4 cursor-pointer underline"
           >
             Cancel
           </button>
@@ -231,7 +231,7 @@ export default function GoogleAuth() {
         )}
 
         {/* Legitimate use reminder */}
-        <p className="text-xs text-gray-400 mt-8 leading-relaxed">
+        <p className="text-xs text-stone-400 mt-8 leading-relaxed">
           By signing in you agree to use this platform for legitimate credential purposes only
         </p>
       </div>
@@ -440,7 +440,7 @@ export function GoogleCallback() {
   if (loading) {
     return (
       <div 
-        className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6"
+        className="flex flex-col items-center justify-center min-h-screen bg-stone-50 p-6"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -476,19 +476,19 @@ export function GoogleCallback() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-stretch md:items-center justify-end md:justify-center p-0 md:p-4">
+    <div className="min-h-screen bg-stone-50 flex items-stretch md:items-center justify-end md:justify-center p-0 md:p-4">
       <style>{spinStyles}</style>
 
       {/* Role Selector Modal */}
       {showRoleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-stretch md:items-center justify-end md:justify-center p-0 md:p-4 z-50 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 max-w-md w-full flex flex-col justify-between md:justify-start pb-8 md:pb-8">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-t-3xl md:rounded-2xl shadow-lg border border-stone-100 p-6 md:p-8 md:max-w-md w-full flex flex-col justify-between md:justify-start pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-8">
             <div>
               {/* Modal Headers */}
-              <h3 className="text-xl font-semibold text-gray-900 mb-1">
+              <h3 className="text-xl font-semibold text-stone-900 mb-1">
                 One more step
               </h3>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-stone-500 mb-6">
                 Tell us how you will use Actik
               </p>
 
@@ -499,15 +499,15 @@ export function GoogleCallback() {
                 <div
                   onClick={() => setSelectedRole('student')}
                   className={`flex-1 p-4 border rounded-lg cursor-pointer transition-all flex flex-row md:flex-col items-center gap-4 md:gap-2 text-left md:text-center ${
-                    selectedRole === 'student' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-gray-300 bg-white active:bg-gray-100'
+                    selectedRole === 'student' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-stone-300 bg-white active:bg-stone-100'
                   }`}
                 >
                   <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
                     <GraduationCap size={22} className="text-indigo-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm md:text-base font-semibold text-gray-900 mb-0.5">Student</h4>
-                    <p className="text-xs text-gray-500 leading-normal">
+                    <h4 className="text-sm md:text-base font-semibold text-stone-900 mb-0.5">Student</h4>
+                    <p className="text-xs text-stone-500 leading-normal">
                       Receive and share digital certificates from your institution
                     </p>
                   </div>
@@ -517,15 +517,15 @@ export function GoogleCallback() {
                 <div
                   onClick={() => setSelectedRole('issuer')}
                   className={`flex-1 p-4 border rounded-lg cursor-pointer transition-all flex flex-row md:flex-col items-center gap-4 md:gap-2 text-left md:text-center ${
-                    selectedRole === 'issuer' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-gray-300 bg-white active:bg-gray-100'
+                    selectedRole === 'issuer' ? 'border-2 border-indigo-600 bg-indigo-50/50' : 'border-stone-300 bg-white active:bg-stone-100'
                   }`}
                 >
                   <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
                     <Building2 size={22} className="text-indigo-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm md:text-base font-semibold text-gray-900 mb-0.5">Institution</h4>
-                    <p className="text-xs text-gray-500 leading-normal">
+                    <h4 className="text-sm md:text-base font-semibold text-stone-900 mb-0.5">Institution</h4>
+                    <p className="text-xs text-stone-500 leading-normal">
                       Issue certificates to students on behalf of a university
                     </p>
                   </div>
@@ -546,7 +546,7 @@ export function GoogleCallback() {
               onClick={handleSaveRole}
               disabled={!selectedRole || savingRole}
               className={`w-full text-white font-semibold h-[52px] rounded-lg transition-all flex items-center justify-center gap-2 ${
-                selectedRole ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                selectedRole ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
               }`}
             >
               {savingRole && (

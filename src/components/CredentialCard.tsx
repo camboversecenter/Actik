@@ -69,7 +69,10 @@ export default function CredentialCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-stone-200 shadow-sm transition-all overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md' : ''} ${className}`}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      className={`bg-white rounded-2xl border border-stone-200/80 shadow-[0_1px_2px_rgba(28,25,23,0.05)] overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-md' : ''} ${className}`}
     >
       {/* Institution band */}
       <div className="bg-indigo-600 px-4 py-2.5 flex items-center gap-2.5">
@@ -93,21 +96,21 @@ export default function CredentialCard({
           {major && <p className="text-sm text-stone-500 mt-0.5 truncate">{major}</p>}
           <div className="flex items-center gap-4 mt-3">
             <div>
-              <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide">{t('wallet.issued_on_label')}</div>
-              <div className="font-mono text-xs font-medium text-stone-700">{new Date(createdAt).toLocaleDateString()}</div>
+              <div className="text-[11px] text-stone-500">{t('wallet.issued_on_label')}</div>
+              <div className="font-mono text-[13px] font-medium text-stone-800 tabular-nums mt-0.5">{new Date(createdAt).toLocaleDateString()}</div>
             </div>
             {year && (
               <div>
-                <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide">{t('wallet.year_label')}</div>
-                <div className="font-mono text-xs font-medium text-stone-700">{year}</div>
+                <div className="text-[11px] text-stone-500">{t('wallet.year_label')}</div>
+                <div className="font-mono text-[13px] font-medium text-stone-800 tabular-nums mt-0.5">{year}</div>
               </div>
             )}
             <div>
-              <div className="font-mono text-[9px] text-stone-400 uppercase tracking-wide flex items-center gap-1">
-                <Share2 size={9} />
+              <div className="text-[11px] text-stone-500 flex items-center gap-1">
+                <Share2 size={11} />
                 {t('wallet.share_label')}
               </div>
-              <div className="font-mono text-xs font-medium text-stone-700">{shareCount ?? 0}×</div>
+              <div className="font-mono text-[13px] font-medium text-stone-800 tabular-nums mt-0.5">{shareCount ?? 0}×</div>
             </div>
           </div>
         </div>

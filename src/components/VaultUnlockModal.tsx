@@ -46,15 +46,15 @@ export default function VaultUnlockModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4">
-      <div className="bg-indigo-950 rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-sm flex flex-col items-center animate-scale-in text-white">
-        <div className="w-14 h-14 rounded-2xl bg-teal-400/15 border border-teal-400/40 flex items-center justify-center mb-4">
+      <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-indigo-950 rounded-3xl shadow-2xl p-6 [@media(max-height:700px)]:p-5 md:p-8 w-full max-w-sm flex flex-col items-center animate-scale-in text-white">
+        <div className="w-14 h-14 [@media(max-height:700px)]:w-11 [@media(max-height:700px)]:h-11 rounded-2xl bg-teal-400/15 border border-teal-400/40 flex items-center justify-center mb-4 [@media(max-height:700px)]:mb-3">
           <Lock size={24} className="text-teal-400" strokeWidth={1.8} />
         </div>
         <h3 className="font-khmer text-lg font-bold text-center">{title || t('wallet.unlock_vault_title')}</h3>
         {desc && <p className="text-xs text-white/60 mt-1.5 text-center leading-relaxed max-w-[260px]">{desc}</p>}
 
         {(unlockMethod === 'pin' || unlockMethod === 'both' || !unlockMethod) && (
-          <form onSubmit={onSubmitPin} className="w-full flex flex-col items-center gap-5 mt-6">
+          <form onSubmit={onSubmitPin} className="w-full flex flex-col items-center gap-5 [@media(max-height:700px)]:gap-3 mt-6 [@media(max-height:700px)]:mt-4">
             <PinDotsInput
               value={pinInput}
               onChange={onPinChange}

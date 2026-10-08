@@ -58,13 +58,13 @@ export default function IssuedCredentialsCategory() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 md:px-0 pb-20">
+    <div className="w-full max-w-2xl mx-auto">
       <div className="mb-6 pt-4">
         <Link to="/app/issued" className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-650 mb-4 transition-colors">
           <ArrowLeft size={16} strokeWidth={2} className="mr-1" />
           {t('dashboard.back_to_issued')}
         </Link>
-        <h1 className="font-khmer text-2xl font-bold text-stone-900 tracking-tight">{getCategoryLabel(credentialType)}</h1>
+        <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{getCategoryLabel(credentialType)}</h1>
       </div>
 
       <div className="flex flex-col gap-4">

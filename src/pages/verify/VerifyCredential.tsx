@@ -803,7 +803,7 @@ export default function VerifyCredential() {
       <div className="h-1 bg-indigo-600 w-full no-print" />
 
       {/* Top bar */}
-      <header className="border-b border-stone-100 bg-white no-print">
+      <header className="sticky top-0 z-30 material-bar border-b border-stone-900/[0.06] pt-[env(safe-area-inset-top)] no-print">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Actik" className="h-8 w-auto" />

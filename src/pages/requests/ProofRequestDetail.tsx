@@ -109,19 +109,19 @@ export default function ProofRequestDetail() {
   if (request === undefined) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>
   }
-  if (!request) return <div className="max-w-2xl mx-auto p-6 text-stone-600">{error ?? t('proof.not_found')}</div>
+  if (!request) return <div className="max-w-2xl mx-auto px-1 py-10 text-center text-stone-500">{error ?? t('proof.not_found')}</div>
 
   const link = requestLink(request.id)
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-3xl mx-auto space-y-6">
       <Link to="/app/requests" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> {t('proof.page_title')}
       </Link>
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-stone-900">{request.title}</h1>
+          <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{request.title}</h1>
           <p className="text-sm text-stone-500 mt-1">
             {request.requesterName} · {t('proof.until', { date: longDate(Math.floor(new Date(request.expiresAt).getTime() / 1000)) })}
           </p>

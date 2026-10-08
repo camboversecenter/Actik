@@ -60,6 +60,7 @@ export default function Contacts() {
       setMyCard(await makeContactCard({ publicJwk: key.publicJwk, key: key.key }))
       // A card with an identity check, if the wallet holds one bound to this key.
       const { data: rows } = await supabase.from('credentials').select('cipher, iv, credential_type').eq('owner', uid)
+        .or(`credential_type.is.null,credential_type.eq.${IDENTITY_TYPE}`)
       let identity: string | null = null
       for (const r of rows ?? []) {
         if (r.credential_type && r.credential_type !== IDENTITY_TYPE) continue
@@ -155,8 +156,8 @@ export default function Contacts() {
 
   if (!isUnlocked) {
     return (
-      <div className="max-w-2xl mx-auto p-6 space-y-3">
-        <h1 className="text-2xl font-extrabold text-stone-900">{t('contacts.title')}</h1>
+      <div className="max-w-2xl mx-auto px-1 space-y-3">
+        <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('contacts.title')}</h1>
         <p className="text-sm text-stone-600">{t('walletkey.unlock_first')}</p>
         <Link to="/app/wallet" className="inline-block text-sm font-semibold text-indigo-700">{t('nav.wallet')} →</Link>
       </div>
@@ -164,9 +165,9 @@ export default function Contacts() {
   }
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2"><UserCheck size={22} /> {t('contacts.title')}</h1>
+        <h1 className="flex items-center gap-2 text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight"><UserCheck size={22} /> {t('contacts.title')}</h1>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">{t('contacts.intro')}</p>
       </div>
 

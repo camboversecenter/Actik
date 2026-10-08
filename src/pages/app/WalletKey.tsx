@@ -147,8 +147,8 @@ export default function WalletKey() {
 
   if (!isUnlocked) {
     return (
-      <div className="max-w-2xl mx-auto p-6 space-y-3">
-        <h1 className="text-2xl font-extrabold text-stone-900">{t('walletkey.title')}</h1>
+      <div className="max-w-2xl mx-auto px-1 space-y-3">
+        <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('walletkey.title')}</h1>
         <p className="text-sm text-stone-600">{t('walletkey.unlock_first')}</p>
         <Link to="/app/wallet" className="inline-block text-sm font-semibold text-indigo-700">{t('nav.wallet')} →</Link>
       </div>
@@ -156,12 +156,12 @@ export default function WalletKey() {
   }
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-3xl mx-auto space-y-6">
       <Link to="/app/vault-setup" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> {t('nav.account')}
       </Link>
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 flex items-center gap-2"><KeyRound size={22} /> {t('walletkey.title')}</h1>
+        <h1 className="flex items-center gap-2 text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight"><KeyRound size={22} /> {t('walletkey.title')}</h1>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">{t('walletkey.intro')}</p>
       </div>
 
