@@ -322,7 +322,7 @@ export default function CredentialDetail() {
 
   if (loading) {
     return (
-      <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 py-20 flex flex-col items-center justify-center">
+      <div className="w-full md:max-w-4xl mx-auto py-20 flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600" />
         <p className="text-stone-500 mt-4 font-medium">{t('wallet.loading_single')}</p>
       </div>
@@ -331,8 +331,8 @@ export default function CredentialDetail() {
 
   if (loadError || !credential) {
     return (
-      <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 py-20 flex flex-col items-center justify-center">
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-8 md:p-12 text-center w-full">
+      <div className="w-full md:max-w-4xl mx-auto py-20 flex flex-col items-center justify-center">
+        <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-8 md:p-12 text-center w-full">
           <h3 className="text-lg font-bold text-stone-900 mb-4">{t('wallet.credential_not_found')}</h3>
           <Link to="/app/wallet" className="text-indigo-600 font-semibold hover:underline">
             {t('wallet.return_to_wallet')}
@@ -364,9 +364,9 @@ export default function CredentialDetail() {
   }
 
   return (
-    <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
+    <div className="w-full md:max-w-4xl mx-auto">
       {/* Back link */}
-      <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors mb-4">
+      <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-stone-500 hover:text-indigo-600 transition-colors mb-4">
         <ArrowLeft size={16} />
         {t('wallet.back_to_wallet')}
       </Link>
@@ -434,7 +434,7 @@ export default function CredentialDetail() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="p-5 md:p-8 text-sm text-left">
           {!isUnlocked ? (
             <div className="text-center py-12">
@@ -442,7 +442,7 @@ export default function CredentialDetail() {
                 {t('wallet.encrypted_detail_msg')}
               </p>
               <button 
-                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-300 text-white font-semibold h-11 px-6 rounded-lg text-sm cursor-pointer flex items-center justify-center gap-2 mx-auto"
+                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-300 text-white font-semibold h-11 px-6 rounded-xl text-sm cursor-pointer flex items-center justify-center gap-2 mx-auto"
                 onClick={() => setShowUnlockModal(true)}
                 disabled={isUnlocking}
               >
@@ -726,7 +726,7 @@ export default function CredentialDetail() {
       )}
 
       {toastMessage && (
-        <div className="fixed bottom-24 right-4 md:right-6 bg-stone-900 text-white px-4 py-2.5 rounded-lg shadow-lg z-[1000] text-sm font-semibold">
+        <div className="fixed left-4 right-4 md:left-auto md:right-6 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+12px)] md:bottom-6 bg-stone-900/90 backdrop-blur-xl text-white text-center md:text-left px-4 py-3 rounded-2xl shadow-lg z-[1000] text-sm font-semibold">
           {toastMessage}
         </div>
       )}

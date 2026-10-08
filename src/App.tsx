@@ -1,69 +1,58 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import Layout from './components/Layout'
-import GoogleAuth, { GoogleCallback } from './pages/auth/GoogleAuth'
-import RegisterIssuer from './pages/app/RegisterIssuer'
-import IssueCredential from './pages/app/IssueCredential'
-import Wallet from './pages/app/Wallet'
-import VaultSetup from './pages/app/VaultSetup'
-import WalletKey from './pages/app/WalletKey'
-import ShareCredential from './pages/app/ShareCredential'
-import ScanCertificate from './pages/scan/ScanCertificate'
-import VerifyCredential from './pages/verify/VerifyCredential'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import Notifications from './pages/app/Notifications'
-import InstitutionSettings from './pages/app/InstitutionSettings'
-import Landing from './pages/public/Landing'
-import Activity from './pages/app/Activity'
-import WalletCategory from './pages/app/WalletCategory'
-import CredentialDetail from './pages/app/CredentialDetail'
-import IssuedCredentials from './pages/app/IssuedCredentials'
-import IssuedCredentialsCategory from './pages/app/IssuedCredentialsCategory'
-import Withdrawals from './pages/app/Withdrawals'
-import ReissueRequests from './pages/app/ReissueRequests'
-import ProofRequests from './pages/requests/ProofRequests'
-import NewProofRequest from './pages/requests/NewProofRequest'
-import ProofRequestDetail from './pages/requests/ProofRequestDetail'
-import ProofRequestPublic from './pages/requests/ProofRequestPublic'
-import AnswerProofRequest from './pages/requests/AnswerProofRequest'
 import { VaultProvider } from './vault/zk-vault'
 import HolderKeyKeeper from './components/HolderKeyKeeper'
 import PresencePrompt from './components/PresencePrompt'
-import Contacts from './pages/app/Contacts'
 import { supabaseVaultAdapter } from './vault/vaultAdapter'
 import { issuerVaultAdapter } from './vault/issuerVaultAdapter'
 
-// ==========================================
-// 6. Placeholder Page Components
-// ==========================================
-import IssuerDashboard from './pages/app/IssuerDashboard'
+
+
+// Pages load on demand: the PDF, QR-scanning and image libraries only some
+// pages need were all in one 1.3 MB bundle that had to download and parse
+// before the wallet could show. Layout keeps the app shell on screen while a
+// page chunk loads (see the Suspense around its <Outlet />).
+const GoogleAuth = lazy(() => import('./pages/auth/GoogleAuth'))
+const GoogleCallback = lazy(() => import('./pages/auth/GoogleAuth').then((m) => ({ default: m.GoogleCallback })))
+const RegisterIssuer = lazy(() => import('./pages/app/RegisterIssuer'))
+const IssueCredential = lazy(() => import('./pages/app/IssueCredential'))
+const Wallet = lazy(() => import('./pages/app/Wallet'))
+const VaultSetup = lazy(() => import('./pages/app/VaultSetup'))
+const WalletKey = lazy(() => import('./pages/app/WalletKey'))
+const ShareCredential = lazy(() => import('./pages/app/ShareCredential'))
+const ScanCertificate = lazy(() => import('./pages/scan/ScanCertificate'))
+const VerifyCredential = lazy(() => import('./pages/verify/VerifyCredential'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const Notifications = lazy(() => import('./pages/app/Notifications'))
+const InstitutionSettings = lazy(() => import('./pages/app/InstitutionSettings'))
+const Landing = lazy(() => import('./pages/public/Landing'))
+const Activity = lazy(() => import('./pages/app/Activity'))
+const WalletCategory = lazy(() => import('./pages/app/WalletCategory'))
+const CredentialDetail = lazy(() => import('./pages/app/CredentialDetail'))
+const IssuedCredentials = lazy(() => import('./pages/app/IssuedCredentials'))
+const IssuedCredentialsCategory = lazy(() => import('./pages/app/IssuedCredentialsCategory'))
+const Withdrawals = lazy(() => import('./pages/app/Withdrawals'))
+const ReissueRequests = lazy(() => import('./pages/app/ReissueRequests'))
+const ProofRequests = lazy(() => import('./pages/requests/ProofRequests'))
+const NewProofRequest = lazy(() => import('./pages/requests/NewProofRequest'))
+const ProofRequestDetail = lazy(() => import('./pages/requests/ProofRequestDetail'))
+const ProofRequestPublic = lazy(() => import('./pages/requests/ProofRequestPublic'))
+const AnswerProofRequest = lazy(() => import('./pages/requests/AnswerProofRequest'))
+const Contacts = lazy(() => import('./pages/app/Contacts'))
+const IssuerDashboard = lazy(() => import('./pages/app/IssuerDashboard'))
 
 // ==========================================
 // 1. Loading Screen Component
 // ==========================================
 export function LoadingScreen() {
-  const spinnerStyle = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--paper)', fontFamily: 'inherit' }}>
-      <style>{spinnerStyle}</style>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-        <div style={{
-          width: 44,
-          height: 44,
-          border: '4px solid var(--forest-soft)',
-          borderTop: '4px solid var(--forest)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <p style={{ color: 'var(--forest)', fontWeight: 500, fontSize: '1.1rem', margin: 0 }}>Loading Actik...</p>
-      </div>
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 bg-stone-100">
+      <img src="/logo.png" alt="" className="h-10 w-auto opacity-90" />
+      <div className="w-6 h-6 border-[2.5px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      <p className="sr-only">Loading Actik...</p>
     </div>
   )
 }
@@ -362,11 +351,22 @@ export function RootRedirect() {
 // 5. Main App Component
 // ==========================================
 export default function App() {
+  // Once the first screen is up, warm the chunks for the main tabs so
+  // switching between them never waits on the network.
   useEffect(() => {
+    const warm = () => {
+      import('./pages/app/Wallet'); import('./pages/app/Activity'); import('./pages/app/Contacts')
+      import('./pages/requests/ProofRequests'); import('./pages/app/VaultSetup'); import('./pages/app/CredentialDetail')
+      import('./pages/app/IssuerDashboard'); import('./pages/app/IssuedCredentials'); import('./pages/app/InstitutionSettings')
+    }
+    const ric = (window as any).requestIdleCallback as ((cb: () => void) => number) | undefined
+    const id = ric ? ric(warm) : window.setTimeout(warm, 1500)
+    return () => { if (!ric) window.clearTimeout(id) }
   }, [])
 
   return (
     <BrowserRouter>
+      <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* Root redirect route */}
         <Route path="/" element={<RootRedirect />} />
@@ -461,6 +461,7 @@ export default function App() {
         {/* Global fallback route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

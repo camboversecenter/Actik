@@ -224,8 +224,8 @@ export default function RegisterIssuer() {
   if (existingIssuer) {
     const isAccredited = existingIssuer.accredited
     return (
-      <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
+      <div className="w-full md:max-w-xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 md:p-8 text-center">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
             <Building2 size={28} className="text-indigo-600" />
           </div>
@@ -234,20 +234,20 @@ export default function RegisterIssuer() {
             {t('dashboard.inst_linked_desc')}
           </p>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
+          <div className="bg-stone-50 border border-stone-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.inst_name')}</span>
-              <strong className="text-gray-900 text-base">{existingIssuer.name}</strong>
+              <span className="text-xs text-stone-400 block font-medium">{t('dashboard.inst_name')}</span>
+              <strong className="text-stone-900 text-base">{existingIssuer.name}</strong>
             </div>
             {existingIssuer.domain && (
               <div>
-                <span className="text-xs text-gray-400 block font-medium">{t('dashboard.inst_domain')}</span>
-                <strong className="text-gray-900">{existingIssuer.domain}</strong>
+                <span className="text-xs text-stone-400 block font-medium">{t('dashboard.inst_domain')}</span>
+                <strong className="text-stone-900">{existingIssuer.domain}</strong>
               </div>
             )}
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.inst_did')}</span>
-              <code className="mono block bg-gray-100 p-2 rounded text-xs mt-1 overflow-x-auto">
+              <span className="text-xs text-stone-400 block font-medium">{t('dashboard.inst_did')}</span>
+              <code className="mono block bg-stone-100 p-2 rounded text-xs mt-1 overflow-x-auto">
                 {existingIssuer.did}
               </code>
             </div>
@@ -279,7 +279,7 @@ export default function RegisterIssuer() {
               </p>
             )}
             <button 
-              className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+              className="w-full border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/dashboard')}
             >
               {t('account.go_dashboard')}
@@ -293,21 +293,21 @@ export default function RegisterIssuer() {
   // Registration Success State
   if (registeredSuccess) {
     return (
-      <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 text-center">
+      <div className="w-full md:max-w-xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 md:p-8 text-center">
           <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={28} className="text-emerald-600" />
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('dashboard.inst_registered')}</h2>
           
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
+          <div className="bg-stone-50 border border-stone-200 rounded-lg p-4 mb-6 text-left text-sm space-y-3">
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.inst_name')}</span>
-              <strong className="text-gray-900 text-base">{registeredSuccess.name}</strong>
+              <span className="text-xs text-stone-400 block font-medium">{t('dashboard.inst_name')}</span>
+              <strong className="text-stone-900 text-base">{registeredSuccess.name}</strong>
             </div>
             <div>
-              <span className="text-xs text-gray-400 block font-medium">{t('dashboard.inst_did')}</span>
-              <code className="mono block bg-gray-100 p-2 rounded text-xs mt-1 overflow-x-auto">
+              <span className="text-xs text-stone-400 block font-medium">{t('dashboard.inst_did')}</span>
+              <code className="mono block bg-stone-100 p-2 rounded text-xs mt-1 overflow-x-auto">
                 {registeredSuccess.did}
               </code>
             </div>
@@ -337,7 +337,7 @@ export default function RegisterIssuer() {
               {t('dashboard.issue_credential')}
             </button>
             <button 
-              className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+              className="w-full border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/dashboard')}
             >
               {t('account.go_dashboard')}
@@ -350,7 +350,7 @@ export default function RegisterIssuer() {
 
   // Registration Form State
   return (
-    <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
+    <div className="w-full md:max-w-xl mx-auto">
       {/* Headers */}
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-stone-900 tracking-tight">
@@ -362,18 +362,18 @@ export default function RegisterIssuer() {
       </div>
 
       {/* Form Card */}
-      <div className="bg-transparent md:bg-white rounded-xl md:shadow-sm md:border md:border-gray-200 p-0 md:p-8">
+      <div className="bg-transparent md:bg-white rounded-xl md:shadow-sm md:border md:border-stone-200 p-0 md:p-8">
         <form onSubmit={handleRegister} className="space-y-5">
           
           {/* Institution Name */}
           <div>
-            <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.inst_name_label')}</label>
+            <label className="text-xs md:text-sm font-bold text-stone-700 block">{t('dashboard.inst_name_label')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Royal University of Phnom Penh"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+              className="mt-1 block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
             />
             {errors.name && (
               <p className="text-rose-600 text-xs mt-1 font-semibold">{errors.name}</p>
@@ -382,16 +382,16 @@ export default function RegisterIssuer() {
 
           {/* Domain */}
           <div>
-            <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.domain_label')}</label>
+            <label className="text-xs md:text-sm font-bold text-stone-700 block">{t('dashboard.domain_label')}</label>
             <input
               type="text"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               onBlur={handleDomainBlur}
               placeholder="rupp.edu.kh"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+              className="mt-1 block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
             />
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+            <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
               {t('dashboard.domain_help')}
             </p>
             {errors.domain && (
@@ -400,7 +400,7 @@ export default function RegisterIssuer() {
           </div>
 
           {/* Collapsible DID Explanation Box */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+          <div className="border border-stone-200 rounded-lg overflow-hidden bg-stone-50">
             <button
               type="button"
               onClick={() => setDidExplanationExpanded(!didExplanationExpanded)}
@@ -411,12 +411,12 @@ export default function RegisterIssuer() {
             </button>
             
             {didExplanationExpanded && (
-              <div className="px-4 pb-3 text-xs text-gray-500 leading-relaxed space-y-2">
+              <div className="px-4 pb-3 text-xs text-stone-500 leading-relaxed space-y-2">
                 <p>
                   {t('dashboard.did_desc1')}
                 </p>
                 <p className="font-semibold">
-                  {t('dashboard.did_example')} <code className="mono block bg-gray-150 px-2 py-0.5 rounded text-stone-700 mt-0.5">did:web:rupp.edu.kh</code>
+                  {t('dashboard.did_example')} <code className="mono block bg-stone-150 px-2 py-0.5 rounded text-stone-700 mt-0.5">did:web:rupp.edu.kh</code>
                 </p>
                 <p>
                   {t('dashboard.did_desc2')}
@@ -430,11 +430,11 @@ export default function RegisterIssuer() {
 
           {/* Institution Type */}
           <div>
-            <label className="text-xs md:text-sm font-bold text-gray-700 block">{t('dashboard.inst_type_label')}</label>
+            <label className="text-xs md:text-sm font-bold text-stone-700 block">{t('dashboard.inst_type_label')}</label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+              className="mt-1 block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
             >
               <option value="">{t('dashboard.select_type')}</option>
               <option value="University">University</option>
@@ -457,16 +457,16 @@ export default function RegisterIssuer() {
 
           {/* Signing PIN */}
           <div>
-            <label className="text-xs md:text-sm font-bold text-gray-700 block">Signing PIN</label>
+            <label className="text-xs md:text-sm font-bold text-stone-700 block">Signing PIN</label>
             <input
               type="password"
               value={signingPin}
               onChange={(e) => setSigningPin(e.target.value)}
               placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
               autoComplete="new-password"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+              className="mt-1 block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
             />
-            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+            <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
               Protects your certificate-signing key so it survives closing this tab. You&apos;ll enter this PIN each time you return, instead of regenerating a new key.
             </p>
             {errors.signingPin && (

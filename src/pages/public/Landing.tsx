@@ -21,7 +21,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white text-stone-900 font-sans">
       {/* Nav */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-stone-200">
+      <header className="sticky top-0 z-30 material-bar border-b border-stone-900/[0.06] pt-[env(safe-area-inset-top)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Actik" className="h-8 w-auto" />

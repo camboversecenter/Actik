@@ -58,9 +58,9 @@ export default function ProofRequests() {
   }
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-8">
+    <div className="w-full md:max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900">{t('proof.page_title')}</h1>
+        <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('proof.page_title')}</h1>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">{t('proof.page_intro')}</p>
       </div>
 

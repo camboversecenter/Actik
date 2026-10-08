@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
@@ -139,7 +139,9 @@ export default function WalletCategory() {
 
       let query = supabase
         .from('credentials')
-        .select('*')
+        // List columns only — `cipher` holds the whole encrypted credential
+        // (photo included, ~0.7 MB each) and is fetched on demand below.
+        .select('id, owner, label, iv, created_at, graduation_date, credential_type, major, issuer_did, institution_name')
         .eq('owner', user.id)
         .order('created_at', { ascending: false })
       
@@ -202,17 +204,28 @@ export default function WalletCategory() {
   // Once the vault is unlocked, decrypt whatever credentials are still
   // missing institution_name and fill in the real values from inside the
   // credential itself (mirrors Wallet.tsx). Best-effort per credential.
+  const previewAttempted = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isUnlocked) return
     const toDecrypt = credentials.filter(
-      (c) => !c.institution_name && !decryptedPreviews[c.id] && (c.cipher || c.sd_jwt)
+      (c) => !c.institution_name && !decryptedPreviews[c.id] && !previewAttempted.current.has(c.id)
     )
     if (toDecrypt.length === 0) return
+    toDecrypt.forEach((c) => previewAttempted.current.add(c.id))
 
     let active = true
     ;(async () => {
+      // The list query leaves `cipher` out (it's the heavy column); fetch it
+      // only for the few legacy rows that need decrypting for their preview.
+      const { data: cipherRows } = await supabase
+        .from('credentials')
+        .select('id, cipher, iv')
+        .in('id', toDecrypt.map((c) => c.id))
+      const cipherById = new Map((cipherRows || []).map((r: any) => [r.id, r]))
       const results: Record<string, DecryptedPreview> = {}
-      for (const cred of toDecrypt) {
+      for (const listed of toDecrypt) {
+        const cred = { ...listed, ...(cipherById.get(listed.id) || {}) }
+        if (!cred.cipher && !cred.sd_jwt) continue
         try {
           let sdjwtString: string
           if (cred.cipher && cred.iv) {
@@ -353,11 +366,11 @@ export default function WalletCategory() {
   }, [isUnlocked, pendingNavCredId, navigate])
 
   return (
-    <div className="w-full md:max-w-4xl mx-auto px-4 md:px-0 pb-24">
+    <div className="w-full md:max-w-4xl mx-auto">
       {/* Header with back button */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex flex-col gap-2">
-          <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+          <Link to="/app/wallet" className="inline-flex items-center gap-1 text-sm font-semibold text-stone-500 hover:text-indigo-600 transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -369,7 +382,7 @@ export default function WalletCategory() {
         </div>
         <div>
           {vaultExists === true && !isUnlocked && (
-            <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-gray-100 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg">
+            <span className="w-full sm:w-auto text-center px-4 py-2.5 bg-stone-100 border border-stone-200 text-stone-700 text-sm font-semibold rounded-lg">
               {t('wallet.vault_locked')}
             </span>
           )}
@@ -391,7 +404,7 @@ export default function WalletCategory() {
       {!loading && !loadError && (
         <div>
           {credentials.length === 0 ? (
-            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-8 md:p-12 text-center">
+            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-8 md:p-12 text-center">
               <h3 className="text-lg font-bold text-stone-900">{t('wallet.no_credentials_found')}</h3>
             </div>
           ) : (

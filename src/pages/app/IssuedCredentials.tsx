@@ -70,9 +70,9 @@ export default function IssuedCredentials() {
   }
 
   return (
-    <div className="w-full md:max-w-4xl mx-auto pb-24 px-4 md:px-0">
+    <div className="w-full md:max-w-4xl mx-auto">
       <div className="mb-8 pt-4">
-        <h1 className="font-khmer text-3xl font-extrabold text-stone-900 tracking-tight">{t('dashboard.issued_creds')}</h1>
+        <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('dashboard.issued_creds')}</h1>
         <p className="text-sm text-stone-500 mt-1">{t('dashboard.issued_creds_desc')}</p>
         <Link to="/app/withdrawals" className="inline-block mt-3 text-sm font-semibold text-rose-700 hover:text-rose-800">
           {t('dashboard.manage_withdrawals')} →

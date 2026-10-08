@@ -992,7 +992,7 @@ export default function ShareCredential() {
                     value={recipientLabel}
                     onChange={(e) => setRecipientLabel(e.target.value)}
                     placeholder={t('wallet.recipient_placeholder')}
-                    className="w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                   <label className="flex items-start gap-2 mt-3 text-sm text-stone-700 cursor-pointer select-none">
                     <input
@@ -1056,7 +1056,7 @@ export default function ShareCredential() {
                         min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]} // tomorrow
                         max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]} // 1 year
                         onChange={(e) => setCustomDate(e.target.value)}
-                        className="w-full rounded-lg border border-stone-300 pl-10 pr-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full rounded-xl border border-stone-300 pl-10 pr-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                       <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                     </div>

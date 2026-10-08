@@ -400,9 +400,9 @@ export default function Notifications() {
   }
 
   return (
-    <div className="w-full md:max-w-2xl mx-auto pb-24 px-4 md:px-0">
+    <div className="w-full md:max-w-2xl mx-auto">
       {/* Back Link */}
-      <Link to="/app/wallet" className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors mb-6">
+      <Link to="/app/wallet" className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-500 hover:text-indigo-600 transition-colors mb-6">
         <ArrowLeft size={16} />
         {t('wallet.back_to_wallet')}
       </Link>
@@ -420,7 +420,7 @@ export default function Notifications() {
       </div>
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div className="flex flex-col items-center justify-center py-20 bg-white border border-stone-200 rounded-xl shadow-sm">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600" />
           <p className="text-stone-500 mt-4 font-medium">{t('wallet.checking_pending_credentials')}</p>
         </div>
@@ -430,7 +430,7 @@ export default function Notifications() {
         <div className="w-full bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-6 text-center shadow-sm">
           <h3 className="font-semibold text-rose-900 text-lg mb-2">{t('wallet.failed_load_notifications')}</h3>
           <p className="text-sm text-rose-700 mb-4">{t('wallet.refresh_to_try_again')}</p>
-          <button className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" onClick={() => loadPending(currentUser)}>
+          <button className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-colors cursor-pointer" onClick={() => loadPending(currentUser)}>
             {t('wallet.retry_btn')}
           </button>
         </div>
@@ -439,7 +439,7 @@ export default function Notifications() {
       {!loading && !loadError && (
         <div className="space-y-4">
           {pendingList.length === 0 ? (
-            <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-12 text-center">
+            <div className="bg-white border border-stone-200 shadow-sm rounded-xl p-12 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 mb-4">
                 <Inbox size={32} />
               </div>
@@ -453,19 +453,19 @@ export default function Notifications() {
               {pendingList.map((c) => (
                 <div 
                   key={c.id}
-                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white border border-gray-200 shadow-sm rounded-xl p-5 gap-4 hover:border-indigo-100 transition-colors"
+                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white border border-stone-200 shadow-sm rounded-xl p-5 gap-4 hover:border-indigo-100 transition-colors"
                 >
                   <div className="flex-1">
-                    <strong className="text-sm md:text-base text-gray-900 block font-semibold leading-snug">
+                    <strong className="text-sm md:text-base text-stone-900 block font-semibold leading-snug">
                       {c.institution_name ? `${c.institution_name} — ` : ''}{c.degree_title}
                     </strong>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-stone-500 mt-1">
                       {t('wallet.issued_by')}<code className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded break-all">{truncateDid(c.issuer_did)}</code>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-stone-400">
                       {new Date(c.created_at).toLocaleDateString()}
                     </span>
                     {/* Nothing counts until the recipient accepts it — and they can
@@ -475,14 +475,14 @@ export default function Notifications() {
                       type="button"
                       onClick={() => declineCredential(c)}
                       disabled={claimingCredId !== null}
-                      className="shrink-0 border border-gray-300 text-gray-700 font-semibold h-11 px-4 rounded-lg text-xs md:text-sm cursor-pointer disabled:opacity-50"
+                      className="shrink-0 border border-stone-300 text-stone-700 font-semibold h-11 px-4 rounded-xl text-xs md:text-sm cursor-pointer disabled:opacity-50"
                     >
                       {t('wallet.decline_btn')}
                     </button>
                     <button
                       onClick={() => triggerClaimFlow(c)}
                       disabled={claimingCredId !== null}
-                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-5 rounded-lg text-xs md:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-5 rounded-xl text-xs md:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                     >
                       {claimingCredId === c.id && (
                         <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-indigo-200 border-t-white" />
@@ -531,7 +531,7 @@ export default function Notifications() {
          ======================================================= */}
       {showSetupNeededModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in text-center">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-2xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col animate-scale-in text-center">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
               <ShieldAlert size={22} className="text-indigo-600" />
             </div>
@@ -541,13 +541,13 @@ export default function Notifications() {
             </p>
             <div className="flex flex-col gap-2.5">
               <button
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
                 onClick={() => navigate('/app/vault-setup')}
               >
                 {t('wallet.setup_my_vault_btn')}
               </button>
               <button
-                className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
                 onClick={() => setShowSetupNeededModal(false)}
               >
                 {t('wallet.cancel')}
@@ -559,7 +559,7 @@ export default function Notifications() {
 
       {/* Toast notifications */}
       {toastMessage && (
-        <div className="fixed bottom-24 right-4 md:right-6 bg-stone-900 text-white px-4 py-2.5 rounded-lg shadow-lg z-[1000] text-sm font-semibold animate-scale-in">
+        <div className="fixed left-4 right-4 md:left-auto md:right-6 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+12px)] md:bottom-6 bg-stone-900/90 backdrop-blur-xl text-white text-center md:text-left px-4 py-3 rounded-2xl shadow-lg z-[1000] text-sm font-semibold animate-scale-in">
           {toastMessage}
         </div>
       )}

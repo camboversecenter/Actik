@@ -87,17 +87,22 @@ export default function AnswerProofRequest() {
     if (!isUnlocked || !user || !request || candidates) return
     const wanted = new Set(request.requirements.map((r) => r.type))
     ;(async () => {
-      const { data } = await supabase.from('credentials').select('*').eq('owner', user.id)
+      // Only rows that could match: a requested type, or untyped legacy
+      // rows (their type is only known after decrypting).
+      const { data } = await supabase.from('credentials')
+        .select('id, label, cipher, iv, credential_type')
+        .eq('owner', user.id)
+        .or(`credential_type.is.null,credential_type.in.(${[...wanted].join(',')})`)
       const out: Candidate[] = []
       for (const row of data ?? []) {
         try {
           const decrypted = (row.cipher && row.iv
             ? await decryptPayload({ cipher: row.cipher, iv: row.iv })
-            : await decryptPayload(JSON.parse(row.sd_jwt))) as { sdjwt: string }
+            : await decryptPayload(JSON.parse((row as any).sd_jwt))) as { sdjwt: string }
           const type = claimedType(decrypted.sdjwt)
           if (!type || !wanted.has(type)) continue
           const claims = Object.fromEntries(readDisclosures(decrypted.sdjwt).map((d) => [d.name, d.value]))
-          out.push({ id: row.id, label: row.label || row.degree_title || t(`proof.type_${type}`), type, sdjwt: decrypted.sdjwt, claims, check: null })
+          out.push({ id: row.id, label: row.label || (row as any).degree_title || t(`proof.type_${type}`), type, sdjwt: decrypted.sdjwt, claims, check: null })
         } catch {
           // a credential that will not decrypt is simply not offered
         }
@@ -167,10 +172,10 @@ export default function AnswerProofRequest() {
   if (request === undefined || vaultExists === null) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>
   }
-  if (!request) return <div className="max-w-2xl mx-auto p-6 text-stone-600">{t('proof.not_found')}</div>
+  if (!request) return <div className="max-w-2xl mx-auto px-1 py-10 text-center text-stone-500">{t('proof.not_found')}</div>
 
   return (
-    <div className="w-full md:max-w-2xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-2xl mx-auto space-y-6">
       <Link to="/app/requests" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> {t('proof.page_title')}
       </Link>

@@ -7,6 +7,7 @@ import {
   ScrollText, Building2, AlertTriangle, Search, Copy, Inbox,
 } from 'lucide-react'
 import StatusPill from '../../components/ui/StatusPill'
+import SignOutSection from '../../components/SignOutSection'
 
 // --- TypeScript Types ---
 interface Issuer {
@@ -484,7 +485,7 @@ export default function AdminDashboard() {
   // SKELETON LOADER
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 p-6 md:p-8 space-y-8 animate-pulse font-sans">
+      <div className="max-w-6xl mx-auto space-y-8 animate-pulse">
         <div className="space-y-2">
           <div className="h-8 bg-stone-200 rounded w-1/4" />
           <div className="h-4 bg-stone-200 rounded w-2/4" />
@@ -522,7 +523,8 @@ export default function AdminDashboard() {
 
   if (initialError) {
     return (
-      <div className="max-w-2xl mx-auto mt-12 p-6 bg-rose-50 border border-rose-100 rounded-xl">
+      <div className="max-w-2xl mx-auto mt-12">
+      <div className="p-6 bg-rose-50 border border-rose-100 rounded-xl">
         <div className="flex gap-3">
           <svg className="w-6 h-6 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -539,13 +541,15 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+      <SignOutSection />
+      </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 pb-20 relative font-sans antialiased">
+    <div className="text-stone-900 relative">
       {/* Toast Notifications */}
-      <div className="fixed top-4 right-4 left-4 sm:left-auto z-50 space-y-2 pointer-events-none">
+      <div className="fixed top-[calc(var(--topbar-h)+env(safe-area-inset-top)+8px)] md:top-4 right-4 left-4 sm:left-auto z-[110] space-y-2 pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -572,21 +576,12 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <style>{`
-        @keyframes scaleIn {
-          0% { transform: scale(0.95); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-      `}</style>
 
-      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header Section */}
         <div>
-          <h1 className="text-2xl font-bold text-stone-900 tracking-tight">Trust Registry Management</h1>
+          <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">Trust Registry Management</h1>
           <p className="text-sm text-stone-500 mt-1">Manage accredited institutions and verify trust settings on behalf of MoEYS</p>
         </div>
 
@@ -884,6 +879,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      <SignOutSection className="max-w-6xl mx-auto" />
+
       {/* Audit Log Modal */}
       {isAuditLogOpen && (
         <AuditLogView onClose={() => setIsAuditLogOpen(false)} />
@@ -920,7 +917,7 @@ export default function AdminDashboard() {
       {/* Confirmation Modal */}
       {confirmModal && (
         <div className="fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border border-stone-200 rounded-[14px] shadow-2xl max-w-[420px] w-full overflow-hidden animate-scale-in text-left">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white border border-stone-200 rounded-[14px] shadow-2xl max-w-[420px] w-full overflow-hidden animate-scale-in text-left">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-stone-100">
               <h3

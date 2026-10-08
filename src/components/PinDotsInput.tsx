@@ -62,7 +62,7 @@ export default function PinDotsInput({
         className={
           dark
             ? 'pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-white/20 bg-transparent peer-focus:border-teal-400 peer-focus:ring-2 peer-focus:ring-teal-400/40 peer-disabled:opacity-50'
-            : 'pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-gray-300 bg-white peer-focus:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500 peer-disabled:opacity-50'
+            : 'pointer-events-none flex h-full w-full items-center justify-center gap-2.5 rounded-lg border border-stone-300 bg-white peer-focus:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500 peer-disabled:opacity-50'
         }
       >
         {Array.from({ length }).map((_, i) => {

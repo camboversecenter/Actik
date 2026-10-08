@@ -259,7 +259,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
         </p>
         <button
           onClick={runStatusCheck}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm transition-all cursor-pointer"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm transition-all cursor-pointer"
         >
           Retry
         </button>
@@ -316,7 +316,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
               <button
                 type="submit"
                 disabled={pin.length < MIN_LEN || isProcessing}
-                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing && <Loader2 size={16} className="animate-spin" />}
                 <span>Set up signing PIN</span>
@@ -366,7 +366,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
             <button
               type="submit"
               disabled={pin.length < MIN_LEN || isProcessing || isLockedOut}
-              className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isProcessing ? (
                 <Loader2 size={16} className="animate-spin" />

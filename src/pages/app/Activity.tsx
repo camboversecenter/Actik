@@ -6,7 +6,6 @@ import { Loader2, Link2 } from 'lucide-react'
 interface ShareRecord {
   id: string
   owner: string
-  presentation: string
   issuer_did: string
   revealed: string[]
   expires_at: string
@@ -44,7 +43,9 @@ export default function Activity() {
       setLoading(true)
       const { data, error } = await supabase
         .from('shares')
-        .select('*')
+        // Not '*': `presentation` is the whole shared credential (photo
+        // included) — ~13 MB across a typical account, none of it shown here.
+        .select('id, owner, issuer_did, revealed, expires_at, created_at, recipient_label, revoked_at')
         .eq('owner', userId)
         .order('created_at', { ascending: false })
 
@@ -211,10 +212,10 @@ export default function Activity() {
 
   // Main Page Layout
   return (
-    <div className="w-full max-w-2xl mx-auto mb-16 md:mb-0 relative">
-      <div className="mb-8 text-center md:text-left">
-        <h1 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 mb-2">{t('wallet.share_activity_title')}</h1>
-        <p className="font-khmer text-stone-500">{t('wallet.share_activity_desc')}</p>
+    <div className="w-full max-w-2xl mx-auto relative">
+      <div className="mb-6 px-1">
+        <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('wallet.share_activity_title')}</h1>
+        <p className="font-khmer text-[14px] text-stone-500 mt-1.5 leading-relaxed">{t('wallet.share_activity_desc')}</p>
       </div>
 
       {/* Main Content Area */}
@@ -445,25 +446,11 @@ export default function Activity() {
 
       {/* Global Toast Notification */}
       {toastMessage && (
-        <div 
-          style={{
-            position: 'fixed',
-            bottom: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: toastType === 'success' ? '#10b981' : '#ef4444',
-            color: '#fff',
-            padding: '0.75rem 1.25rem',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
-            fontWeight: 500,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            animation: 'fadeInOut 3s forwards'
-          }}
+        <div
+          role="status"
+          className={`fixed left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+12px)] md:bottom-6 z-[1000] px-4 py-3 rounded-2xl shadow-lg text-white text-sm font-semibold text-center animate-fade-in ${
+            toastType === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+          }`}
         >
           {toastMessage}
         </div>

@@ -100,13 +100,13 @@ export default function NotificationsBell({ email }: NotificationsBellProps) {
   return (
     <button
       onClick={() => navigate('/app/notifications')}
-      className="relative p-1.5 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-gray-100 transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+      className="relative w-10 h-10 rounded-full text-stone-600 hover:text-indigo-600 hover:bg-stone-900/5 active:bg-stone-900/10 flex items-center justify-center cursor-pointer"
       aria-label={t('wallet.notifications_title')}
     >
-      <Bell size={22} strokeWidth={2} />
+      <Bell size={21} strokeWidth={1.9} />
       {count > 0 && (
         <span
-          className={`absolute -top-1.5 -right-1.5 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-sm ${
+          className={`absolute top-0.5 right-0.5 bg-rose-500 text-white rounded-full min-w-[18px] h-[18px] px-1 ring-2 ring-white flex items-center justify-center text-[10px] font-bold shadow-sm ${
             shouldPulse ? 'animate-pulse' : ''
           }`}
         >
