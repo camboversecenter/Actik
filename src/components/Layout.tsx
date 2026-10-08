@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Suspense, useEffect, useState } from 'react'
+import { Outlet, NavLink, useLocation, useNavigationType } from 'react-router-dom'
 import { useLanguage } from '../lib/i18n'
 import { Session } from '@supabase/supabase-js'
-import { getIssuerKey, subscribeIssuerKey, forgetIssuerKey } from '../lib/issuerKeyStore'
-import { forgetHolderKey } from '../lib/holderKey'
+import { getIssuerKey, subscribeIssuerKey } from '../lib/issuerKeyStore'
 import { supabase } from '../lib/supabase'
 import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
 import {
-  Wallet, Activity, Fingerprint, LayoutDashboard, FileSignature, Settings,
-  ShieldCheck, LogOut, Building2, Lock, Briefcase, UserCheck,
+  Wallet, Activity, LayoutDashboard, FileSignature, Settings,
+  ShieldCheck, Building2, Lock, Briefcase, UserCheck, LucideIcon,
 } from 'lucide-react'
+
+interface NavItem {
+  to: string
+  icon: LucideIcon
+  label: string
+  end?: boolean
+}
 
 export default function Layout() {
   const [session, setSession] = useState<Session | null>(null)
@@ -25,7 +31,12 @@ export default function Layout() {
   // this app today, so this is a static "present/absent" indicator, not a
   // countdown). Re-checked whenever role/session changes, same as issuerCard.
   const [hasSigningKey, setHasSigningKey] = useState(false)
-  const navigate = useNavigate()
+  const [scrolled, setScrolled] = useState(false)
+  // Only one of the sidebar / mobile bar is ever visible; mount the
+  // notifications bell (realtime channel + 20s poll) in that one only.
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+  const { pathname } = useLocation()
+  const navigationType = useNavigationType()
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -130,168 +141,135 @@ export default function Layout() {
     }
   }, [role, session?.user?.id])
 
-  const handleSignOut = async () => {
-    // The signing key must not outlive the session that unlocked it.
-    forgetIssuerKey()
-    forgetHolderKey()
-    await supabase.auth.signOut()
-    navigate('/auth/login', { replace: true })
-  }
+  // BrowserRouter doesn't reset scroll: without this, opening a
+  // credential from the bottom of a long list lands mid-way down the
+  // detail page. Back/forward (POP) is left to the browser so the user
+  // returns to where they were.
+  useEffect(() => {
+    if (navigationType !== 'POP') window.scrollTo(0, 0)
+  }, [pathname, navigationType])
+
+  // Scroll-edge: the top bar only gets its hairline once content is
+  // actually underneath it.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const onChange = () => setIsDesktop(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   if (loading) {
-    const spinnerStyle = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--paper)', fontFamily: 'inherit' }}>
-        <style>{spinnerStyle}</style>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            border: '4px solid var(--forest-soft)',
-            borderTop: '4px solid var(--forest)',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: 'var(--forest)', fontWeight: 500, fontSize: '1.1rem', margin: 0 }}>{t('layout.loading')}</p>
-        </div>
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 bg-stone-100">
+        <img src="/logo.png" alt="" className="h-10 w-auto opacity-90" />
+        <div className="w-6 h-6 border-[2.5px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <p className="sr-only">{t('layout.loading')}</p>
       </div>
     )
   }
 
+  const roleLabel =
+    role === 'admin' ? 'Admin'
+    : role === 'issuer' ? t('role.issuer')
+    : role === 'student' ? t('role.student')
+    : role
+
   const renderRoleBadge = () => {
-    if (role === 'admin') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
-          <ShieldCheck size={12} className="text-gray-500" />
-          Admin
-        </span>
-      )
-    }
-    if (role === 'issuer') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-          {t('role.issuer')}
-        </span>
-      )
-    }
-    if (role === 'student') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800">
-          {t('role.student')}
-        </span>
-      )
-    }
-    return role ? (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-        {role}
+    if (!roleLabel) return null
+    const tone =
+      role === 'admin' ? 'bg-stone-100 text-stone-700 border-stone-200'
+      : role === 'issuer' ? 'bg-indigo-50 text-indigo-700 border-indigo-100'
+      : 'bg-teal-50 text-teal-800 border-teal-100'
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${tone}`}>
+        {role === 'admin' && <ShieldCheck size={11} />}
+        {roleLabel}
       </span>
-    ) : null
+    )
   }
 
-  const bottomNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col items-center justify-center flex-1 h-full text-[10px] font-medium transition-colors ${
-      isActive ? 'text-indigo-600' : 'text-gray-500 active:text-indigo-600'
-    }`
+  const navItems: NavItem[] =
+    role === 'student' ? [
+      { to: '/app/wallet', icon: Wallet, label: t('nav.wallet'), end: true },
+      { to: '/app/activity', icon: Activity, label: t('nav.activity') },
+      { to: '/app/requests', icon: Briefcase, label: t('nav.requests') },
+      { to: '/app/contacts', icon: UserCheck, label: t('nav.contacts') },
+    ]
+    : role === 'issuer' ? [
+      { to: '/app/dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), end: true },
+      { to: '/app/issued', icon: FileSignature, label: t('nav.issued') },
+      { to: '/app/requests', icon: Briefcase, label: t('nav.requests') },
+      { to: '/app/institution-settings', icon: Settings, label: t('nav.settings') },
+    ]
+    : role === 'admin' ? [
+      { to: '/admin', icon: ShieldCheck, label: 'Manage issuers', end: true },
+    ]
+    : []
 
-  // Desktop sidebar link — icon + label, same icon set as the mobile bottom
-  // nav below so the two stay visually consistent instead of drifting into
-  // two different navigation vocabularies.
+  // A tab bar with a single destination is just a label; admins get the
+  // top bar only on phones.
+  const showTabBar = navItems.length > 1
+
+  // Desktop sidebar link — icon + label, same icon set as the mobile tab
+  // bar below so the two stay one navigation vocabulary.
   const sidebarLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-      isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+    `flex items-center gap-3 px-3 h-10 rounded-xl text-sm font-medium ${
+      isActive
+        ? 'bg-indigo-600/10 text-indigo-700 font-semibold'
+        : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
     }`
 
-  const sidebarNav = (
-    <>
-      {role === 'student' && (
-        <>
-          <NavLink to="/app/wallet" end className={sidebarLinkClass}>
-            <Wallet size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.wallet')}
-          </NavLink>
-          <NavLink to="/app/activity" className={sidebarLinkClass}>
-            <Activity size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.activity')}
-          </NavLink>
-          <NavLink to="/app/requests" className={sidebarLinkClass}>
-            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.requests')}
-          </NavLink>
-          <NavLink to="/app/contacts" className={sidebarLinkClass}>
-            <UserCheck size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.contacts')}
-          </NavLink>
-          <NavLink to="/app/vault-setup" className={sidebarLinkClass}>
-            <Fingerprint size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.account')}
-          </NavLink>
-        </>
-      )}
-      {role === 'issuer' && (
-        <>
-          <NavLink to="/app/dashboard" end className={sidebarLinkClass}>
-            <LayoutDashboard size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.dashboard')}
-          </NavLink>
-          <NavLink to="/app/issued" className={sidebarLinkClass}>
-            <FileSignature size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.issued')}
-          </NavLink>
-          <NavLink to="/app/requests" className={sidebarLinkClass}>
-            <Briefcase size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.requests')}
-          </NavLink>
-          <NavLink to="/app/institution-settings" className={sidebarLinkClass}>
-            <Settings size={20} strokeWidth={1.9} className="shrink-0" />
-            {t('nav.settings')}
-          </NavLink>
-        </>
-      )}
-      {role === 'admin' && (
-        <NavLink to="/admin" end className={sidebarLinkClass}>
-          <ShieldCheck size={20} strokeWidth={1.9} className="shrink-0" />
-          Manage issuers
-        </NavLink>
-      )}
-    </>
-  )
+  const tabLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `group relative flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 ${
+      isActive ? 'text-indigo-600' : 'text-stone-500'
+    }`
+
+  // The avatar (top bar) and the sidebar's user row both open the role's
+  // account page, which ends with who's signed in and the Sign out button.
+  const accountPath =
+    role === 'issuer' ? '/app/institution-settings'
+    : role === 'admin' ? '/admin'
+    : '/app/vault-setup'
+
+  const email = session?.user?.email ?? ''
+  const initial = email.charAt(0).toUpperCase()
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Desktop sidebar — replaces the top nav bar at md+. Logo has no
-          tagline here (or on the mobile bar below); it only ever showed at
-          md+ and just added height without adding anything mobile didn't
-          already communicate with the logo alone. */}
-      <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 bg-white border-r border-gray-200">
-        <div className="h-16 flex items-center px-5 border-b border-gray-100">
-          <img src="/logo.png" alt="Actik" className="h-9 w-auto" />
+    <div className="min-h-[100dvh] flex bg-stone-100">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white/80 border-r border-stone-200/80 z-20">
+        <div className="h-16 flex items-center px-6">
+          <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
         </div>
-        <nav className="flex-1 flex flex-col gap-1 px-3 py-4 overflow-y-auto">
+        <nav className="flex-1 flex flex-col gap-0.5 px-3 pt-2 pb-4 overflow-y-auto" aria-label="Primary">
           {role === 'issuer' && issuerCard && (
-            <div className="mb-3 bg-white border border-stone-200 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                  <Building2 size={14} className="text-indigo-600" strokeWidth={1.9} />
+            <div className="mb-4 rounded-2xl bg-stone-50 border border-stone-200/80 p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600/10 flex items-center justify-center shrink-0">
+                  <Building2 size={15} className="text-indigo-600" strokeWidth={1.9} />
                 </div>
-                <span className="font-khmer text-[13px] font-semibold text-stone-900 truncate">{issuerCard.name}</span>
+                <div className="min-w-0">
+                  <p className="font-khmer text-[13px] font-semibold text-stone-900 truncate leading-tight">{issuerCard.name}</p>
+                  <p className={`text-[11px] font-semibold mt-0.5 ${issuerCard.accredited ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {issuerCard.accredited ? t('dashboard.accredited_pill') : t('dashboard.pending_approval_pill')}
+                  </p>
+                </div>
               </div>
-              {issuerCard.accredited ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {t('dashboard.accredited_pill')}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  {t('dashboard.pending_approval_pill')}
-                </span>
-              )}
             </div>
           )}
-          {sidebarNav}
+          {navItems.map(({ to, icon: Icon, label, end }) => (
+            <NavLink key={to} to={to} end={end} className={sidebarLinkClass}>
+              <Icon size={19} strokeWidth={1.9} className="shrink-0" />
+              <span className="truncate">{label}</span>
+            </NavLink>
+          ))}
           <InstallPwaButton variant="sidebar" />
         </nav>
         {role === 'issuer' && hasSigningKey && (
@@ -301,127 +279,123 @@ export default function Layout() {
           </div>
         )}
         {session?.user && (
-          <div className="border-t border-gray-100 p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs text-gray-700 font-medium truncate">{session.user.email}</p>
-                <div className="mt-1">{renderRoleBadge()}</div>
-              </div>
-              {role === 'student' && <NotificationsBell email={session.user.email} />}
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 transition-colors rounded-lg h-9 cursor-pointer"
+          <div className="border-t border-stone-200/80 p-3 flex items-center gap-1">
+            <NavLink
+              to={accountPath}
+              end
+              title={email}
+              className={({ isActive }) =>
+                `flex-1 min-w-0 flex items-center gap-3 p-2 rounded-xl ${isActive ? 'bg-indigo-600/10' : 'hover:bg-stone-100'}`
+              }
             >
-              {t('layout.sign_out')}
-            </button>
+              <span className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold shrink-0">
+                {initial}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] text-stone-800 font-medium truncate">{email}</span>
+                <span className="block mt-0.5">{renderRoleBadge()}</span>
+              </span>
+            </NavLink>
+            {role === 'student' && isDesktop && <NotificationsBell email={session.user.email} />}
           </div>
         )}
       </aside>
 
-      {/* Right column: mobile top bar + page content + footer */}
-      <div className="flex-1 flex flex-col min-w-0 md:pl-60">
-        {/* Top bar — mobile only; desktop uses the sidebar above instead */}
-        <nav className="md:hidden bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-4 sm:px-6">
-            <div className="flex justify-between items-center h-14">
-              <img src="/logo.png" alt="Actik" className="h-10 w-auto" />
-              <div className="flex items-center space-x-4">
-                {session?.user && renderRoleBadge()}
-                <InstallPwaButton variant="icon" />
-                {session?.user && role === 'student' && (
-                  <NotificationsBell email={session.user.email} />
-                )}
-                <button
-                  onClick={handleSignOut}
-                  className="inline-flex items-center text-sm font-semibold text-indigo-600 p-2"
-                  aria-label="Sign out"
+      {/* Right column: mobile top bar + page content */}
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64">
+        {/* Top bar — mobile only. Translucent and sticky: content scrolls
+            under it, and the hairline appears only once it does. */}
+        <header
+          data-scrolled={scrolled}
+          className="md:hidden sticky top-0 z-30 material-bar scroll-edge pt-[env(safe-area-inset-top)] no-print"
+        >
+          <div className="flex justify-between items-center h-14 px-4">
+            <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
+            <div className="flex items-center gap-1">
+              <InstallPwaButton variant="icon" />
+              {session?.user && role === 'student' && !isDesktop && (
+                <NotificationsBell email={session.user.email} />
+              )}
+              {session?.user && (
+                <NavLink
+                  to={accountPath}
+                  end
+                  className="w-10 h-10 flex items-center justify-center rounded-full"
+                  aria-label={t('nav.account')}
                 >
-                  <LogOut size={20} strokeWidth={1.9} />
-                </button>
-                {session?.user?.email && (
-                  <div
-                    className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-semibold shrink-0"
-                    title={session.user.email}
-                  >
-                    {session.user.email.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
+                  {({ isActive }) => (
+                    <span
+                      className={`w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[13px] font-semibold ${
+                        isActive ? 'ring-2 ring-indigo-600/30 ring-offset-2 ring-offset-stone-50' : ''
+                      }`}
+                    >
+                      {initial}
+                    </span>
+                  )}
+                </NavLink>
+              )}
             </div>
           </div>
-        </nav>
+        </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
-          <Outlet />
+        {/* Main content. On phones the bottom padding clears the floating
+            tab bar plus the home indicator. */}
+        <main
+          className={`flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-10 pt-5 md:pt-10 md:pb-12 ${
+            showTabBar ? 'pb-[calc(var(--tabbar-h)+var(--safe-bottom)+28px)]' : 'pb-[calc(var(--safe-bottom)+28px)]'
+          }`}
+        >
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-24">
+                <div className="w-6 h-6 border-[2.5px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
 
-        {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 no-print pb-20 md:pb-0">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center">
-            <p className="text-xs text-gray-500">
-              Actik MVP — Digital proof of ownership, starting with certificates, backed by W3C VC and SD-JWT
+        {/* Footer — desktop only; on phones it was a block of marketing
+            copy the user had to scroll past inside their own wallet. */}
+        <footer className="hidden md:block no-print">
+          <div className="max-w-6xl mx-auto py-6 px-10">
+            <p className="text-xs text-stone-400">
+              Actik — {t('layout.tagline_footer')}
             </p>
           </div>
         </footer>
       </div>
 
-      {/* Bottom navigation bar (mobile only) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(64px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white border-t border-gray-200 flex items-center justify-around z-50 shadow-lg">
-        {role === 'student' && (
-          <>
-            <NavLink to="/app/wallet" end className={bottomNavLinkClass}>
-              <Wallet size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.wallet')}</span>
-            </NavLink>
-            <NavLink to="/app/activity" className={bottomNavLinkClass}>
-              <Activity size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.activity')}</span>
-            </NavLink>
-            <NavLink to="/app/requests" className={bottomNavLinkClass}>
-              <Briefcase size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.requests')}</span>
-            </NavLink>
-            <NavLink to="/app/contacts" className={bottomNavLinkClass}>
-              <UserCheck size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.contacts')}</span>
-            </NavLink>
-            <NavLink to="/app/vault-setup" className={bottomNavLinkClass}>
-              <Fingerprint size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.account')}</span>
-            </NavLink>
-          </>
-        )}
-        {role === 'issuer' && (
-          <>
-            <NavLink to="/app/dashboard" end className={bottomNavLinkClass}>
-              <LayoutDashboard size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.dashboard')}</span>
-            </NavLink>
-            <NavLink to="/app/issued" className={bottomNavLinkClass}>
-              <FileSignature size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.issued')}</span>
-            </NavLink>
-            <NavLink to="/app/requests" className={bottomNavLinkClass}>
-              <Briefcase size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.requests')}</span>
-            </NavLink>
-            <NavLink to="/app/institution-settings" className={bottomNavLinkClass}>
-              <Settings size={20} strokeWidth={1.9} />
-              <span className="mt-1">{t('nav.settings')}</span>
-            </NavLink>
-          </>
-        )}
-        {role === 'admin' && (
-          <>
-            <NavLink to="/admin" end className={bottomNavLinkClass}>
-              <ShieldCheck size={20} strokeWidth={1.9} />
-              <span className="mt-1">Registry</span>
-            </NavLink>
-          </>
-        )}
-      </div>
+      {/* Tab bar (mobile). Sits below modal scrims (z-30 vs their z-40+)
+          so sheets are never covered by it. */}
+      {showTabBar && (
+        <nav
+          aria-label="Primary"
+          className="md:hidden fixed bottom-0 inset-x-0 z-30 material-bar border-t border-stone-900/[0.06] pb-safe no-print"
+        >
+          <div className="flex items-stretch h-[var(--tabbar-h)] px-1">
+            {navItems.map(({ to, icon: Icon, label, end }) => (
+              <NavLink key={to} to={to} end={end} className={tabLinkClass}>
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`flex items-center justify-center w-14 h-8 rounded-full transition-colors duration-200 ${
+                        isActive ? 'bg-indigo-600/10' : 'group-active:bg-stone-900/5'
+                      }`}
+                    >
+                      <Icon size={21} strokeWidth={isActive ? 2.2 : 1.8} />
+                    </span>
+                    <span className={`text-[10px] leading-tight truncate max-w-full px-1 ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                      {label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+      )}
     </div>
   )
 }

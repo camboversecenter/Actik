@@ -192,14 +192,12 @@ export default function IssuerDashboard() {
             supabase.rpc('issuer_verification_count'),
             supabase.from('credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did).gte('created_at', monthStart.toISOString()),
             supabase.from('pending_credentials').select('*', { count: 'exact', head: true }).eq('issuer_did', issuerData.did).lte('created_at', thirtyDaysAgo),
-            // select('*') deliberately, not named columns — this table is
-            // written by two different code paths with different shapes
-            // (IssueCredential.tsx's own insert uses holder_email/degree_type;
-            // the student-claim fallback in VaultSetup.tsx's useClaim() uses
-            // owner/label/cipher/iv instead) — naming a column absent from
-            // either shape 400s the whole query and silently drops every row.
-            supabase.from('credentials').select('*').eq('issuer_did', issuerData.did).order('created_at', { ascending: false }).limit(5),
-            supabase.from('pending_credentials').select('*').eq('issuer_did', issuerData.did).order('created_at', { ascending: false }).limit(5),
+            // Named columns, all present in the live schema (holder_email /
+            // degree_title don't exist on `credentials`, so they're not
+            // requested — the row mapping below already falls back past
+            // them). Never '*': `cipher` and `student_photo` are large.
+            supabase.from('credentials').select('id, label, student_email, created_at').eq('issuer_did', issuerData.did).order('created_at', { ascending: false }).limit(5),
+            supabase.from('pending_credentials').select('id, label, degree_type, recipient_email, student_email, created_at').eq('issuer_did', issuerData.did).order('created_at', { ascending: false }).limit(5),
             // Chart bucketing — created_at only, no row cap concern beyond the
             // same 1000-row PostgREST default noted above.
             supabase.from('credentials').select('created_at').eq('issuer_did', issuerData.did)
@@ -375,7 +373,7 @@ export default function IssuerDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
         <Loader2 size={40} className="animate-spin text-indigo-600" />
-        <p className="text-gray-500 mt-4 font-semibold text-sm">{t('dashboard.loading_dashboard')}</p>
+        <p className="text-stone-500 mt-4 font-semibold text-sm">{t('dashboard.loading_dashboard')}</p>
       </div>
     )
   }
@@ -389,7 +387,7 @@ export default function IssuerDashboard() {
             <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto">
               <Building2 size={28} className="text-indigo-600" />
             </div>
-            <h1 className="text-2xl font-bold text-stone-900 mt-4">{t('dashboard.register_institution')}</h1>
+            <h1 className="mt-4 text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('dashboard.register_institution')}</h1>
             <p className="text-sm text-stone-500 mt-1">
               {t('dashboard.register_desc')}
             </p>
@@ -405,7 +403,7 @@ export default function IssuerDashboard() {
                 value={regName}
                 onChange={(e) => setRegName(e.target.value)}
                 placeholder="Royal University of Phnom Penh"
-                className="block w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               />
               {regErrors.name && (
                 <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.name}</p>
@@ -422,7 +420,7 @@ export default function IssuerDashboard() {
                 onChange={(e) => setRegDomain(e.target.value)}
                 onBlur={handleDomainBlur}
                 placeholder="rupp.edu.kh"
-                className="block w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               />
               <p className="text-[11px] text-stone-500 mt-1 leading-normal">
                 {t('dashboard.domain_desc')}
@@ -439,7 +437,7 @@ export default function IssuerDashboard() {
               <select
                 value={regType}
                 onChange={(e) => setRegType(e.target.value)}
-                className="block w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               >
                 <option value="">{t('dashboard.select_type')}</option>
                 <option value="University">{t('dashboard.university')}</option>
@@ -462,7 +460,7 @@ export default function IssuerDashboard() {
                 onChange={(e) => setRegSigningPin(e.target.value)}
                 placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
                 autoComplete="new-password"
-                className="block w-full rounded-lg border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
+                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
               />
               <p className="text-[11px] text-stone-500 mt-1 leading-normal">
                 Protects your certificate-signing key so it survives closing this tab.
@@ -481,7 +479,7 @@ export default function IssuerDashboard() {
             <button
               type="submit"
               disabled={isRegistering}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
             >
               {isRegistering && <Loader2 size={18} className="animate-spin" />}
               <span>{t('dashboard.register_btn')}</span>
@@ -501,7 +499,7 @@ export default function IssuerDashboard() {
           {/* Header — Khmer title, English/DID mono caption, primary action */}
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="font-khmer text-2xl md:text-3xl font-bold text-stone-900 tracking-tight">{t('dashboard.issuer_dashboard')}</h1>
+              <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('dashboard.issuer_dashboard')}</h1>
               <p className="font-mono text-xs text-stone-400 mt-1">Issuer dashboard · {issuerInfo.did}</p>
             </div>
             {issuerInfo.accredited && privateKey && (

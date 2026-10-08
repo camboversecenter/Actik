@@ -38,7 +38,9 @@ const translations = {
       tagline: 'Proof of ownership',
       institution_dashboard: 'Institution Dashboard',
       sign_out: 'Sign out',
-      install_app: 'Install app'
+      install_app: 'Install app',
+      signed_in_as: 'Signed in as',
+      tagline_footer: 'Digital proof of ownership, starting with certificates, backed by W3C VC and SD-JWT',
     },
     wallet: {
       title: 'My credential wallet',
@@ -235,6 +237,7 @@ const translations = {
       notifications_desc: 'Claim credentials issued to your Cambodian digital identity',
       checking_pending_credentials: 'Checking pending credentials...',
       failed_load_notifications: 'Failed to load notifications',
+      failed_load_wallet: "Couldn't load your credentials",
       refresh_to_try_again: 'Please refresh the page to try again.',
       retry_btn: 'Retry',
       all_caught_up: 'All caught up!',
@@ -1040,7 +1043,9 @@ const translations = {
       tagline: 'ភស្តុតាងកម្មសិទ្ធិ',
       institution_dashboard: 'ផ្ទាំងគ្រប់គ្រងស្ថាប័ន',
       sign_out: 'ចាកចេញ',
-      install_app: 'ដំឡើងកម្មវិធី' // TODO(km-review)
+      install_app: 'ដំឡើងកម្មវិធី', // TODO(km-review)
+      signed_in_as: 'បានចូលជា', // TODO(km-review)
+      tagline_footer: 'ភស្តុតាងកម្មសិទ្ធិឌីជីថល ចាប់ផ្តើមពីវិញ្ញាបនបត្រ ដោយផ្អែកលើ W3C VC និង SD-JWT', // TODO(km-review)
     },
     wallet: {
       title: 'កាបូបលិខិតរបស់ខ្ញុំ',
@@ -1237,6 +1242,7 @@ const translations = {
       notifications_desc: 'ទទួលវិញ្ញាបនបត្រដែលបានចេញឲ្យអត្តសញ្ញាណឌីជីថលកម្ពុជារបស់អ្នក',
       checking_pending_credentials: 'កំពុងត្រួតពិនិត្យវិញ្ញាបនបត្រដែលរង់ចាំ...',
       failed_load_notifications: 'បរាជ័យក្នុងការផ្ទុកការជូនដំណឹង',
+      failed_load_wallet: 'មិនអាចផ្ទុកលិខិតរបស់អ្នកបានទេ', // TODO(km-review)
       refresh_to_try_again: 'សូមផ្ទុកទំព័រឡើងវិញដើម្បីព្យាយាមម្តងទៀត។',
       retry_btn: 'ព្យាយាមម្តងទៀត',
       all_caught_up: 'បានទទួលទាំងអស់ហើយ!',
@@ -2046,6 +2052,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
       setLanguageState(stored);
     }
   }, []);
+
+  // Lets the browser pick Khmer line-breaking and lets CSS (:lang(km))
+  // tune spacing for the script.
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);

@@ -47,7 +47,7 @@ export default function LanguageSwitcher({ prefix, variant = 'card' }: LanguageS
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
       <div className="mb-4">
         <h3 className="text-sm font-bold text-stone-900 tracking-tight flex items-center gap-2">
           <Globe size={18} className="text-indigo-500" />
@@ -59,7 +59,7 @@ export default function LanguageSwitcher({ prefix, variant = 'card' }: LanguageS
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as 'en' | 'km')}
-          className="block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900 cursor-pointer"
+          className="block w-full max-w-xs rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900 cursor-pointer"
         >
           <option value="en">EN / English</option>
           <option value="km">ខ្មែរ / Khmer</option>

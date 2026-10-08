@@ -66,10 +66,10 @@ export default function InstallPwaButton({ variant = 'sidebar' }: InstallPwaButt
     return (
       <button
         onClick={handleClick}
-        className="relative p-1.5 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-gray-100 transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+        className="relative w-10 h-10 rounded-full text-stone-600 hover:text-indigo-600 hover:bg-stone-900/5 active:bg-stone-900/10 flex items-center justify-center cursor-pointer"
         aria-label={t('layout.install_app')}
       >
-        <MonitorSmartphone size={22} strokeWidth={2} />
+        <MonitorSmartphone size={21} strokeWidth={1.9} />
       </button>
     )
   }
@@ -77,9 +77,9 @@ export default function InstallPwaButton({ variant = 'sidebar' }: InstallPwaButt
   return (
     <button
       onClick={handleClick}
-      className="w-full flex items-center gap-3 px-3 pb-2.5 pt-4 mt-2 border-t border-gray-100 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+      className="w-full flex items-center gap-3 px-3 h-10 mt-3 rounded-xl text-sm font-medium text-indigo-600 hover:bg-indigo-600/10 cursor-pointer"
     >
-      <MonitorSmartphone size={20} className="shrink-0" />
+      <MonitorSmartphone size={19} strokeWidth={1.9} className="shrink-0" />
       {t('layout.install_app')}
     </button>
   )

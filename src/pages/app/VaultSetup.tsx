@@ -8,6 +8,7 @@ import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PinDotsInput from '../../components/PinDotsInput'
 import { verifyIssuedCredential } from '../../lib/claimVerification'
 import { forgetHolderKey } from '../../lib/holderKey'
+import SignOutSection from '../../components/SignOutSection'
 
 // Note: The prompt expects import { useVault } from '../../vault/zk-vault/useVault'
 // But the actual file in this project exports useZkVault from '../../vault/zk-vault'
@@ -355,7 +356,7 @@ export default function VaultSetup() {
 
   // Render Page
   return (
-    <div className="w-full md:max-w-xl mx-auto px-4 md:px-0 pb-24">
+    <div className="w-full md:max-w-xl mx-auto">
       <style>{spinStyles}</style>
 
       {/* =======================================================
@@ -434,17 +435,17 @@ export default function VaultSetup() {
           {/* Card 3: Action Options */}
           <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 flex flex-col gap-3">
             <button
-              className="font-khmer w-full bg-indigo-600 hover:bg-indigo-650 active:bg-indigo-700 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+              className="font-khmer w-full bg-indigo-600 hover:bg-indigo-650 active:bg-indigo-700 text-white font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => navigate('/app/wallet')}>
               {t('account.go_wallet')}
             </button>
             <button
-              className="font-khmer w-full border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
+              className="font-khmer w-full border border-stone-300 bg-white hover:bg-stone-50 text-stone-800 font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
               onClick={() => navigate('/app/wallet-key')}>
               <KeyRound size={15} /> {t('walletkey.title')}
             </button>
             <button
-              className="font-khmer w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
+              className="font-khmer w-full border border-rose-200 bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer"
               onClick={() => setShowResetModal(true)}>
               {t('account.reset_vault')}
             </button>
@@ -477,7 +478,7 @@ export default function VaultSetup() {
           {/* Stepper progress indicator */}
           <div className="flex items-center justify-between mb-8 relative px-4">
             {/* Horizontal Line background */}
-            <div className="absolute top-4 sm:top-5 left-[10%] right-[10%] h-[2px] bg-gray-200 z-0" />
+            <div className="absolute top-4 sm:top-5 left-[10%] right-[10%] h-[2px] bg-stone-200 z-0" />
             
             {/* Step 1 */}
             <div className="flex flex-col items-center relative z-10">
@@ -488,31 +489,31 @@ export default function VaultSetup() {
               >
                 {step > 1 ? <Check size={16} /> : '1'}
               </div>
-              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-gray-500 hidden sm:inline">{t('account.step_choose_method')}</span>
+              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-stone-500 hidden sm:inline">{t('account.step_choose_method')}</span>
             </div>
 
             {/* Step 2 */}
             <div className="flex flex-col items-center relative z-10">
               <div 
                 className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border-2 transition-colors ${
-                  step === 2 ? 'bg-indigo-600 border-indigo-600 text-white' : step > 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-200 text-gray-400'
+                  step === 2 ? 'bg-indigo-600 border-indigo-600 text-white' : step > 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-stone-200 text-stone-400'
                 }`}
               >
                 {step > 2 ? <Check size={16} /> : '2'}
               </div>
-              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-gray-500 hidden sm:inline">{t('account.step_create_vault')}</span>
+              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-stone-500 hidden sm:inline">{t('account.step_create_vault')}</span>
             </div>
 
             {/* Step 3 */}
             <div className="flex flex-col items-center relative z-10">
               <div 
                 className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold border-2 transition-colors ${
-                  step === 3 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-200 text-gray-400'
+                  step === 3 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-stone-200 text-stone-400'
                 }`}
               >
                 3
               </div>
-              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-gray-500 hidden sm:inline">{t('account.step_done')}</span>
+              <span className="text-[10px] md:text-xs font-semibold mt-1.5 text-stone-500 hidden sm:inline">{t('account.step_done')}</span>
             </div>
           </div>
 
@@ -534,11 +535,11 @@ export default function VaultSetup() {
                 <div className="mb-4 text-indigo-600">
                   <Lock size={28} />
                 </div>
-                <strong className="text-sm md:text-base text-gray-900 block font-semibold">{t('account.pin_title')}</strong>
-                <p className="text-xs text-gray-500 mt-2 mb-4 leading-relaxed">
+                <strong className="text-sm md:text-base text-stone-900 block font-semibold">{t('account.pin_title')}</strong>
+                <p className="text-xs text-stone-500 mt-2 mb-4 leading-relaxed">
                   {t('account.pin_desc')}
                 </p>
-                <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-gray-500">
+                <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-stone-500">
                   <li>{t('account.pin_feature_1')}</li>
                   <li>{t('account.pin_feature_2')}</li>
                   <li>{t('account.pin_feature_3')}</li>
@@ -552,11 +553,11 @@ export default function VaultSetup() {
                   Face ID/Touch ID/Windows Hello on later visits. See
                   components/PinDotsInput.tsx for why that matters. */}
               <form onSubmit={handleContinueToStep2}>
-                <div className="bg-white border border-gray-200 rounded-xl p-5 md:p-6 mb-6 shadow-sm">
+                <div className="bg-white border border-stone-200 rounded-xl p-5 md:p-6 mb-6 shadow-sm">
 
                   {/* Create PIN block */}
                   <div className="mb-6">
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
+                    <label className="text-xs md:text-sm font-bold text-stone-700 block text-center mb-3">
                       {t('account.create_pin')}
                     </label>
                     <PinDotsInput
@@ -571,7 +572,7 @@ export default function VaultSetup() {
 
                   {/* Confirm PIN block */}
                   <div className="mb-4">
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block text-center mb-3">
+                    <label className="text-xs md:text-sm font-bold text-stone-700 block text-center mb-3">
                       {t('account.confirm_pin')}
                     </label>
                     <PinDotsInput
@@ -584,13 +585,13 @@ export default function VaultSetup() {
                   </div>
 
                   {/* Toggle show/hide PIN */}
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-500">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 pt-4 border-t border-stone-100">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-stone-500">
                       <input
                         type="checkbox"
                         checked={showPin}
                         onChange={(e) => setShowPin(e.target.checked)}
-                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="rounded border-stone-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span>{t('account.show_pin_digits')}</span>
                     </label>
@@ -619,7 +620,7 @@ export default function VaultSetup() {
                 <button
                   type="submit"
                   className={`w-full h-[52px] font-semibold rounded-lg transition-all flex items-center justify-center gap-2 mb-6 ${
-                    canContinueStep1 ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer text-white shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    canContinueStep1 ? 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 cursor-pointer text-white shadow-sm' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   }`}
                   disabled={!canContinueStep1}
                 >
@@ -628,11 +629,11 @@ export default function VaultSetup() {
               </form>
 
               {/* SECURITY EXPLAINER SECTION */}
-              <div className="border-t border-gray-200 pt-5">
+              <div className="border-t border-stone-200 pt-5">
                 <button
                   type="button"
                   onClick={() => setExplainOpen(!explainOpen)}
-                  className="w-full flex items-center justify-between bg-transparent border-none cursor-pointer p-0 text-gray-500 text-sm font-semibold hover:text-indigo-600 transition-colors"
+                  className="w-full flex items-center justify-between bg-transparent border-none cursor-pointer p-0 text-stone-500 text-sm font-semibold hover:text-indigo-600 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <HelpCircle size={18} />
@@ -642,21 +643,21 @@ export default function VaultSetup() {
                 </button>
 
                 {explainOpen && (
-                  <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs leading-relaxed text-gray-500 space-y-3">
+                  <div className="mt-3 bg-stone-50 border border-stone-200 rounded-lg p-4 text-xs leading-relaxed text-stone-500 space-y-3">
                     <p className="flex gap-2">
-                      <KeyRound size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <KeyRound size={14} className="shrink-0 mt-0.5 text-stone-400" />
                       <span><strong>Local Key Derivation:</strong> Your encryption key is derived directly from your PIN using the browser&apos;s WebCrypto API.</span>
                     </p>
                     <p className="flex gap-2">
-                      <Ban size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <Ban size={14} className="shrink-0 mt-0.5 text-stone-400" />
                       <span><strong>Zero Knowledge:</strong> The key never leaves your device. Actik servers only store the encrypted envelopes (gibberish without your device key).</span>
                     </p>
                     <p className="flex gap-2">
-                      <Lock size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <Lock size={14} className="shrink-0 mt-0.5 text-stone-400" />
                       <span><strong>AES-GCM 256 Encryption:</strong> We use industry-standard AES-GCM 256-bit symmetric encryption to wrap certificates.</span>
                     </p>
                     <p className="flex gap-2">
-                      <Settings2 size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                      <Settings2 size={14} className="shrink-0 mt-0.5 text-stone-400" />
                       <span><strong>Technical stack:</strong> A PIN-derived KEK envelope secures the main Data Encryption Key (DEK).</span>
                     </p>
                   </div>
@@ -669,11 +670,11 @@ export default function VaultSetup() {
               STEP 2: CREATING THE VAULT CHECKSLIST
              ======================================================= */}
           {step === 2 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 shadow-sm">
+            <div className="bg-white rounded-xl border border-stone-200 p-6 md:p-8 shadow-sm">
               <h3 className="text-base md:text-lg font-bold text-stone-900 mb-1">
                 {t('account.creating_your_vault')}
               </h3>
-              <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
+              <p className="text-xs md:text-sm text-stone-500 mb-6 leading-relaxed">
                 {t('account.confirm_with_device')} {t('account.pin_passcode')}
               </p>
 
@@ -681,44 +682,44 @@ export default function VaultSetup() {
               <div className="flex flex-col gap-4 mb-8 w-full leading-relaxed">
                 {/* 1. Generating encryption key */}
                 <div className="flex items-center gap-3 text-sm md:text-base">
-                  {creationStatus.keyGen === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
-                  {creationStatus.keyGen === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
+                  {creationStatus.keyGen === 'idle' && <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 shrink-0" />}
+                  {creationStatus.keyGen === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-stone-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.keyGen === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
                   {creationStatus.keyGen === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
-                  <span className={creationStatus.keyGen === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
+                  <span className={creationStatus.keyGen === 'running' ? 'text-stone-900 font-semibold' : 'text-stone-500'}>
                     {t('account.generating_key')}
                   </span>
                 </div>
 
                 {/* 2. Creating vault envelope */}
                 <div className="flex items-center gap-3 text-sm md:text-base">
-                  {creationStatus.envelope === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
-                  {creationStatus.envelope === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
+                  {creationStatus.envelope === 'idle' && <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 shrink-0" />}
+                  {creationStatus.envelope === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-stone-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.envelope === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
                   {creationStatus.envelope === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
-                  <span className={creationStatus.envelope === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
+                  <span className={creationStatus.envelope === 'running' ? 'text-stone-900 font-semibold' : 'text-stone-500'}>
                     {t('account.creating_envelope')}
                   </span>
                 </div>
 
                 {/* 3. Saving to Actik */}
                 <div className="flex items-center gap-3 text-sm md:text-base">
-                  {creationStatus.saving === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
-                  {creationStatus.saving === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
+                  {creationStatus.saving === 'idle' && <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 shrink-0" />}
+                  {creationStatus.saving === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-stone-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.saving === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
                   {creationStatus.saving === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
-                  <span className={creationStatus.saving === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
+                  <span className={creationStatus.saving === 'running' ? 'text-stone-900 font-semibold' : 'text-stone-500'}>
                     {t('account.saving_actik')}
                   </span>
                 </div>
 
                 {/* 4. Verifying vault */}
                 <div className="flex items-center gap-3 text-sm md:text-base">
-                  {creationStatus.verifying === 'idle' && <div className="w-5 h-5 rounded-full border border-gray-200 bg-gray-50 shrink-0" />}
-                  {creationStatus.verifying === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-200 border-t-indigo-600 shrink-0" />}
+                  {creationStatus.verifying === 'idle' && <div className="w-5 h-5 rounded-full border border-stone-200 bg-stone-50 shrink-0" />}
+                  {creationStatus.verifying === 'running' && <div className="animate-spin rounded-full h-5 w-5 border-2 border-stone-200 border-t-indigo-600 shrink-0" />}
                   {creationStatus.verifying === 'done' && <CheckCircle size={20} className="text-emerald-500 shrink-0" />}
                   {creationStatus.verifying === 'error' && <XCircle size={20} className="text-rose-500 shrink-0" />}
-                  <span className={creationStatus.verifying === 'running' ? 'text-gray-900 font-semibold' : 'text-gray-500'}>
+                  <span className={creationStatus.verifying === 'running' ? 'text-stone-900 font-semibold' : 'text-stone-500'}>
                     {t('account.verifying_vault')}
                   </span>
                 </div>
@@ -743,34 +744,34 @@ export default function VaultSetup() {
               STEP 3: DONE / SUCCESS STATE
              ======================================================= */}
           {step === 3 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 md:p-8 text-center shadow-sm">
+            <div className="bg-white rounded-xl border border-stone-200 p-6 md:p-8 text-center shadow-sm">
               
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 mb-4">
                 <CheckCircle size={28} />
               </div>
 
               <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2">{t('account.vault_ready_title')}</h2>
-              <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
+              <p className="text-xs md:text-sm text-stone-500 mb-6 leading-relaxed">
                 {t('account.vault_protected_by')} {t('account.pin_passcode')}
               </p>
 
               {/* Explainer cards */}
               <div className="flex flex-col gap-3 text-left mb-8">
-                <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
+                <div className="flex gap-3 items-start p-3.5 bg-stone-50 border border-stone-200 rounded-lg text-xs leading-relaxed text-stone-500">
                   <ShieldCheck size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.only_you_open')}</strong> {t('account.only_you_open_desc')}
                   </p>
                 </div>
 
-                <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
+                <div className="flex gap-3 items-start p-3.5 bg-stone-50 border border-stone-200 rounded-lg text-xs leading-relaxed text-stone-500">
                   <Building2 size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.if_lose_access')}</strong> {t('account.if_lose_access_desc')}
                   </p>
                 </div>
 
-                <div className="flex gap-3 items-start p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-xs leading-relaxed text-gray-500">
+                <div className="flex gap-3 items-start p-3.5 bg-stone-50 border border-stone-200 rounded-lg text-xs leading-relaxed text-stone-500">
                   <KeyRound size={16} className="shrink-0 text-indigo-500" />
                   <p className="margin-0">
                     <strong>{t('account.backup_methods')}</strong> {t('account.backup_methods_desc')}
@@ -796,7 +797,7 @@ export default function VaultSetup() {
                       {t('account.go_wallet')}
                     </button>
                     <button 
-                      className="w-full sm:flex-1 border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
+                      className="w-full sm:flex-1 border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center cursor-pointer" 
                       onClick={() => navigate('/app/dashboard')}
                     >
                       {t('account.go_dashboard')}
@@ -809,23 +810,25 @@ export default function VaultSetup() {
         </div>
       )}
 
+      <SignOutSection />
+
       {/* =======================================================
           RESET VAULT CONFIRMATION WARNING MODAL (Requirement 8)
          ======================================================= */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[1000] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in text-center">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-t-3xl md:rounded-2xl shadow-lg p-6 md:p-8 w-full md:max-w-sm flex flex-col pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-8 animate-scale-in text-center">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-2">
               <AlertTriangle size={22} className="text-rose-600" />
             </div>
             <h3 className="text-lg font-bold text-rose-600 mb-2">{t('account.delete_vault_warning')}</h3>
             
-            <p className="text-xs text-gray-500 mb-6 leading-relaxed text-left">
+            <p className="text-xs text-stone-500 mb-6 leading-relaxed text-left">
               {t('account.reset_vault_desc')}
             </p>
 
             <div className="mb-6 text-left">
-              <label className="text-xs font-bold text-gray-700 block mb-2">
+              <label className="text-xs font-bold text-stone-700 block mb-2">
                 {t('account.type_reset_confirm')}
               </label>
               <input
@@ -833,14 +836,14 @@ export default function VaultSetup() {
                 value={resetInput}
                 onChange={(e) => setResetInput(e.target.value)}
                 placeholder="RESET"
-                className="w-full text-center h-11 border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-lg text-sm font-semibold mb-2"
+                className="w-full text-center h-11 border border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-500 rounded-xl text-sm font-semibold mb-2"
               />
             </div>
 
             <div className="flex gap-3">
               <button
                 type="button"
-                className="w-1/2 border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-1/2 border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
                 onClick={() => {
                   setShowResetModal(false)
                   setResetInput('')
@@ -855,7 +858,7 @@ export default function VaultSetup() {
                 disabled={resetInput !== 'RESET' || isResetting}
                 onClick={handleResetConfirm}
                 className={`w-1/2 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center gap-1.5 transition-all ${
-                  resetInput === 'RESET' && !isResetting ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  resetInput === 'RESET' && !isResetting ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 cursor-pointer' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                 }`}
               >
                 {isResetting && (
@@ -873,7 +876,7 @@ export default function VaultSetup() {
          ======================================================= */}
       {showReconfigureModal && (
         <div className="fixed inset-0 bg-black/40 flex items-stretch md:items-center justify-end md:justify-center z-[1000] p-0 md:p-4 flex-col">
-          <div className="bg-white rounded-t-2xl md:rounded-xl shadow-lg p-6 md:p-8 w-full max-w-sm flex flex-col pb-8 md:pb-8 animate-scale-in">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-t-3xl md:rounded-2xl shadow-lg p-6 md:p-8 w-full md:max-w-sm flex flex-col pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-8 animate-scale-in">
             <div className="text-center mb-6">
               <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-2">
                 <AlertTriangle size={22} className="text-amber-600" />
@@ -891,14 +894,14 @@ export default function VaultSetup() {
                   setExistingVault(null)
                   setStep(1)
                 }}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
               >
                 {t('account.proceed_reconfigure')}
               </button>
               
               <button
                 onClick={() => setShowReconfigureModal(false)}
-                className="w-full border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold h-11 rounded-lg text-sm flex items-center justify-center cursor-pointer"
+                className="w-full border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-11 rounded-xl text-sm flex items-center justify-center cursor-pointer"
               >
                 {t('wallet.cancel')}
               </button>

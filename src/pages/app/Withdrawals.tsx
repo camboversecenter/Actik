@@ -136,7 +136,7 @@ export default function Withdrawals() {
   }
 
   if (!issuer) {
-    return <div className="max-w-2xl mx-auto p-6 text-stone-600">No institution is registered to this account.</div>
+    return <div className="max-w-2xl mx-auto px-1 py-10 text-center text-stone-500">No institution is registered to this account.</div>
   }
 
   if (!hasKey && user) {
@@ -154,13 +154,13 @@ export default function Withdrawals() {
   const lapsesInDays = revocations ? Math.floor((revocations.expires - now) / 86400) : null
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-3xl mx-auto space-y-6">
       <Link to="/app/issued" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> Issued credentials
       </Link>
 
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900">Withdrawals</h1>
+        <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">Withdrawals</h1>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">
           Withdrawing a credential adds it to {issuer.name}'s signed withdrawal list. Verifiers then refuse it and say
           your institution withdrew it. They can be up to a day behind, and a verifier offline for longer can be further

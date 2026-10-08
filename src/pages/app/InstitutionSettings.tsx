@@ -24,6 +24,7 @@ import {
 import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PageHeader from '../../components/ui/PageHeader'
+import SignOutSection from '../../components/SignOutSection'
 
 const MIN_PIN_LEN = 8
 
@@ -257,11 +258,11 @@ export default function InstitutionSettings() {
   const status = getAccreditationStatus()
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0">
+    <div className="w-full md:max-w-3xl mx-auto">
       <PageHeader icon={Settings} title={t('settings.title')} subtitle={t('settings.subtitle')} />
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div className="flex flex-col items-center justify-center py-20 bg-white border border-stone-200 rounded-2xl shadow-sm">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-200 border-t-indigo-600" />
           <p className="text-stone-500 mt-4 font-medium">{t('settings.status_loading')}</p>
         </div>
@@ -272,7 +273,7 @@ export default function InstitutionSettings() {
           <h3 className="font-semibold text-rose-900 text-lg mb-2">{t('settings.status_failed')}</h3>
           <p className="text-sm text-rose-700 mb-4">{t('settings.status_error')}</p>
           <button 
-            className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-colors cursor-pointer" 
+            className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-colors cursor-pointer" 
             onClick={() => fetchIssuerProfile(currentUser)}
           >
             {t('settings.retry_btn')}
@@ -281,7 +282,7 @@ export default function InstitutionSettings() {
       )}
 
       {!loading && !loadError && !issuer && (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-12 text-center">
+        <div className="bg-white border border-stone-200 shadow-sm rounded-2xl p-12 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 mb-4">
             <Building2 size={32} />
           </div>
@@ -291,7 +292,7 @@ export default function InstitutionSettings() {
           </p>
           <button
             onClick={() => navigate('/app/register-issuer')}
-            className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-lg text-sm flex items-center justify-center gap-1.5 mx-auto cursor-pointer shadow-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-xl text-sm flex items-center justify-center gap-1.5 mx-auto cursor-pointer shadow-sm"
           >
             <span>{t('settings.register_inst_btn')}</span>
             <ArrowRight size={16} />
@@ -306,32 +307,32 @@ export default function InstitutionSettings() {
           <LanguageSwitcher prefix="settings" variant="compact-row" />
 
           {/* Card A: Institution Profile Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
             <h3 className="text-sm font-bold text-stone-900 tracking-tight mb-5 flex items-center gap-2">
               <Building2 size={18} className="text-indigo-500" />
               <span>{t('settings.inst_profile')}</span>
             </h3>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100 gap-4">
-                <span className="text-gray-500 shrink-0">{t('settings.official_name')}</span>
+              <div className="flex justify-between items-center py-2 border-b border-stone-100 gap-4">
+                <span className="text-stone-500 shrink-0">{t('settings.official_name')}</span>
                 <strong className="text-stone-900 font-semibold text-right">{issuer.name}</strong>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100 gap-4">
-                <span className="text-gray-500 shrink-0">{t('settings.inst_domain')}</span>
+              <div className="flex justify-between items-center py-2 border-b border-stone-100 gap-4">
+                <span className="text-stone-500 shrink-0">{t('settings.inst_domain')}</span>
                 <strong className="text-stone-900 font-medium flex items-center gap-1.5">
                   <Globe size={14} className="text-stone-400" />
                   <span>{issuer.domain}</span>
                 </strong>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-gray-500">{t('settings.inst_type')}</span>
+              <div className="flex justify-between items-center py-2 border-b border-stone-100">
+                <span className="text-stone-500">{t('settings.inst_type')}</span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
                   {issuer.type}
                 </span>
               </div>
-              <div className={`flex justify-between items-center py-2 ${issuer.updated_at ? 'border-b border-gray-100' : ''}`}>
-                <span className="text-gray-500">{t('settings.registered_date')}</span>
+              <div className={`flex justify-between items-center py-2 ${issuer.updated_at ? 'border-b border-stone-100' : ''}`}>
+                <span className="text-stone-500">{t('settings.registered_date')}</span>
                 <strong className="text-stone-900 font-medium flex items-center gap-1.5">
                   <Calendar size={14} className="text-stone-400" />
                   <span>{issuer.created_at ? new Date(issuer.created_at).toLocaleDateString() : 'N/A'}</span>
@@ -339,7 +340,7 @@ export default function InstitutionSettings() {
               </div>
               {issuer.updated_at && (
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-500">{t('settings.updated_date')}</span>
+                  <span className="text-stone-500">{t('settings.updated_date')}</span>
                   <strong className="text-stone-900 font-medium flex items-center gap-1.5">
                     <Calendar size={14} className="text-stone-400" />
                     <span>{new Date(issuer.updated_at).toLocaleDateString()}</span>
@@ -350,7 +351,7 @@ export default function InstitutionSettings() {
           </div>
 
           {/* Card B: Decentralized Identity (DID) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
             <div className="mb-4">
               <h3 className="text-sm font-bold text-stone-900 tracking-tight flex items-center gap-2">
                 <Globe size={18} className="text-indigo-500" />
@@ -374,7 +375,7 @@ export default function InstitutionSettings() {
 
           {/* Card C: Accreditation Status Card */}
           {status && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
               <h3 className="text-sm font-bold text-stone-900 tracking-tight mb-5 flex items-center gap-2">
                 <Award size={18} className="text-indigo-500" />
                 <span>{t('settings.accreditation_status')}</span>
@@ -413,7 +414,7 @@ export default function InstitutionSettings() {
 
           {/* Card D: Public Key Section */}
           {issuer.public_key && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-sm font-bold text-stone-900 tracking-tight flex items-center gap-2">
                   <Award size={18} className="text-indigo-500" />
@@ -429,7 +430,7 @@ export default function InstitutionSettings() {
               </div>
 
               <div className="bg-stone-50 border border-stone-200 rounded-xl p-3.5 mb-4">
-                <code className="font-mono text-[10px] block overflow-x-auto text-gray-600 break-all leading-normal">
+                <code className="font-mono text-[10px] block overflow-x-auto text-stone-600 break-all leading-normal">
                   {truncateKey(issuer.public_key)}
                 </code>
               </div>
@@ -477,14 +478,14 @@ export default function InstitutionSettings() {
                   </label>
 
                   <div>
-                    <label className="text-xs md:text-sm font-bold text-gray-700 block">New signing PIN</label>
+                    <label className="text-xs md:text-sm font-bold text-stone-700 block">New signing PIN</label>
                     <input
                       type="password"
                       value={regeneratePin}
                       onChange={(e) => setRegeneratePin(e.target.value)}
                       placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
                       autoComplete="new-password"
-                      className="mt-1 block w-full max-w-xs rounded-lg border border-gray-300 px-3 h-11 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white text-stone-900"
+                      className="mt-1 block w-full max-w-xs rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 bg-white text-stone-900"
                     />
                   </div>
 
@@ -497,7 +498,7 @@ export default function InstitutionSettings() {
                   <button
                     onClick={handleDangerRegenerate}
                     disabled={!regenerateAck || regeneratePin.trim().length < MIN_PIN_LEN || isRegenerating}
-                    className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isRegenerating && <Loader2 size={18} className="animate-spin" />}
                     <span>Permanently regenerate signing key</span>
@@ -509,9 +510,11 @@ export default function InstitutionSettings() {
         </div>
       )}
 
+      <SignOutSection />
+
       {/* Toast notifications */}
       {toastMessage && (
-        <div className="fixed bottom-24 right-4 md:right-6 bg-stone-900 text-white px-4 py-2.5 rounded-lg shadow-lg z-[1000] text-sm font-semibold animate-scale-in">
+        <div className="fixed left-4 right-4 md:left-auto md:right-6 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+12px)] md:bottom-6 bg-stone-900/90 backdrop-blur-xl text-white text-center md:text-left px-4 py-3 rounded-2xl shadow-lg z-[1000] text-sm font-semibold animate-scale-in">
           {toastMessage}
         </div>
       )}

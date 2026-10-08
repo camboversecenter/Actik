@@ -84,7 +84,7 @@ export default function PresencePrompt() {
 
   return (
     <div className="fixed inset-0 z-[60] bg-stone-900/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" data-testid="presence-prompt">
-      <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3">
+      <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3">
         {asker ? (
           <h2 className="text-lg font-bold text-stone-900 flex items-start gap-2"><UserCheck className="shrink-0 mt-0.5 text-indigo-600" size={20} />{t('presence.asking', { name: asker.name })}</h2>
         ) : (
@@ -95,11 +95,11 @@ export default function PresencePrompt() {
         )}
         <p className="text-sm text-stone-600 leading-relaxed">{t('presence.explain')}</p>
         <input type="password" inputMode="numeric" autoComplete="off" value={pin} onChange={(e) => setPin(e.target.value)} name="presencePin"
-          placeholder={t('presence.pin')} className="w-full rounded-lg border border-stone-300 h-11 px-3 text-base tracking-widest bg-white" />
+          placeholder={t('presence.pin')} className="w-full rounded-xl border border-stone-300 h-11 px-3 text-base tracking-widest bg-white" />
         {error && <p className="text-xs text-rose-700">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={decline} disabled={busy} className="h-11 rounded-lg border border-stone-300 text-sm font-semibold text-stone-700">{t('presence.decline')}</button>
-          <button type="button" onClick={() => approve('pin')} disabled={busy || pin.length < 4} className="h-11 rounded-lg bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50">{t('presence.approve')}</button>
+          <button type="button" onClick={decline} disabled={busy} className="h-11 rounded-xl border border-stone-300 text-sm font-semibold text-stone-700">{t('presence.decline')}</button>
+          <button type="button" onClick={() => approve('pin')} disabled={busy || pin.length < 4} className="h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-50">{t('presence.approve')}</button>
         </div>
         <button type="button" onClick={() => approve('passkey')} disabled={busy} className="w-full text-xs font-semibold text-indigo-700 disabled:opacity-50">
           {t('presence.use_passkey')}

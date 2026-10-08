@@ -166,7 +166,7 @@ export default function ScanCertificate() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="border-b border-stone-100 bg-white">
+      <header className="sticky top-0 z-30 material-bar border-b border-stone-900/[0.06] pt-[env(safe-area-inset-top)]">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-2">
           <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
           <div>
@@ -182,7 +182,7 @@ export default function ScanCertificate() {
         {!result && (
           <>
             <div>
-              <h1 className="font-khmer text-2xl font-bold">{t('scan.title')}</h1>
+              <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('scan.title')}</h1>
               <p className="text-sm text-stone-600 mt-1 leading-relaxed">{t('scan.intro')}</p>
             </div>
 
@@ -218,7 +218,7 @@ export default function ScanCertificate() {
                     <button
                       type="button"
                       onClick={startCamera}
-                      className="absolute inset-0 m-auto w-48 h-12 bg-white text-stone-900 font-semibold rounded-lg"
+                      className="absolute inset-0 m-auto w-48 h-12 bg-white text-stone-900 font-semibold rounded-xl"
                     >
                       {t('scan.start_camera')}
                     </button>
@@ -249,7 +249,7 @@ export default function ScanCertificate() {
                   type="button"
                   disabled={!pasted.trim()}
                   onClick={() => handle(pasted)}
-                  className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-lg text-sm disabled:opacity-50"
+                  className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-xl text-sm disabled:opacity-50"
                 >
                   {t('scan.verify_button')}
                 </button>
@@ -266,7 +266,7 @@ export default function ScanCertificate() {
           <button
             type="button"
             onClick={reset}
-            className="w-full inline-flex items-center justify-center gap-2 border border-stone-300 bg-white text-stone-700 font-semibold h-11 rounded-lg text-sm"
+            className="w-full inline-flex items-center justify-center gap-2 border border-stone-300 bg-white text-stone-700 font-semibold h-11 rounded-xl text-sm"
           >
             <RotateCcw size={15} /> {t('scan.scan_another')}
           </button>

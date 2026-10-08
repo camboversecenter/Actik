@@ -247,7 +247,7 @@ export default function ShareChecklist({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-1.5 cursor-pointer"
+          className="flex-1 border border-stone-300 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <ArrowLeft size={16} />
           <span>Cancel</span>
@@ -257,7 +257,7 @@ export default function ShareChecklist({
           type="button"
           disabled={true}
           title="This feature will be available in a future update"
-          className="flex-1 border border-stone-200 bg-stone-50 text-stone-400 font-semibold h-11 rounded-lg text-sm cursor-not-allowed flex items-center justify-center"
+          className="flex-1 border border-stone-200 bg-stone-50 text-stone-400 font-semibold h-11 rounded-xl text-sm cursor-not-allowed flex items-center justify-center"
         >
           <span>Edit Credential</span>
         </button>
@@ -266,7 +266,7 @@ export default function ShareChecklist({
           type="button"
           onClick={onProceed}
           disabled={!allChecked}
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-stone-200 disabled:text-stone-400 text-white font-semibold h-11 rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+          className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-stone-200 disabled:text-stone-400 text-white font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
         >
           <span>Proceed to Share</span>
           <ArrowRight size={16} />

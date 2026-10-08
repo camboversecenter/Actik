@@ -21,6 +21,20 @@
   --ok: #059669;           /* success (emerald-600) */
   --danger: #e11d48;       /* danger / error (rose-600) */
   --gold: #d97706;         /* warning / pending (amber-600) */
+
+  /* Chrome materials — the floating bars and sheets. Bars are the heavier
+     structural layer; content scrolls under them. */
+  --bar-bg: rgba(250, 250, 249, 0.72);
+  --bar-edge: rgba(28, 25, 23, 0.08);
+  --sheet-bg: #ffffff;
+  --scrim: rgba(28, 25, 23, 0.45);
+
+  /* Heights of the fixed mobile chrome, so pages and sheets can clear it. */
+  --topbar-h: 56px;
+  --tabbar-h: 60px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
@@ -28,11 +42,169 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Anchored jumps (#section links, scrollIntoView) land below the
+       sticky mobile bar instead of under it. */
+    scroll-padding-top: calc(var(--topbar-h) + 12px);
+  }
+
   body {
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    background: #f5f5f4;
+    color: var(--ink);
+  }
+
+  /* Large headings tighten; Khmer keeps its looser leading for the tall
+     stacked vowels and subscripts. */
+  h1, h2 {
+    letter-spacing: -0.015em;
+  }
+  h1 {
+    line-height: 1.2;
+  }
+  :lang(km) h1, :lang(km) h2, .font-khmer {
+    letter-spacing: 0;
   }
 
   input, select, textarea {
     font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  /* One focus ring for the whole app — visible for keyboard users only. */
+  :focus-visible {
+    outline: 2px solid #097bb7;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline-offset: 0;
+  }
+
+  /* Press feedback on pointer-down, everywhere — buttons and anything
+     link-shaped that acts like one. Disabled controls don't react. */
+  button, [role="button"], a[class*="rounded"], summary {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, scale;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out);
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  /* `scale`, not `transform`, so it composes with any translate/rotate
+     utility already on the element instead of replacing it. */
+  button:not(:disabled):active, [role="button"]:active, a[class*="rounded"]:active {
+    scale: 0.97;
+    transition-duration: 80ms;
+  }
+
+  /* A modal is open: freeze the page behind it so the scroll stays in
+     the sheet (otherwise iOS scrolls the body under the scrim). */
+  body:has(.fixed.inset-0[class*="bg-black"]),
+  body:has(.fixed.inset-0[class*="bg-stone-900"]),
+  body:has([aria-modal="true"]) {
+    overflow: hidden;
+  }
+
+  /* Every modal backdrop in the app (they all share this shape) fades in
+     and keeps scroll chaining out of the page behind it. */
+  .fixed.inset-0[class*="bg-black"],
+  .fixed.inset-0[class*="bg-stone-900"] {
+    overscroll-behavior: contain;
+    animation: actik-fade-in 200ms var(--ease-out);
+  }
+}
+
+@layer components {
+  /* Translucent chrome — nav bars and the tab bar. */
+  .material-bar {
+    background: var(--bar-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Hairline that only appears once content is actually under the bar —
+     a scroll-edge effect instead of a permanent divider. */
+  .scroll-edge {
+    box-shadow: 0 0 0 0 transparent;
+    transition: box-shadow 200ms var(--ease-out);
+  }
+  .scroll-edge[data-scrolled="true"] {
+    box-shadow: 0 1px 0 0 var(--bar-edge), 0 6px 16px -10px rgba(28, 25, 23, 0.18);
+  }
+
+  /* Hide scrollbars on horizontal chip rails while keeping them scrollable. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Materialize: scale + fade together. Several modals already reference
+     this class but it only existed inside a few pages' local <style>. */
+  .animate-scale-in {
+    animation: actik-scale-in 240ms var(--ease-out) both;
+  }
+  .animate-fade-in {
+    animation: actik-fade-in 200ms var(--ease-out) both;
+  }
+  .animate-rise-in {
+    animation: actik-rise-in 320ms var(--ease-out) both;
+  }
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+}
+
+@keyframes actik-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes actik-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes actik-rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Reduced motion: keep the opacity cue, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+  .animate-scale-in, .animate-rise-in {
+    animation-name: actik-fade-in !important;
+  }
+  button:not(:disabled):active, [role="button"]:active, a[class*="rounded"]:active {
+    scale: none;
+  }
+}
+
+/* Reduced transparency: solid chrome, no blur. */
+@media (prefers-reduced-transparency: reduce) {
+  .material-bar {
+    background: #fafaf9;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* Increased contrast: near-solid chrome with a defined edge. */
+@media (prefers-contrast: more) {
+  .material-bar {
+    background: #ffffff;
+    box-shadow: 0 0 0 1px #57534e;
   }
 }

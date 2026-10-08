@@ -89,15 +89,15 @@ export default function ReissueRequests() {
   if (!items || !user) {
     return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 size={36} className="animate-spin text-indigo-600" /></div>
   }
-  if (!issuer) return <div className="max-w-2xl mx-auto p-6 text-stone-600">No issuer is registered to this account.</div>
+  if (!issuer) return <div className="max-w-2xl mx-auto px-1 py-10 text-center text-stone-500">No issuer is registered to this account.</div>
 
   return (
-    <div className="w-full md:max-w-3xl mx-auto pb-24 px-4 md:px-0 pt-4 space-y-6">
+    <div className="w-full md:max-w-3xl mx-auto space-y-6">
       <Link to="/app/issued" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> Issued credentials
       </Link>
       <div>
-        <h1 className="text-2xl font-extrabold text-stone-900">Reissue requests</h1>
+        <h1 className="text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">Reissue requests</h1>
         <p className="text-sm text-stone-500 mt-1 leading-relaxed">
           People whose wallet key changed — a forgotten PIN, a lost or compromised phone — ask you to reissue their
           credentials to their new key. Each request has been checked below. Reissuing signs the same details again,
