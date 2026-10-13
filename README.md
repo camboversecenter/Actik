@@ -1,12 +1,12 @@
-# Actik - issue and manage digital assets (MVP)
+# Actik: Issue and Manage Digital Assets (MVP)
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
 Actik has two purposes:
 
-1. **Issue digital assets** - an institution signs an asset in its own name,
+1. **Issue digital assets**: an institution signs an asset in its own name,
    so anyone can check who issued it.
-2. **Manage digital assets** - the owner holds their assets, decides who sees
+2. **Manage digital assets**: the owner holds their assets, decides who sees
    what, and takes them where they are needed (a share link, a printed copy, a
    CamboVerse museum).
 
@@ -20,13 +20,13 @@ shape.
 This MVP is a Vite + React + TypeScript **PWA**, backed by **Supabase**. For
 certificates it implements the core lifecycle from the design proposal:
 
-1. **Issue** - an accredited issuer (university / ministry / trainer) signs a
+1. **Issue**: an accredited issuer (university / ministry / trainer) signs a
    credential as an **SD-JWT** under a `did:web` identity.
-2. **Hold** - the owner claims the credential and stores it **encrypted in a
+2. **Hold**: the owner claims the credential and stores it **encrypted in a
    zero-knowledge vault** (zk-vault-react). Supabase only ever sees ciphertext.
-3. **Share** - the owner builds a **time-limited, selectively-disclosed**
+3. **Share**: the owner builds a **time-limited, selectively-disclosed**
    presentation (reveal degree + name, hide GPA + national ID) as a link.
-4. **Verify** - anyone with the link verifies the signature, checks the issuer
+4. **Verify**: anyone with the link verifies the signature, checks the issuer
    against the **trust registry**, and sees only the disclosed fields. No account
    needed.
 
@@ -38,7 +38,7 @@ certificates it implements the core lifecycle from the design proposal:
   salted-hash disclosures, selective presentation, signature + expiry verification.
   Run `npm run test:sdjwt` to see it round-trip (including Khmer text).
 - `did:web` issuer identities and ES256 key generation (`src/lib/did.ts`).
-- A **trust registry** as the `issuers` table - maps DID → public key + an
+- A **trust registry** as the `issuers` table, mapping DID to public key and an
   `accredited` flag (MoEYS would own this in production).
 - Time-limited shares with server-side expiry (`shares.expires_at`).
 - PWA install + offline app shell via `vite-plugin-pwa`.
@@ -60,8 +60,8 @@ nothing to copy in. To update it from upstream, see `src/vault/README.md`.
 ### 3. Create the Supabase project
 
 - Create a project at supabase.com.
-- In the SQL editor, run `supabase/apply_all.sql` - tables, Row Level Security,
-  functions and triggers, in one idempotent script. It is safe to re-run, and
+- In the SQL editor, run `supabase/apply_all.sql` (tables, Row Level Security,
+  functions and triggers, in one idempotent script). It is safe to re-run, and
   it is also how you bring an existing project up to date.
   (`supabase/migrations/` holds the same changes as individual dated files;
   `supabase/schema.sql` is the original bootstrap and is no longer complete on
@@ -111,7 +111,7 @@ and a date. An institution still holding a list in the older plaintext format
 is told to renew it; until it does, only it can read that list.
 
 **Key changes.** When an institution regenerates its key, the old one is
-retired (what it signed keeps verifying) and the new one is recorded - but
+retired (what it signed keeps verifying) and the new one is recorded, but
 credentials signed with the new key do not verify until the next list is
 published. If a key is *compromised*, set `revoked_at` on its `issuer_keys`
 row in the SQL editor and publish a new list: nothing it signed verifies after
@@ -131,8 +131,8 @@ npm run build          # production build
 npm run preview
 ```
 
-> WebAuthn/passkeys and the vault require a **secure context** - `localhost` is
-> fine; otherwise serve over HTTPS.
+> WebAuthn/passkeys and the vault require a **secure context** (`localhost` is
+> fine; otherwise serve over HTTPS).
 
 ## Printed certificates
 
@@ -142,21 +142,21 @@ Actik has two lanes, with one trust layer underneath both:
 |---|---|---|
 | The QR carries | a link to `/verify/<id>` | the signed credential itself (`KH1:…`) |
 | Verified | in a browser, online | in the Actik app, at `/scan` |
-| Selective disclosure | yes (SD-JWT) | no - four fields, printed and signed |
+| Selective disclosure | yes (SD-JWT) | no: four fields, printed and signed |
 
 After issuing a **degree** (with a certificate number) or a **professional
 certification** (with a licence number), the success screen offers a printable
 certificate. Its QR code is QRSeal's Profile B: the holder name, document
 number, issuing institution and issue date are signed into it and printed
-beside it, verbatim. Credentials without a document number cannot be printed -
+beside it, verbatim. Credentials without a document number cannot be printed;
 the verifier would have nothing on the paper to compare.
 
 **Verifying.** Open `/scan` in the Actik app (camera, a photo of the code, or
 paste). The scanner refuses every link except this app's own `/verify/…` pages,
 so a lookalike QR on a forged certificate cannot send anyone to a website. A
-verified certificate shows the four signed fields to compare with the paper - a
+verified certificate shows the four signed fields to compare with the paper. A
 genuine code copied onto a forged certificate still verifies, and only that
-comparison catches it - plus its standing against the institution's withdrawal
+comparison catches it, plus its standing against the institution's withdrawal
 list. Withdrawing a credential in the app withdraws its printed copy too.
 
 **The holder keeps the printed code.** It is signed before the credential goes
@@ -185,11 +185,11 @@ ACTIK is not an alternative *to* Cambodia's national verification platform; it
 is a second option beside it, for people and institutions to choose.
 Verify.gov.kh checks official documents online against a record on its own
 servers, and the code on a document points to that record. ACTIK gives the
-holder the certificate itself - a signed credential in their own wallet, from
+holder the certificate itself: a signed credential in their own wallet, from
 any issuer the trust Root admits (training providers and employers included),
 checked offline and shown in part. An issuer can use both; a holder can present
-whichever a verifier accepts. The national platform's advantages - withdrawal
-visible at the next lookup, and standing as an operating government service - are
+whichever a verifier accepts. The national platform's advantages (withdrawal
+visible at the next lookup, and standing as an operating government service) are
 stated in the paper (`paper/`, section 8.2), with the architectural comparison
 carried from the QRSeal preprint.
 
@@ -197,8 +197,8 @@ carried from the QRSeal preprint.
 
 ACTIK is open source, so anyone may run an installation. How separate
 installations would connect through a hub that holds only public, signed
-documents - and the four format decisions to settle before the first real
-credential is issued - is in [`docs/FEDERATION.md`](docs/FEDERATION.md).
+documents, and the four format decisions to settle before the first real
+credential is issued, is in [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 ## Paper
 
@@ -219,8 +219,8 @@ existed) still verify and are labelled "check ID". Details:
 
 ## Employment records
 
-Proof of work: a **registered employer** - a trust-list tier signed by the Root,
-shown to every verifier, allowed to issue employment records only - signs a
+Proof of work: a **registered employer**, a trust-list tier signed by the Root,
+shown to every verifier and allowed to issue employment records only, signs a
 record of job title, type and dates. It reaches the employee's wallet only if
 they accept it; they can decline. It never carries salary, reason for leaving or
 ratings (the database refuses them). "Current" is always shown as of the day it
@@ -229,8 +229,8 @@ was signed. Details: [`docs/EMPLOYMENT_RECORDS.md`](docs/EMPLOYMENT_RECORDS.md).
 ## Identity verifiers
 
 Individual ownership needs a valid person behind the wallet. An **identity
-verifier** - a third trust-list tier, admitted by the Root separately from
-institutions - sees a person in person with their original ID card or
+verifier**, a third trust-list tier admitted by the Root separately from
+institutions, sees a person in person with their original ID card or
 passport, and signs an **identity attestation** into that person's wallet: the
 name exactly as on the document, which document was seen, and when. Never the
 document number, a birth date, a photo or a biometric (the database refuses
@@ -242,8 +242,8 @@ identity check were presented from the same wallet. Details:
 
 ## Key recovery
 
-A wallet key can be retired - **lost** (forgotten PIN, wallet reset),
-**compromised** (someone else has the wallet) or **replaced** - and never
+A wallet key can be retired (**lost** (forgotten PIN, wallet reset),
+**compromised** (someone else has the wallet), or **replaced**) and never
 reactivated. The next unlock makes a new key, and the holder asks each issuer
 to reissue to it (**Account → Wallet key**), proving continuity with either the
 old key (if still available and not compromised) or a fresh identity check
@@ -255,7 +255,7 @@ wallet, the issuer issues them again from its own records. Details:
 
 ## Verified contacts
 
-"Is it really you, right now?" - the deepfake check. People add each other in
+"Is it really you, right now?" is the deepfake check. People add each other in
 person by QR (or from a contact card carrying a bound identity check); the
 contact is stored end-to-end encrypted in their own wallet. **Check** sends a
 two-minute challenge addressed to the other person's wallet key; they approve
@@ -274,8 +274,8 @@ in ACTIK: [`docs/TOKENIZED_ASSETS.md`](docs/TOKENIZED_ASSETS.md).
 
 ## Proof requests (recruitment)
 
-An employer asks for proof - **Requests → New request**: up to five credential
-types, with a few optional extra fields per type - and shares the link. A
+An employer asks for proof (**Requests → New request**): up to five credential
+types, with a few optional extra fields per type, and shares the link. A
 candidate answers from their own wallet with only the fields the request may
 see, and can withdraw the answer later. The employer's app checks each answer
 against the issuing institution, issuer first, no tick. A request cannot ask
@@ -289,7 +289,7 @@ A holder can add a credential to a CamboVerse personal museum: credential →
 **Add to museum**. They crop the picture and cover what should not be shown,
 choose who may see it (only me by default), and choose whether to include the
 institution's signed printed code. The app builds an `actik/exhibit/1` file on
-the device - the original file's SHA-256, the prepared picture, the code - and
+the device (the original file's SHA-256, the prepared picture, the code), and
 never the original file. A withdrawn credential cannot be exported. Format,
 how CamboVerse should read it, and the open identity question (D5):
 [`docs/MUSEUM_EXPORT.md`](docs/MUSEUM_EXPORT.md).
@@ -304,7 +304,7 @@ how CamboVerse should read it, and the open identity question (D5):
    (The issuer's private key is held in memory for the session only.)
 3. Sign out, sign up as `student@example.com`, set up the vault, tap
    **Check for new** to claim the credential into the encrypted vault.
-4. **Share with an employer** - pick fields to reveal, set an expiry, copy the
+4. **Share with an employer**: pick fields to reveal, set an expiry, copy the
    link.
 5. Open the link in a private window (no login) to see the verifier result.
 
@@ -312,21 +312,21 @@ how CamboVerse should read it, and the open identity question (D5):
 
 - **Signed ≠ encrypted.** The SD-JWT is signed (authenticity). Confidentiality
   comes from zk-vault at rest and TLS in transit. A verifier always reads the
-  disclosed fields in clear - selective disclosure controls *what* they see.
+  disclosed fields in clear; selective disclosure controls *what* they see.
 - **The trust registry is the point.** A valid signature only proves *who signed*.
-  The Root-signed trust list proves *the signer is legitimate* - and because it
+  The Root-signed trust list proves *the signer is legitimate*, and because it
   is signed by a key pinned in the app, not read from a table, nobody with
   database access can add an institution or swap its key.
 - **Recovery.** zk-vault has zero key-recovery by design, so the issuer remains
-  the source of truth: a lost vault is recovered by re-issuance, never by the DB
-  - to a new wallet key, after the holder proves continuity (see Key recovery).
+  the source of truth: a lost vault is recovered by re-issuance, never by the DB,
+  but as a new wallet key, after the holder proves continuity (see Key recovery).
 
 ## Limitations (deliberate MVP scope)
 
 - **Unbound credentials.** Credentials issued before their holder had a
   wallet carry no holder key, so a forwarded or leaked link to one can be
-  replayed until it expires, is revoked, or - if the holder chose *one view
-  only* - has been opened once. Bound credentials cannot (see Holder binding).
+  replayed until it expires, is revoked, or (if the holder chose *one view
+  only*) has been opened once. Bound credentials cannot (see Holder binding).
 - **No `did:web` hosting.** Issuer keys come from the Root-signed trust list,
   not from `/.well-known/did.json`.
 - **Issuer key in the browser.** It is held as a non-extractable key in memory,
