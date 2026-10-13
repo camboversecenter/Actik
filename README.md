@@ -313,7 +313,7 @@ how CamboVerse should read it, and the open identity question (D5):
 - **Signed ≠ encrypted.** The SD-JWT is signed (authenticity). Confidentiality
   comes from zk-vault at rest and TLS in transit. A verifier always reads the
   disclosed fields in clear - selective disclosure controls *what* they see.
-- **Trust registry is the point.** A valid signature only proves *who signed*.
+- **The trust registry is the point.** A valid signature only proves *who signed*.
   The Root-signed trust list proves *the signer is legitimate* - and because it
   is signed by a key pinned in the app, not read from a table, nobody with
   database access can add an institution or swap its key.
@@ -337,7 +337,6 @@ how CamboVerse should read it, and the open identity question (D5):
   unexpired list (up to 31 days old). QRSeal's separate timestamp role and
   independent mirrors would close both; neither is built.
 - Replace the hand-rolled SD-JWT with `@sd-jwt/sd-jwt-vc` for production.
-```
 
 ## License
 
