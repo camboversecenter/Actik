@@ -947,6 +947,53 @@ export default function VerifyCredential() {
                 </p>
               </div>
 
+              {/* The issuer first, with its kind: who signed this is the first
+                  thing a reader has to weigh (a short course is not a degree,
+                  and an employer is not an accredited institution). */}
+              <div className="border border-indigo-200 rounded-[11px] p-4 bg-indigo-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="font-khmer text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                    {t('verify.issued_by_label')}
+                  </span>
+                  <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
+                  {issuer && (
+                    <span className="inline-block text-[11px] font-semibold text-stone-600 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+                      {t(`proof.kind_${issuer.kind}`)}
+                    </span>
+                  )}
+                  <a
+                    href={`https://${issuer?.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-stone-500 hover:text-indigo-600 flex items-center gap-1 font-medium transition-colors"
+                  >
+                    {issuer?.domain}
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+                {/* Standing, stated. Not a badge: a shield with a tick reads
+                    as "safe", which is a claim about the institution nobody
+                    here is in a position to make. */}
+                <div className="w-full sm:w-auto border-t sm:border-t-0 border-indigo-200/40 pt-3 sm:pt-0 sm:text-right">
+                  {/* "Accredited" only for an institution: an employer or an
+                      identity verifier is admitted for one credential type. */}
+                  {issuer && (
+                    <p className="font-khmer text-xs font-semibold text-stone-700 sm:max-w-[16rem]">
+                      {issuer.kind === 'employer' ? t('verify.listed_employer_badge')
+                        : issuer.kind === 'identity_verifier' ? t('verify.listed_identity_verifier_badge')
+                        : t('verify.accredited_badge')}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Recap row — the three checks that just ran, restated as a
                   quick-scan summary rather than making the verifier re-read
                   the in-progress checklist. */}
@@ -989,12 +1036,6 @@ export default function VerifyCredential() {
                 )
               )}
 
-              {checked && (
-                <div className="border border-stone-200 rounded-[11px] p-4 bg-white text-sm text-stone-700">
-                  {checked.holder.binding === 'bound' ? t('proof.holder_bound') : t('proof.holder_unbound')}
-                </div>
-              )}
-
               {/* The transplant check. A genuine code photographed off a real
                   certificate and printed on a forged one verifies perfectly,
                   because nothing about the paper is signed. Comparing these
@@ -1027,42 +1068,11 @@ export default function VerifyCredential() {
                 </div>
               )}
 
-              {/* Issuer Trust Badge */}
-              <div className="border border-indigo-200 rounded-[11px] p-4 bg-indigo-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="font-khmer text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
-                    {t('verify.issued_by_label')}
-                  </span>
-                  <h3 className="text-base font-bold text-stone-900">{issuer?.name}</h3>
-                  {issuer && (
-                    <span className="inline-block text-[11px] font-semibold text-stone-600 bg-white border border-stone-200 rounded-full px-2 py-0.5">
-                      {t(`proof.kind_${issuer.kind}`)}
-                    </span>
-                  )}
-                  <a
-                    href={`https://${issuer?.domain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-stone-500 hover:text-indigo-600 flex items-center gap-1 font-medium transition-colors"
-                  >
-                    {issuer?.domain}
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </a>
+              {checked && (
+                <div className="border border-stone-200 rounded-[11px] p-4 bg-white text-sm text-stone-700">
+                  {checked.holder.binding === 'bound' ? t('proof.holder_bound') : t('proof.holder_unbound')}
                 </div>
-                {/* Standing, stated. Not a badge: a shield with a tick reads
-                    as "safe", which is a claim about the institution nobody
-                    here is in a position to make. */}
-                <div className="w-full sm:w-auto border-t sm:border-t-0 border-indigo-200/40 pt-3 sm:pt-0 sm:text-right">
-                  <p className="font-khmer text-xs font-semibold text-stone-700">{t('verify.accredited_badge')}</p>
-                </div>
-              </div>
+              )}
 
               {/* Disclosed Fields Section */}
               <div className="space-y-3">
