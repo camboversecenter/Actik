@@ -998,6 +998,8 @@ const translations = {
       compare_not_disclosed: 'not disclosed',
       issued_by_label: 'Issued by:',
       accredited_badge: 'Listed as accredited in the trust registry',
+      listed_employer_badge: 'Listed in the trust registry as a registered employer — not an accredited institution. It may sign employment records only.',
+      listed_identity_verifier_badge: 'Listed in the trust registry as an identity verifier — not an accredited institution. It may sign identity checks only.',
       credential_details_heading: 'Credential details',
       hidden_fields_notice: 'Some fields are hidden by the holder (selective disclosure).',
       hidden_label: 'Hidden:',
@@ -2004,6 +2006,8 @@ const translations = {
       compare_not_disclosed: 'មិនបានបង្ហាញ', // TODO(km-review)
       issued_by_label: 'ចេញដោយ៖',
       accredited_badge: 'មានក្នុងបញ្ជីទុកចិត្ត ជាស្ថាប័នទទួលស្គាល់', // TODO(km-review)
+      listed_employer_badge: 'មានក្នុងបញ្ជីទុកចិត្ត ជានិយោជកដែលបានចុះឈ្មោះ មិនមែនជាស្ថាប័នទទួលស្គាល់ទេ។ អាចចុះហត្ថលេខាលើកំណត់ត្រាការងារប៉ុណ្ណោះ។', // TODO(km-review)
+      listed_identity_verifier_badge: 'មានក្នុងបញ្ជីទុកចិត្ត ជាអ្នកផ្ទៀងផ្ទាត់អត្តសញ្ញាណ មិនមែនជាស្ថាប័នទទួលស្គាល់ទេ។ អាចចុះហត្ថលេខាលើការផ្ទៀងផ្ទាត់អត្តសញ្ញាណប៉ុណ្ណោះ។', // TODO(km-review)
       credential_details_heading: 'ព័ត៌មានវិញ្ញាបនបត្រ',
       hidden_fields_notice: 'ព័ត៌មានមួយចំនួនត្រូវបានលាក់ដោយម្ចាស់ (ការបង្ហាញដោយជ្រើសរើស)។', // TODO(km-review)
       hidden_label: 'បានលាក់៖', // TODO(km-review)
