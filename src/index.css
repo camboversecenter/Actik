@@ -50,6 +50,10 @@
     /* Anchored jumps (#section links, scrollIntoView) land below the
        sticky mobile bar instead of under it. */
     scroll-padding-top: calc(var(--topbar-h) + 12px);
+    /* Stop the iOS rubber-band pull that drags the sticky top bar down
+       with the page. Safari only honours this on the root element, not
+       body, for the viewport scroller. */
+    overscroll-behavior-y: none;
   }
 
   body {

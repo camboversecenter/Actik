@@ -8,7 +8,7 @@ import NotificationsBell from './NotificationsBell'
 import InstallPwaButton from './InstallPwaButton'
 import {
   Wallet, Activity, LayoutDashboard, FileSignature, Settings,
-  ShieldCheck, Building2, Lock, Briefcase, UserCheck, LucideIcon,
+  ShieldCheck, Building2, Lock, Briefcase, UserCheck, ScanLine, LucideIcon,
 } from 'lucide-react'
 
 interface NavItem {
@@ -206,6 +206,9 @@ export default function Layout() {
       { to: '/app/dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), end: true },
       { to: '/app/issued', icon: FileSignature, label: t('nav.issued') },
       { to: '/app/requests', icon: Briefcase, label: t('nav.requests') },
+      // Institutions and employers are the ones handed paper certificates
+      // to check; the public /scan page has no way back into the app.
+      { to: '/app/scan', icon: ScanLine, label: t('nav.scan') },
       { to: '/app/institution-settings', icon: Settings, label: t('nav.settings') },
     ]
     : role === 'admin' ? [
