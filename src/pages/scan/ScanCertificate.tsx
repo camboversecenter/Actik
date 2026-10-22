@@ -53,7 +53,9 @@ function decodeFrom(source: CanvasImageSource, width: number, height: number, ca
   return jsQR(image.data, image.width, image.height, { inversionAttempts: 'attemptBoth' })?.data ?? null
 }
 
-export default function ScanCertificate() {
+/** `embedded`: rendered inside the signed-in app shell, which already
+ *  supplies the top bar and page padding. */
+export default function ScanCertificate({ embedded = false }: { embedded?: boolean }) {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('camera')
@@ -165,7 +167,8 @@ export default function ScanCertificate() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
+    <div className={embedded ? 'max-w-lg' : 'min-h-screen bg-stone-50 text-stone-900'}>
+      {!embedded && (
       <header className="sticky top-0 z-30 material-bar border-b border-stone-900/[0.06] pt-[env(safe-area-inset-top)]">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-2">
           <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
@@ -175,8 +178,9 @@ export default function ScanCertificate() {
           </div>
         </div>
       </header>
+      )}
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+      <main className={embedded ? 'space-y-5' : 'max-w-lg mx-auto px-4 py-6 space-y-5'}>
         <canvas ref={canvasRef} hidden />
 
         {!result && (

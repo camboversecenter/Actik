@@ -32,6 +32,7 @@ const translations = {
       settings: 'Settings',
       requests: 'Requests',
       contacts: 'Contacts',
+      scan: 'Scan',
     },
     layout: {
       loading: 'Loading Actik...',
@@ -1039,6 +1040,7 @@ const translations = {
       settings: 'ការកំណត់',
       requests: 'សំណើ', // TODO(km-review)
       contacts: 'ទំនាក់ទំនង', // TODO(km-review)
+      scan: 'ស្កេន', // TODO(km-review)
     },
     layout: {
       loading: 'កំពុងផ្ទុក Actik...',

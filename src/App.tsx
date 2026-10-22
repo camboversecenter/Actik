@@ -436,6 +436,8 @@ export default function App() {
           <Route path="requests/new" element={<NewProofRequest />} />
           <Route path="requests/:id" element={<ProofRequestDetail />} />
           <Route path="answer/:id" element={<AnswerProofRequest />} />
+          {/* Same scanner as public /scan, inside the app shell. */}
+          <Route path="scan" element={<ScanCertificate embedded />} />
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Route>
 
