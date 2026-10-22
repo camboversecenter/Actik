@@ -348,6 +348,7 @@ async function peekDocumentId(payload: string): Promise<string | null> {
  */
 export type ScannedKind =
   | { kind: 'own-link'; shareId: string }
+  | { kind: 'own-request'; requestId: string }
   | { kind: 'url' }
   | { kind: 'printed'; payload: string }
   | { kind: 'other' }
@@ -358,10 +359,14 @@ export function classifyScanned(text: string, ownOrigin: string): ScannedKind {
     try {
       const url = new URL(scanned)
       const match = /^\/verify\/([0-9a-f-]{36})\/?$/i.exec(url.pathname)
+      // A proof request's QR is a link by design, so a phone camera can open
+      // it too; scanned here it opens inside the app, where the wallet is.
+      const request = /^\/request\/([0-9a-f-]{36})\/?$/i.exec(url.pathname)
       // Exact origin, no credentials, no query tricks: a lookalike domain or a
       // userinfo-prefixed URL is just another URL.
-      if (url.origin === ownOrigin && !url.username && !url.password && match) {
-        return { kind: 'own-link', shareId: match[1] }
+      if (url.origin === ownOrigin && !url.username && !url.password) {
+        if (match) return { kind: 'own-link', shareId: match[1] }
+        if (request) return { kind: 'own-request', requestId: request[1] }
       }
     } catch {
       /* unparsable: still a URL by its scheme */
