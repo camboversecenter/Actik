@@ -8,6 +8,7 @@ import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
 import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
 import Banner from '../../components/ui/Banner'
 import StatusPill from '../../components/ui/StatusPill'
+import { issuerTypeLabel } from '../../lib/issuerType'
 
 interface IssuerInfo {
   id: string
@@ -149,7 +150,7 @@ export default function IssuerDashboard() {
             id: issuerData.id,
             name: issuerData.name,
             domain: domainVal,
-            type: issuerData.type || 'University',
+            type: issuerTypeLabel(issuerData.type, issuerData.kind),
             did: issuerData.did,
             accredited: !!issuerData.accredited,
             rawIssuerData: issuerData

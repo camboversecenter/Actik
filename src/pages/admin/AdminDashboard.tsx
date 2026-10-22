@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import StatusPill from '../../components/ui/StatusPill'
 import SignOutSection from '../../components/SignOutSection'
+import { issuerTypeLabel } from '../../lib/issuerType'
 
 // --- TypeScript Types ---
 interface Issuer {
@@ -65,7 +66,7 @@ function mapDbIssuer(db: Record<string, unknown>): Issuer {
     extractedDomain = decodeURIComponent(did.substring(8))
   }
 
-  const type = typeof db.type === 'string' ? db.type : 'University'
+  const type = issuerTypeLabel(typeof db.type === 'string' ? db.type : null, typeof db.kind === 'string' ? db.kind : null)
 
   let publicKeyStr = ''
   if (db.public_key && typeof db.public_key === 'string') {
