@@ -16,6 +16,8 @@ interface NavItem {
   icon: LucideIcon
   label: string
   end?: boolean
+  /** false: sidebar only; on phones it lives in the top bar instead. */
+  tab?: boolean
 }
 
 export default function Layout() {
@@ -201,6 +203,7 @@ export default function Layout() {
       { to: '/app/activity', icon: Activity, label: t('nav.activity') },
       { to: '/app/requests', icon: Briefcase, label: t('nav.requests') },
       { to: '/app/contacts', icon: UserCheck, label: t('nav.contacts') },
+      { to: '/app/scan', icon: ScanLine, label: t('nav.scan'), tab: false },
     ]
     : role === 'issuer' ? [
       { to: '/app/dashboard', icon: LayoutDashboard, label: t('nav.dashboard'), end: true },
@@ -218,7 +221,8 @@ export default function Layout() {
 
   // A tab bar with a single destination is just a label; admins get the
   // top bar only on phones.
-  const showTabBar = navItems.length > 1
+  const tabItems = navItems.filter((item) => item.tab !== false)
+  const showTabBar = tabItems.length > 1
 
   // Desktop sidebar link — icon + label, same icon set as the mobile tab
   // bar below so the two stay one navigation vocabulary.
@@ -316,6 +320,21 @@ export default function Layout() {
             <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
             <div className="flex items-center gap-1">
               <InstallPwaButton variant="icon" />
+              {/* Students scan proof requests and printed certificates, but
+                  their four tabs are full; organisations have a Scan tab. */}
+              {role === 'student' && (
+                <NavLink
+                  to="/app/scan"
+                  aria-label={t('nav.scan')}
+                  className={({ isActive }) =>
+                    `w-10 h-10 flex items-center justify-center rounded-full ${
+                      isActive ? 'text-indigo-600 bg-indigo-600/10' : 'text-stone-600 active:bg-stone-900/5'
+                    }`
+                  }
+                >
+                  <ScanLine size={21} strokeWidth={1.9} />
+                </NavLink>
+              )}
               {session?.user && role === 'student' && !isDesktop && (
                 <NotificationsBell email={session.user.email} />
               )}
@@ -378,7 +397,7 @@ export default function Layout() {
           className="md:hidden fixed bottom-0 inset-x-0 z-30 material-bar border-t border-stone-900/[0.06] pb-safe no-print"
         >
           <div className="flex items-stretch h-[var(--tabbar-h)] px-1">
-            {navItems.map(({ to, icon: Icon, label, end }) => (
+            {tabItems.map(({ to, icon: Icon, label, end }) => (
               <NavLink key={to} to={to} end={end} className={tabLinkClass}>
                 {({ isActive }) => (
                   <>

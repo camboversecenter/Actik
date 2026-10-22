@@ -940,7 +940,7 @@ const translations = {
     scan: {
       tagline: 'Verify a printed certificate',
       title: 'Verify a printed certificate',
-      intro: 'Scan the QR code on an Actik certificate. It is checked here, in this app — a genuine certificate never sends you to a website.',
+      intro: 'Scan the QR code on an Actik certificate or proof request. Certificates are checked here, in this app — a genuine certificate never sends you to a website.',
       mode_camera: 'Camera',
       mode_photo: 'Photo',
       mode_paste: 'Paste',
@@ -1949,7 +1949,7 @@ const translations = {
     scan: {
       tagline: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្របោះពុម្ព', // TODO(km-review)
       title: 'ផ្ទៀងផ្ទាត់វិញ្ញាបនបត្របោះពុម្ព', // TODO(km-review)
-      intro: 'ស្កេនកូដ QR លើវិញ្ញាបនបត្រ Actik។ វាត្រូវបានពិនិត្យនៅទីនេះ ក្នុងកម្មវិធីនេះ — វិញ្ញាបនបត្រពិតមិនដែលនាំអ្នកទៅគេហទំព័រទេ។', // TODO(km-review)
+      intro: 'ស្កេនកូដ QR លើវិញ្ញាបនបត្រ ឬសំណើភស្តុតាង Actik។ វិញ្ញាបនបត្រត្រូវបានពិនិត្យនៅទីនេះ ក្នុងកម្មវិធីនេះ — វិញ្ញាបនបត្រពិតមិនដែលនាំអ្នកទៅគេហទំព័រទេ។', // TODO(km-review)
       mode_camera: 'កាមេរ៉ា', // TODO(km-review)
       mode_photo: 'រូបថត', // TODO(km-review)
       mode_paste: 'បិទភ្ជាប់', // TODO(km-review)

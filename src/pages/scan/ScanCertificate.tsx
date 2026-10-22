@@ -82,6 +82,11 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
     stopCamera()
     const kind = classifyScanned(text, window.location.origin)
     if (kind.kind === 'own-link') return navigate(`/verify/${kind.shareId}`)
+    // Signed in: straight to answering. Public scanner: the request page,
+    // which explains what is asked before anyone signs in.
+    if (kind.kind === 'own-request') {
+      return navigate(embedded ? `/app/answer/${kind.requestId}` : `/request/${kind.requestId}`)
+    }
     if (kind.kind === 'url') return setResult({ kind: 'url' })
     if (kind.kind === 'other') return setResult({ kind: 'other' })
 
@@ -105,7 +110,7 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
         setResult({ kind: 'rejected', message: messageForRefusal('UNREADABLE') })
       }
     }
-  }, [navigate, stopCamera])
+  }, [embedded, navigate, stopCamera])
 
   const startCamera = async () => {
     setCameraError(null)
@@ -167,7 +172,7 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
   }
 
   return (
-    <div className={embedded ? 'max-w-lg' : 'min-h-screen bg-stone-50 text-stone-900'}>
+    <div className={embedded ? 'max-w-xl mx-auto' : 'min-h-screen bg-stone-50 text-stone-900'}>
       {!embedded && (
       <header className="sticky top-0 z-30 material-bar border-b border-stone-900/[0.06] pt-[env(safe-area-inset-top)]">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-2">
@@ -216,7 +221,7 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
 
             {mode === 'camera' && (
               <div className="space-y-3">
-                <div className="relative bg-stone-900 rounded-xl overflow-hidden aspect-square">
+                <div className="relative bg-stone-900 rounded-xl overflow-hidden aspect-square max-h-[60dvh] w-full">
                   <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
                   {!cameraOn && (
                     <button

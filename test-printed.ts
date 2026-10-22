@@ -189,12 +189,17 @@ const origin = 'https://actik.app'
 assert(classifyScanned(printed, origin).kind === 'printed', 'the scanner routes KH1: codes to printed verification')
 assert(classifyScanned('https://actik.app/verify/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11', origin).kind === 'own-link',
   "the scanner follows a link to this app's own verify page")
+assert(classifyScanned('https://actik.app/request/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11', origin).kind === 'own-request',
+  "the scanner opens this app's own proof request")
 for (const lookalike of [
   'https://actik.app.evil.example/verify/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
   'https://actlk.app/verify/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
   'https://actik.app@evil.example/verify/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
   'http://actik.app/verify/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
   'https://actik.app/pay?to=5f0c6f8e',
+  'https://actik.app.evil.example/request/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
+  'https://actik.app@evil.example/request/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11',
+  'https://actik.app/request/5f0c6f8e-6a43-4b2a-9d55-2f1c1e7f0a11/answer',
 ]) {
   assert(classifyScanned(lookalike, origin).kind === 'url', `refused as a website: ${lookalike}`)
 }
