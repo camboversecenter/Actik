@@ -25,6 +25,7 @@ import { useLanguage } from '../../lib/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import PageHeader from '../../components/ui/PageHeader'
 import SignOutSection from '../../components/SignOutSection'
+import { issuerTypeLabel } from '../../lib/issuerType'
 
 const MIN_PIN_LEN = 8
 
@@ -123,7 +124,7 @@ export default function InstitutionSettings() {
           id: data.id,
           name: data.name,
           domain: domainVal || 'Not Specified',
-          type: data.type || 'University',
+          type: issuerTypeLabel(data.type, data.kind),
           did: data.did,
           accredited: !!data.accredited,
           accredited_at: data.accredited_at || null,

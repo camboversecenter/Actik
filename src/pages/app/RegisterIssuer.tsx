@@ -144,9 +144,14 @@ export default function RegisterIssuer() {
       const { publicJwk, privateJwk } = await generateIssuerKeys()
       const did = didWeb(domain)
 
-      // Step 2: Save to Supabase (attempting user prompt fields, with fallback to schema.sql layout)
+      // Step 2: Save to Supabase. One insert with every column: `owner` and
+      // `public_jwk` are what the registry reads (public_jwk is NOT NULL), and
+      // `domain` / `type` are what the profile and admin pages show. The old
+      // user_id-only first try always failed on public_jwk and fell back to an
+      // insert without domain or type, so every issuer read as "University".
       const jwkToStore = { ...publicJwk, alg: 'ES256' }
-      let res = await supabase.from('issuers').insert({
+      const res = await supabase.from('issuers').insert({
+        owner: currentUser.id,
         user_id: currentUser.id,
         name: name.trim(),
         domain: domain.trim(),
@@ -155,22 +160,10 @@ export default function RegisterIssuer() {
         // is signed into the trust list; this is what the registry proposes.
         kind: type === 'Employer' ? 'employer' : type === 'Identity verifier' ? 'identity_verifier' : 'institution',
         did: did,
+        public_jwk: jwkToStore,
         public_key: JSON.stringify(jwkToStore),
-        accredited: false,
-        created_at: new Date().toISOString()
+        accredited: false
       })
-
-      // Fallback if custom user columns are not configured in DB
-      if (res.error && (res.error.message.includes('column') || res.error.code === '42703')) {
-        res = await supabase.from('issuers').insert({
-          owner: currentUser.id,
-          name: name.trim(),
-          kind: type === 'Employer' ? 'employer' : type === 'Identity verifier' ? 'identity_verifier' : 'institution',
-          did: did,
-          public_jwk: jwkToStore,
-          accredited: false
-        })
-      }
 
       if (res.error) throw res.error
 
