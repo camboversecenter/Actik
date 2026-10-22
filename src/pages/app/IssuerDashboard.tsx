@@ -1,18 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { generateIssuerKeys, didWeb } from '../../lib/did'
-import { Building2, Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2 } from 'lucide-react'
 
 import { useLanguage } from '../../lib/i18n'
-import { useZkVault } from '../../vault/zk-vault/hooks'
 import IssuerKeyUnlock from '../../components/IssuerKeyUnlock'
-import { getIssuerKey, holdIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
-import { recordNewIssuerKey } from '../../lib/issuerKeys'
+import { getIssuerKey, type HeldIssuerKey } from '../../lib/issuerKeyStore'
 import Banner from '../../components/ui/Banner'
 import StatusPill from '../../components/ui/StatusPill'
-
-const MIN_PIN_LEN = 8
 
 interface IssuerInfo {
   id: string
@@ -28,7 +23,6 @@ export default function IssuerDashboard() {
   const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
-  const { setupVault, encryptPayload } = useZkVault()
   const [currentUser, setCurrentUser] = useState<any | null>(null)
 
   // Loading & state management
@@ -36,14 +30,6 @@ export default function IssuerDashboard() {
   const [issuerInfo, setIssuerInfo] = useState<IssuerInfo | null>(null)
   const [privateKey, setPrivateKey] = useState<HeldIssuerKey | null>(null)
 
-  // Registration Form Fields
-  const [regName, setRegName] = useState('')
-  const [regDomain, setRegDomain] = useState('')
-  const [regType, setRegType] = useState('')
-  const [regSigningPin, setRegSigningPin] = useState('')
-  const [regErrors, setRegErrors] = useState<Record<string, string>>({})
-  const [regSubmitError, setRegSubmitError] = useState<string | null>(null)
-  const [isRegistering, setIsRegistering] = useState(false)
   const [registerSuccessMsg, setRegisterSuccessMsg] = useState<string | null>(null)
 
   // Surfaces a one-off toast handed off via router state — e.g. IssueCredential.tsx's
@@ -261,114 +247,6 @@ export default function IssuerDashboard() {
   }, [navigate])
 
 
-  // Registration Domain validation helper
-  const handleDomainBlur = () => {
-    let clean = regDomain.trim()
-    clean = clean.replace(/^(https?:\/\/)?(www\.)?/, '')
-    clean = clean.split('/')[0]
-    setRegDomain(clean)
-  }
-
-  // Handle Institution Registration
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!currentUser) return
-
-    // Validate
-    const nextErrors: Record<string, string> = {}
-    if (regName.trim().length < 3) {
-      nextErrors.name = 'Institution name must be at least 3 characters.'
-    }
-    if (!regDomain.trim()) {
-      nextErrors.domain = 'Domain is required.'
-    } else if (regDomain.includes(' ')) {
-      nextErrors.domain = 'Domain must not contain spaces.'
-    } else if (!regDomain.includes('.')) {
-      nextErrors.domain = 'Domain must contain at least one dot.'
-    }
-    if (!regType) {
-      nextErrors.type = 'Please select an institution type.'
-    }
-    if (regSigningPin.trim().length < MIN_PIN_LEN) {
-      nextErrors.signingPin = `Signing PIN must be at least ${MIN_PIN_LEN} characters.`
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      setRegErrors(nextErrors)
-      return
-    }
-
-    setRegErrors({})
-    setRegSubmitError(null)
-    setIsRegistering(true)
-
-    try {
-      // 1. Generate keys
-      const { publicJwk, privateJwk } = await generateIssuerKeys()
-      const did = didWeb(regDomain.trim())
-
-      // Try schema.sql columns first (owner, public_jwk) to avoid 400 console errors
-      let res = await supabase.from('issuers').insert({
-        owner: currentUser.id,
-        name: regName.trim(),
-        did: did,
-        public_jwk: publicJwk,
-        accredited: false
-      })
-
-      if (res.error && (res.error.message.includes('owner') || res.error.message.includes('public_jwk') || res.error.code === '42703')) {
-        res = await supabase.from('issuers').insert({
-          user_id: currentUser.id,
-          name: regName.trim(),
-          domain: regDomain.trim(),
-          type: regType,
-          did: did,
-          public_key: JSON.stringify(publicJwk),
-          accredited: false
-        })
-      }
-
-      if (res.error) throw res.error
-
-      // 3. Persist the private key, encrypted with the issuer's signing PIN,
-      // so it survives closing this tab instead of being lost with
-      // sessionStorage alone.
-      const setupOk = await setupVault(regSigningPin, currentUser.id, currentUser.email, { skipPasskey: true })
-      if (!setupOk) throw new Error('Failed to secure your signing key. Please try again.')
-
-      const ciphertext = await encryptPayload(privateJwk)
-      // Into issuer_secrets, not onto the world-readable registry row — see
-      // supabase/migrations/20260910_rls_hardening.sql.
-      const vaultRes = await supabase.from('issuer_secrets').upsert(
-        { owner: currentUser.id, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
-        { onConflict: 'owner' }
-      )
-      if (vaultRes.error) throw vaultRes.error
-
-      // 4. On record for the Root to list, and held in memory for signing.
-      await recordNewIssuerKey(currentUser.id, publicJwk)
-      setPrivateKey(await holdIssuerKey(privateJwk, did))
-
-      // 5. Update states
-      setIssuerInfo({
-        id: currentUser.id,
-        name: regName.trim(),
-        domain: regDomain.trim(),
-        type: regType,
-        did: did,
-        accredited: false,
-        rawIssuerData: null
-      })
-      setRegisterSuccessMsg('Institution registered successfully!')
-    } catch (err: any) {
-      setRegSubmitError(err.message || 'Failed to register institution. Please try again.')
-    } finally {
-      setIsRegistering(false)
-    }
-  }
-
-
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
@@ -378,116 +256,13 @@ export default function IssuerDashboard() {
     )
   }
 
+  // No institution yet: the full registration form lives at
+  // /app/register-issuer (it offers every issuer type, Employer included).
+  if (!issuerInfo) return <Navigate to="/app/register-issuer" replace />
+
   return (
-    <div className={`w-full mx-auto px-4 py-6 md:py-10 ${issuerInfo ? 'max-w-6xl' : 'max-w-4xl'}`}>
-      {/* SECTION 1 — REGISTER INSTITUTION (if not registered yet) */}
-      {!issuerInfo ? (
-        <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-stone-200 p-6 md:p-10">
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto">
-              <Building2 size={28} className="text-indigo-600" />
-            </div>
-            <h1 className="mt-4 text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('dashboard.register_institution')}</h1>
-            <p className="text-sm text-stone-500 mt-1">
-              {t('dashboard.register_desc')}
-            </p>
-          </div>
-
-          <form onSubmit={handleRegister} className="space-y-5">
-            <div>
-              <label className="text-xs md:text-sm font-bold text-stone-700 block mb-1">
-                {t('dashboard.institution_name')}
-              </label>
-              <input
-                type="text"
-                value={regName}
-                onChange={(e) => setRegName(e.target.value)}
-                placeholder="Royal University of Phnom Penh"
-                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
-              />
-              {regErrors.name && (
-                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs md:text-sm font-bold text-stone-700 block mb-1">
-                {t('dashboard.domain_name')}
-              </label>
-              <input
-                type="text"
-                value={regDomain}
-                onChange={(e) => setRegDomain(e.target.value)}
-                onBlur={handleDomainBlur}
-                placeholder="rupp.edu.kh"
-                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
-              />
-              <p className="text-[11px] text-stone-500 mt-1 leading-normal">
-                {t('dashboard.domain_desc')}
-              </p>
-              {regErrors.domain && (
-                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.domain}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs md:text-sm font-bold text-stone-700 block mb-1">
-                {t('dashboard.institution_type')}
-              </label>
-              <select
-                value={regType}
-                onChange={(e) => setRegType(e.target.value)}
-                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
-              >
-                <option value="">{t('dashboard.select_type')}</option>
-                <option value="University">{t('dashboard.university')}</option>
-                <option value="Ministry">{t('dashboard.ministry')}</option>
-                <option value="Training Centre">{t('dashboard.training_centre')}</option>
-                <option value="Other">{t('dashboard.other')}</option>
-              </select>
-              {regErrors.type && (
-                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.type}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs md:text-sm font-bold text-stone-700 block mb-1">
-                Signing PIN
-              </label>
-              <input
-                type="password"
-                value={regSigningPin}
-                onChange={(e) => setRegSigningPin(e.target.value)}
-                placeholder={`Create a ${MIN_PIN_LEN}+ character PIN`}
-                autoComplete="new-password"
-                className="block w-full rounded-xl border border-stone-300 px-3 h-11 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-stone-900"
-              />
-              <p className="text-[11px] text-stone-500 mt-1 leading-normal">
-                Protects your certificate-signing key so it survives closing this tab.
-              </p>
-              {regErrors.signingPin && (
-                <p className="text-rose-600 text-xs mt-1 font-semibold">{regErrors.signingPin}</p>
-              )}
-            </div>
-
-            {regSubmitError && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg p-3">
-                {regSubmitError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isRegistering}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isRegistering && <Loader2 size={18} className="animate-spin" />}
-              <span>{t('dashboard.register_btn')}</span>
-            </button>
-          </form>
-        </div>
-      ) : (
-        /* SECTION 2 — REGISTRATION SUCCESS AND ISSUANCE CONTROL */
+    <div className="w-full mx-auto px-4 py-6 md:py-10 max-w-6xl">
+      {/* Issuance control */}
         <div className="space-y-6">
 
           {registerSuccessMsg && (
@@ -675,7 +450,6 @@ export default function IssuerDashboard() {
             )
           )}
         </div>
-      )}
     </div>
   )
 }
