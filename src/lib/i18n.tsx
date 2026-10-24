@@ -640,7 +640,10 @@ const translations = {
     },
     proof: {
       page_title: 'Proof requests',
-      page_intro: 'Ask for proof of qualifications, or answer a request from your wallet. Answers carry only what the request may see, checked against the institution that issued it.',
+      page_intro: 'Ask for proof, or answer one from your wallet.',
+      tab_answered: 'Answered',
+      tab_made: 'Made',
+      more_actions: 'More',
       your_requests: 'Requests you made',
       new_request: 'New request',
       no_requests: 'You have not made a request.',
@@ -1667,7 +1670,10 @@ const translations = {
     },
     proof: {
       page_title: 'សំណើភស្តុតាង', // TODO(km-review)
-      page_intro: 'ស្នើសុំភស្តុតាងនៃគុណវុឌ្ឍិ ឬឆ្លើយតបសំណើពីកាបូបរបស់អ្នក។ ចម្លើយមានតែអ្វីដែលសំណើអាចមើលបាន ហើយត្រូវបានពិនិត្យជាមួយស្ថាប័នដែលបានចេញ។', // TODO(km-review)
+      page_intro: 'ស្នើសុំភស្តុតាង ឬឆ្លើយតបពីកាបូបរបស់អ្នក។', // TODO(km-review)
+      tab_answered: 'បានឆ្លើយ', // TODO(km-review)
+      tab_made: 'បានបង្កើត', // TODO(km-review)
+      more_actions: 'ជម្រើសផ្សេងទៀត', // TODO(km-review)
       your_requests: 'សំណើដែលអ្នកបានបង្កើត', // TODO(km-review)
       new_request: 'សំណើថ្មី', // TODO(km-review)
       no_requests: 'អ្នកមិនទាន់បានបង្កើតសំណើទេ។', // TODO(km-review)
