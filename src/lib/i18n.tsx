@@ -951,6 +951,10 @@ const translations = {
       mode_paste: 'Paste',
       start_camera: 'Start camera',
       camera_error: 'The camera could not be opened. Allow camera access, or use a photo of the code instead.',
+      camera_denied: 'Camera access is blocked. Allow the camera for this site in your browser or phone settings, then tap Start camera. Or use a photo of the code instead.',
+      upload: 'Upload QR',
+      flash: 'Flash',
+      close: 'Close',
       choose_photo: 'Choose a photo of the QR code',
       photo_hint: 'A clear, straight photo of the code on the paper.',
       no_code_found: 'No QR code could be read from that image. Try a closer, sharper photo.',
@@ -1965,6 +1969,10 @@ const translations = {
       mode_paste: 'បិទភ្ជាប់', // TODO(km-review)
       start_camera: 'បើកកាមេរ៉ា', // TODO(km-review)
       camera_error: 'មិនអាចបើកកាមេរ៉ាបានទេ។ សូមអនុញ្ញាតកាមេរ៉ា ឬប្រើរូបថតកូដជំនួស។', // TODO(km-review)
+      camera_denied: 'កាមេរ៉ាត្រូវបានរារាំង។ សូមអនុញ្ញាតកាមេរ៉ាសម្រាប់គេហទំព័រនេះក្នុងការកំណត់កម្មវិធីរុករក ឬទូរស័ព្ទ រួចចុច “បើកកាមេរ៉ា”។ ឬប្រើរូបថតកូដជំនួស។', // TODO(km-review)
+      upload: 'ផ្ទុកឡើងកូដ QR', // TODO(km-review)
+      flash: 'ភ្លើងពិល', // TODO(km-review)
+      close: 'បិទ', // TODO(km-review)
       choose_photo: 'ជ្រើសរើសរូបថតកូដ QR', // TODO(km-review)
       photo_hint: 'រូបថតច្បាស់ និងត្រង់នៃកូដលើក្រដាស។', // TODO(km-review)
       no_code_found: 'មិនអាចអានកូដ QR ពីរូបភាពនោះបានទេ។ សូមថតឱ្យជិត និងច្បាស់ជាងនេះ។', // TODO(km-review)
