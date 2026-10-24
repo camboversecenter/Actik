@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { ArrowLeft, Copy, Loader2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Copy, Loader2 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { longDate } from '../../lib/dates'
 import { messageForRefusal } from '../../lib/credentialCheck'
@@ -83,6 +83,75 @@ function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
         <p className="text-xs text-stone-600">{t('proof.check_id', { name: c.assertion.mustMatchPrintedDocument.subjectName })}</p>
       )}
     </div>
+  )
+}
+
+// One line per requirement, enough to scan a list of candidates: what was
+// answered, by whom it was issued, and how it checked. The full fields and
+// standing sit behind the card.
+function summaryOf(t: (k: string, v?: Record<string, string | number>) => string, answer: CheckedAnswer | undefined) {
+  if (!answer) return { text: t('proof.not_answered').replace(/\.$/, ''), tone: 'text-stone-500' }
+  if (answer.kind === 'not_asked') return { text: t(`proof.not_asked_${answer.reason}`), tone: 'text-rose-800' }
+  if (answer.kind === 'refused') {
+    const text = answer.unavailable ? t('proof.could_not_check') : answer.withdrawn ? t('verify.withdrawn_title') : t('proof.did_not_verify')
+    return { text, tone: answer.unavailable ? 'text-amber-800' : 'text-rose-800' }
+  }
+  const { standing, issuer } = answer.checked
+  return standing.status === 'clear'
+    ? { text: `${issuer.name} · ${t('verify.standing_clear_title').replace(/\.$/, '')}`, tone: 'text-stone-700' }
+    : { text: `${issuer.name} · ${t('verify.standing_unchecked_title').replace(/\.$/, '')}`, tone: 'text-amber-800' }
+}
+
+function AnswerCard({ request, resp }: { request: ProofRequest; resp: CheckedResponse }) {
+  const { t } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const name = resp.answers.flatMap((a) => (a.kind === 'checked' ? a.fields : [])).find(([k]) => k === 'name')?.[1]
+  const panelId = `answer-${resp.id}`
+  return (
+    <article className="bg-white rounded-xl border border-stone-200" data-testid="answer">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={panelId}
+        className="w-full text-left p-4 flex items-start gap-3 cursor-pointer">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="font-semibold text-stone-900 truncate">{typeof name === 'string' ? name : resp.contact}</p>
+            <span className="text-xs text-stone-500 shrink-0">{new Date(resp.createdAt).toLocaleDateString()}</span>
+          </div>
+          {typeof name === 'string' && <p className="text-xs text-stone-500 break-all">{resp.contact}</p>}
+          <ul className="space-y-1">
+            {request.requirements.map((_, i) => {
+              const s = summaryOf(t, resp.answers.find((a) => a.requirement === i))
+              return (
+                <li key={i} className="text-sm flex flex-wrap gap-x-2">
+                  <span className="text-stone-500">{t(`proof.type_${request.requirements[i].type}`)}</span>
+                  <span className={s.tone}>{s.text}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+        <ChevronDown size={18} className={`mt-1 shrink-0 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+        <span className="sr-only">{open ? t('proof.hide_details') : t('proof.view_details')}</span>
+      </button>
+      {open && (
+        <div id={panelId} className="px-4 pb-4 space-y-4 border-t border-stone-100">
+          <p className="text-sm pt-3">
+            <span className="text-stone-500">{t('proof.contact')}</span>{' '}
+            <span className="font-semibold text-stone-900 break-all">{resp.contact}</span>
+          </p>
+          {resp.oneWalletWithIdentity && (
+            <p className="text-xs rounded-lg border border-sky-200 bg-sky-50 text-sky-900 p-2.5" data-testid="one-wallet">
+              {t('proof.one_wallet_with_identity')}
+            </p>
+          )}
+          {request.requirements.map((_, i) => (
+            <div key={i} className="border-t border-stone-100 pt-3 space-y-2">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide"><RequirementLabel request={request} index={i} /></p>
+              <Answer answer={resp.answers.find((a) => a.requirement === i)} />
+            </div>
+          ))}
+        </div>
+      )}
+    </article>
   )
 }
 
@@ -165,28 +234,7 @@ export default function ProofRequestDetail() {
         {error && <div className="rounded-lg p-3 bg-rose-50 text-rose-800 border border-rose-200 text-sm">{error}</div>}
         {!responses && <Loader2 className="animate-spin text-indigo-600" size={24} />}
         {responses?.length === 0 && <p className="text-sm text-stone-500">{t('proof.no_answers_yet')}</p>}
-        {responses?.map((resp) => (
-          <article key={resp.id} className="bg-white rounded-xl border border-stone-200 p-4 space-y-4" data-testid="answer">
-            <div className="flex items-start justify-between gap-3 text-sm">
-              <div>
-                <span className="text-stone-500">{t('proof.contact')}</span>{' '}
-                <span className="font-semibold text-stone-900 break-all">{resp.contact}</span>
-              </div>
-              <span className="text-xs text-stone-500 shrink-0">{new Date(resp.createdAt).toLocaleDateString()}</span>
-            </div>
-            {resp.oneWalletWithIdentity && (
-              <p className="text-xs rounded-lg border border-sky-200 bg-sky-50 text-sky-900 p-2.5" data-testid="one-wallet">
-                {t('proof.one_wallet_with_identity')}
-              </p>
-            )}
-            {request.requirements.map((_, i) => (
-              <div key={i} className="border-t border-stone-100 pt-3 space-y-2">
-                <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide"><RequirementLabel request={request} index={i} /></p>
-                <Answer answer={resp.answers.find((a) => a.requirement === i)} />
-              </div>
-            ))}
-          </article>
-        ))}
+        {responses?.map((resp) => <AnswerCard key={resp.id} request={request} resp={resp} />)}
       </section>
     </div>
   )
