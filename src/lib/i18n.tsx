@@ -921,6 +921,11 @@ const translations = {
       title: 'Printable certificate',
       toolbar_hint: 'Print on A4, landscape. Use “Save as PDF” in the print dialog to keep a file.',
       print_button: 'Print',
+      qr_only_button: 'QR code only',
+      qr_only_title: 'Put the QR code on your own certificate',
+      qr_only_rule: 'Print these four details next to the code, exactly as written here. The verifier’s screen shows them, and the paper must match. A real code copied onto a forged certificate still scans, and only this comparison catches it.',
+      qr_only_size: 'Print the code at least 4 cm wide, on white, with nothing over it. SVG stays sharp at any size; PNG is at least 1200 px.',
+      copy: 'Copy',
       reprint: 'Print certificate',
       certifies: 'This certifies that',
       has_been_awarded: 'has been awarded',
@@ -1930,6 +1935,11 @@ const translations = {
       title: 'វិញ្ញាបនបត្រសម្រាប់បោះពុម្ព', // TODO(km-review)
       toolbar_hint: 'បោះពុម្ពលើក្រដាស A4 ផ្តេក។ ប្រើ “Save as PDF” ក្នុងប្រអប់បោះពុម្ព ដើម្បីរក្សាទុកជាឯកសារ។', // TODO(km-review)
       print_button: 'បោះពុម្ព', // TODO(km-review)
+      qr_only_button: 'តែកូដ QR', // TODO(km-review)
+      qr_only_title: 'ដាក់កូដ QR លើវិញ្ញាបនបត្ររបស់អ្នកផ្ទាល់', // TODO(km-review)
+      qr_only_rule: 'បោះពុម្ពព័ត៌មានទាំងបួននេះនៅជាប់កូដ ដូចដែលបានសរសេរនៅទីនេះទាំងស្រុង។ អេក្រង់អ្នកផ្ទៀងផ្ទាត់បង្ហាញព័ត៌មានទាំងនេះ ហើយក្រដាសត្រូវតែដូចគ្នា។ កូដពិតដែលចម្លងទៅលើវិញ្ញាបនបត្រក្លែងក្លាយនៅតែស្កេនបាន ហើយមានតែការប្រៀបធៀបនេះទេដែលរកឃើញវា។', // TODO(km-review)
+      qr_only_size: 'បោះពុម្ពកូដយ៉ាងហោចណាស់ទទឹង ៤ សង់ទីម៉ែត្រ លើផ្ទៃពណ៌ស ដោយគ្មានអ្វីគ្របពីលើ។ SVG នៅច្បាស់គ្រប់ទំហំ; PNG មានទំហំយ៉ាងហោចណាស់ 1200 px។', // TODO(km-review)
+      copy: 'ចម្លង', // TODO(km-review)
       reprint: 'បោះពុម្ពវិញ្ញាបនបត្រ', // TODO(km-review)
       certifies: 'សូមបញ្ជាក់ថា', // TODO(km-review)
       has_been_awarded: 'ត្រូវបានប្រគល់', // TODO(km-review)
