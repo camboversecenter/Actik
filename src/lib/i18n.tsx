@@ -644,7 +644,6 @@ const translations = {
       page_intro: 'Ask for proof, or answer one from your wallet.',
       tab_answered: 'Answered',
       tab_made: 'Made',
-      more_actions: 'More',
       your_requests: 'Requests you made',
       new_request: 'New request',
       no_requests: 'You have not made a request.',
@@ -653,7 +652,6 @@ const translations = {
       answers_count: '{count} answer(s)',
       until: 'open until {date}',
       sent_items: '{count} credential(s) sent',
-      view_sent: 'View what you sent',
       share_for: 'Let them see it for',
       share_for_hint: 'After this, the employer can no longer open your answer. You can still see it, and withdraw it any time.',
       visible_until: 'Employer can see it until {date}',
@@ -664,9 +662,10 @@ const translations = {
       sent_skipped: 'You skipped this one.',
       withdraw_answer: 'Withdraw',
       withdraw_confirm: 'Withdraw your answer? The requester will no longer see it.',
-      status_open: 'Open',
+      status_open: 'Accepting answers',
       status_closed: 'Closed',
       status_expired: 'Expired',
+      status_open_long: 'This request is open and still takes answers.',
       status_closed_long: 'This request is closed and no longer takes answers.',
       status_expired_long: 'This request has expired and no longer takes answers.',
       new_intro: 'Say what you need to see. Candidates answer from their own wallets, and only with credentials an institution issued.',
@@ -1677,7 +1676,6 @@ const translations = {
       page_intro: 'ស្នើសុំភស្តុតាង ឬឆ្លើយតបពីកាបូបរបស់អ្នក។', // TODO(km-review)
       tab_answered: 'បានឆ្លើយ', // TODO(km-review)
       tab_made: 'បានបង្កើត', // TODO(km-review)
-      more_actions: 'ជម្រើសផ្សេងទៀត', // TODO(km-review)
       your_requests: 'សំណើដែលអ្នកបានបង្កើត', // TODO(km-review)
       new_request: 'សំណើថ្មី', // TODO(km-review)
       no_requests: 'អ្នកមិនទាន់បានបង្កើតសំណើទេ។', // TODO(km-review)
@@ -1686,7 +1684,6 @@ const translations = {
       answers_count: 'ចម្លើយ {count}', // TODO(km-review)
       until: 'បើករហូតដល់ {date}', // TODO(km-review)
       sent_items: 'បានផ្ញើលិខិត {count}', // TODO(km-review)
-      view_sent: 'មើលអ្វីដែលអ្នកបានផ្ញើ', // TODO(km-review)
       share_for: 'អនុញ្ញាតឱ្យពួកគេមើលរយៈពេល', // TODO(km-review)
       share_for_hint: 'បន្ទាប់ពីនេះ និយោជកលែងអាចបើកចម្លើយរបស់អ្នកបានទៀត។ អ្នកនៅតែអាចមើលវា ហើយដកវាវិញបានគ្រប់ពេល។', // TODO(km-review)
       visible_until: 'និយោជកអាចមើលបានរហូតដល់ {date}', // TODO(km-review)
@@ -1697,9 +1694,10 @@ const translations = {
       sent_skipped: 'អ្នកបានរំលងអង្គនេះ។', // TODO(km-review)
       withdraw_answer: 'ដកវិញ', // TODO(km-review)
       withdraw_confirm: 'ដកចម្លើយរបស់អ្នកវិញ? អ្នកស្នើសុំនឹងមិនឃើញវាទៀតទេ។', // TODO(km-review)
-      status_open: 'បើក', // TODO(km-review)
+      status_open: 'កំពុងទទួលចម្លើយ', // TODO(km-review)
       status_closed: 'បានបិទ', // TODO(km-review)
       status_expired: 'ផុតកំណត់', // TODO(km-review)
+      status_open_long: 'សំណើនេះនៅបើក ហើយនៅតែទទួលចម្លើយ។', // TODO(km-review)
       status_closed_long: 'សំណើនេះត្រូវបានបិទ ហើយលែងទទួលចម្លើយទៀតហើយ។', // TODO(km-review)
       status_expired_long: 'សំណើនេះផុតកំណត់ ហើយលែងទទួលចម្លើយទៀតហើយ។', // TODO(km-review)
       new_intro: 'បញ្ជាក់អ្វីដែលអ្នកត្រូវការមើល។ បេក្ខជនឆ្លើយពីកាបូបផ្ទាល់ខ្លួន ហើយតែជាមួយលិខិតដែលស្ថាប័នបានចេញប៉ុណ្ណោះ។', // TODO(km-review)
