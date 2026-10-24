@@ -34,6 +34,8 @@ export interface MyAnswerSummary {
   requestStatus: ProofRequest['status']
   items: number
   createdAt: string
+  /** When the employer stops seeing this answer; null for answers sent before this existed. */
+  expiresAt: string | null
 }
 
 export interface ResponseRow {
@@ -167,8 +169,13 @@ function issuerOf(presentation: string): string | null {
   }
 }
 
-export async function submitAnswer(requestId: string, contact: string, items: AnswerItem[]): Promise<void> {
-  const { error } = await supabase.from('proof_responses').insert({ request_id: requestId, contact: contact.trim(), items })
+export async function submitAnswer(requestId: string, contact: string, items: AnswerItem[], shareDays: number): Promise<void> {
+  const { error } = await supabase.from('proof_responses').insert({
+    request_id: requestId,
+    contact: contact.trim(),
+    items,
+    expires_at: new Date(Date.now() + shareDays * 86400 * 1000).toISOString(),
+  })
   if (error) {
     if (error.code === '23505') throw new Error('ALREADY_ANSWERED')
     throw new Error(error.message)
@@ -186,7 +193,21 @@ export async function listMyAnswers(): Promise<MyAnswerSummary[]> {
     requestStatus: r.request_status,
     items: r.items_count,
     createdAt: r.created_at,
+    expiresAt: r.expires_at ?? null,
   }))
+}
+
+/** One of the caller's own answers, as it was sent. null when it is not theirs or is gone. */
+export async function getMyAnswer(id: string): Promise<(ResponseRow & { requestId: string; expiresAt: string | null }) | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null
+  const { data, error } = await supabase
+    .from('proof_responses')
+    .select('id, request_id, contact, items, created_at, expires_at')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  return { id: data.id, requestId: data.request_id, contact: data.contact, items: data.items ?? [], createdAt: data.created_at, expiresAt: data.expires_at ?? null }
 }
 
 export async function withdrawAnswer(id: string): Promise<void> {

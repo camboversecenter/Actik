@@ -40,6 +40,7 @@ const ProofRequests = lazy(() => import('./pages/requests/ProofRequests'))
 const NewProofRequest = lazy(() => import('./pages/requests/NewProofRequest'))
 const ProofRequestDetail = lazy(() => import('./pages/requests/ProofRequestDetail'))
 const ProofRequestPublic = lazy(() => import('./pages/requests/ProofRequestPublic'))
+const SentAnswer = lazy(() => import('./pages/requests/SentAnswer'))
 const AnswerProofRequest = lazy(() => import('./pages/requests/AnswerProofRequest'))
 const Contacts = lazy(() => import('./pages/app/Contacts'))
 const IssuerDashboard = lazy(() => import('./pages/app/IssuerDashboard'))
@@ -434,6 +435,7 @@ export default function App() {
           {/* Proof requests: any signed-in account may ask, and any may answer. */}
           <Route path="requests" element={<ProofRequests />} />
           <Route path="requests/new" element={<NewProofRequest />} />
+          <Route path="requests/sent/:id" element={<SentAnswer />} />
           <Route path="requests/:id" element={<ProofRequestDetail />} />
           <Route path="answer/:id" element={<AnswerProofRequest />} />
           {/* Same scanner as public /scan, inside the app shell. */}
