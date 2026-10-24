@@ -211,7 +211,7 @@ export default function Layout() {
       { to: '/app/requests', icon: Briefcase, label: t('nav.requests') },
       // Institutions and employers are the ones handed paper certificates
       // to check; the public /scan page has no way back into the app.
-      { to: '/app/scan', icon: ScanLine, label: t('nav.scan') },
+      { to: '/app/scan', icon: ScanLine, label: t('nav.scan'), tab: false },
       { to: '/app/institution-settings', icon: Settings, label: t('nav.settings') },
     ]
     : role === 'admin' ? [
@@ -320,9 +320,9 @@ export default function Layout() {
             <img src="/logo.png" alt="Actik" className="h-8 w-auto" />
             <div className="flex items-center gap-1">
               <InstallPwaButton variant="icon" />
-              {/* Students scan proof requests and printed certificates, but
-                  their four tabs are full; organisations have a Scan tab. */}
-              {role === 'student' && (
+              {/* One place for Scan on every phone: students scan proof
+                  requests and certificates, organisations check paper ones. */}
+              {(role === 'student' || role === 'issuer') && (
                 <NavLink
                   to="/app/scan"
                   aria-label={t('nav.scan')}
