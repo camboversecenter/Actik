@@ -2,15 +2,14 @@
 // answer row: who got it, until when they can see it, and the fields shown.
 
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Clock, Loader2, Mail } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { longDate } from '../../lib/dates'
 import { peekJwt, readDisclosures } from '../../lib/sdjwt'
 import { displayClaim } from '../../lib/claimDisplay'
-import { getMyAnswer, getProofRequest } from '../../lib/proofRequestApi'
+import { getMyAnswer, getProofRequest, withdrawAnswer } from '../../lib/proofRequestApi'
 import { allowedClaims, type ProofRequest } from '../../lib/proofRequest'
-import { StatusPill } from './ProofRequests'
 
 type Answer = NonNullable<Awaited<ReturnType<typeof getMyAnswer>>>
 
@@ -20,6 +19,9 @@ const day = (iso: string) => longDate(Math.floor(new Date(iso).getTime() / 1000)
 export default function SentAnswer() {
   const { id = '' } = useParams<{ id: string }>()
   const { t } = useLanguage()
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [answer, setAnswer] = useState<Answer | null | undefined>(undefined)
   const [request, setRequest] = useState<ProofRequest | null>(null)
 
@@ -37,6 +39,19 @@ export default function SentAnswer() {
   }
   if (!answer || !request) return <div className="max-w-2xl mx-auto px-1 py-10 text-center text-stone-500">{t('proof.not_found')}</div>
 
+  const withdraw = async () => {
+    if (!window.confirm(t('proof.withdraw_confirm'))) return
+    setBusy(true)
+    setError(null)
+    try {
+      await withdrawAnswer(id)
+      navigate('/app/requests', { replace: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
   const visible = !answer.expiresAt || new Date(answer.expiresAt).getTime() > Date.now()
 
   return (
@@ -46,11 +61,9 @@ export default function SentAnswer() {
       </Link>
 
       <header className="space-y-1">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-[24px] md:text-[28px] font-bold text-stone-900 leading-tight">{request.title}</h1>
-          <StatusPill status={request.status} />
-        </div>
+        <h1 className="text-[24px] md:text-[28px] font-bold text-stone-900 leading-tight">{request.title}</h1>
         <p className="text-sm text-stone-600">{request.requesterName}</p>
+        <p className="text-xs text-stone-500">{t(`proof.status_${request.status}_long`)}</p>
       </header>
 
       <div className="rounded-xl bg-white border border-stone-200 divide-y divide-stone-100 text-sm">
@@ -109,6 +122,12 @@ export default function SentAnswer() {
           </section>
         )
       })}
+
+      {error && <div className="rounded-lg p-3 bg-rose-50 text-rose-800 border border-rose-200 text-sm">{error}</div>}
+      <button type="button" onClick={withdraw} disabled={busy}
+        className="w-full py-2.5 rounded-xl border border-rose-200 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40">
+        {t('proof.withdraw_answer')}
+      </button>
     </div>
   )
 }
