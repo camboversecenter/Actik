@@ -707,6 +707,8 @@ const translations = {
       no_answers_yet: 'No answers yet.',
       contact: 'Contact:',
       not_answered: 'Not answered.',
+      view_details: 'Show details',
+      hide_details: 'Hide details',
       not_asked_WRONG_TYPE: 'Not counted: this is a different kind of credential from the one asked for.',
       not_asked_OVER_DISCLOSED: 'Not shown: this answer carries fields the request could not ask for.',
       not_asked_NO_SUCH_REQUIREMENT: 'Not shown.',
@@ -1738,6 +1740,8 @@ const translations = {
       no_answers_yet: 'មិនទាន់មានចម្លើយទេ។', // TODO(km-review)
       contact: 'ទំនាក់ទំនង៖', // TODO(km-review)
       not_answered: 'មិនបានឆ្លើយ។', // TODO(km-review)
+      view_details: 'បង្ហាញព័ត៌មានលម្អិត', // TODO(km-review)
+      hide_details: 'លាក់ព័ត៌មានលម្អិត', // TODO(km-review)
       not_asked_WRONG_TYPE: 'មិនរាប់បញ្ចូល៖ នេះជាប្រភេទលិខិតខុសពីអ្វីដែលបានស្នើ។', // TODO(km-review)
       not_asked_OVER_DISCLOSED: 'មិនបង្ហាញ៖ ចម្លើយនេះមានព័ត៌មានដែលសំណើមិនអាចស្នើបាន។', // TODO(km-review)
       not_asked_NO_SUCH_REQUIREMENT: 'មិនបង្ហាញ។', // TODO(km-review)
