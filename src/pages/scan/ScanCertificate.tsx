@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
-import { Camera, ImageUp, ClipboardPaste, RotateCcw } from 'lucide-react'
+import { Flashlight, FlashlightOff, ImageUp, RotateCcw, X } from 'lucide-react'
 import { longDate } from '../../lib/dates'
 import { useLanguage } from '../../lib/i18n'
 import {
@@ -39,8 +39,6 @@ type Result =
   | { kind: 'withdrawn'; reason: WithdrawalReason; revokedAt: number }
   | { kind: 'checked'; checked: CheckedPrinted }
 
-type Mode = 'camera' | 'photo' | 'paste'
-
 /** Decode a QR code from an image source, scaling large photos down first. */
 function decodeFrom(source: CanvasImageSource, width: number, height: number, canvas: HTMLCanvasElement): string | null {
   const scale = Math.min(1, 1600 / Math.max(width, height))
@@ -58,22 +56,29 @@ function decodeFrom(source: CanvasImageSource, width: number, height: number, ca
 export default function ScanCertificate({ embedded = false }: { embedded?: boolean }) {
   const { t } = useLanguage()
   const navigate = useNavigate()
-  const [mode, setMode] = useState<Mode>('camera')
   const [result, setResult] = useState<Result | null>(null)
-  const [pasted, setPasted] = useState('')
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [cameraOn, setCameraOn] = useState(false)
+  // Torch is offered only where the browser exposes it (Android Chrome; iOS Safari does not).
+  const [torchOk, setTorchOk] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const loopRef = useRef<number | null>(null)
+  // Bumped by every stop, so a start still waiting on the permission prompt
+  // can tell it was cancelled (left the page, switched tab) and let go.
+  const startRef = useRef(0)
 
   const stopCamera = useCallback(() => {
+    startRef.current++
     if (loopRef.current !== null) cancelAnimationFrame(loopRef.current)
     loopRef.current = null
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
     setCameraOn(false)
+    setTorchOk(false)
+    setTorchOn(false)
   }, [])
 
   useEffect(() => stopCamera, [stopCamera])
@@ -113,6 +118,7 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
   }, [embedded, navigate, stopCamera])
 
   const startCamera = async () => {
+    const attempt = ++startRef.current
     setCameraError(null)
     setResult(null)
     try {
@@ -120,11 +126,17 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
         video: { facingMode: 'environment' },
         audio: false,
       })
+      if (attempt !== startRef.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
       streamRef.current = stream
       const video = videoRef.current!
       video.srcObject = stream
       await video.play()
       setCameraOn(true)
+      const caps = stream.getVideoTracks()[0]?.getCapabilities?.() as { torch?: boolean } | undefined
+      setTorchOk(!!caps?.torch)
 
       // BarcodeDetector where the browser has one (Chrome, Android); jsQR
       // everywhere else (Safari on iOS).
@@ -147,11 +159,26 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
         loopRef.current = requestAnimationFrame(tick)
       }
       loopRef.current = requestAnimationFrame(tick)
-    } catch {
-      setCameraError(t('scan.camera_error'))
+    } catch (e) {
+      if (attempt !== startRef.current) return
+      // Blocked is different from broken: once a browser has been told no it
+      // stops asking, so the person has to be told where to turn it back on.
+      const blocked = e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
+      setCameraError(t(blocked ? 'scan.camera_denied' : 'scan.camera_error'))
       stopCamera()
     }
   }
+
+  // Opening Scan asks for the camera straight away, and so does scanning
+  // another. Denied: the error shows, with a button to retry.
+  const wantsCamera = result === null
+  useEffect(() => {
+    if (!wantsCamera) return
+    void startCamera()
+    return stopCamera
+    // startCamera is recreated every render; only the want changes matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsCamera])
 
   const onPhoto = async (file: File | undefined) => {
     if (!file || !canvasRef.current) return
@@ -166,9 +193,91 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
     }
   }
 
-  const reset = () => {
-    setResult(null)
-    setPasted('')
+  const reset = () => setResult(null)
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    const next = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] })
+      setTorchOn(next)
+    } catch {
+      setTorchOk(false)
+    }
+  }
+
+  // Back to wherever Scan was opened from; a fresh tab has nowhere to go back to.
+  const close = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'))
+
+  // Nothing to read yet: the camera, edge to edge, and nothing else. The
+  // explanation lives on the result, not in front of the lens.
+  if (!result) {
+    const corner = 'absolute w-10 h-10 border-white'
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+        <canvas ref={canvasRef} hidden />
+
+        <div className="relative flex-1 min-h-0 overflow-hidden rounded-b-[28px] bg-stone-900">
+          <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+
+          <div className="absolute inset-x-0 top-0 z-10 pt-[env(safe-area-inset-top)] bg-gradient-to-b from-black/55 to-transparent">
+            <div className="relative h-14 flex items-center justify-center">
+              <h1 className="font-khmer text-lg font-semibold tracking-wide">{t('nav.scan')}</h1>
+              <button
+                type="button"
+                onClick={close}
+                aria-label={t('scan.close')}
+                className="absolute right-2 top-2 w-10 h-10 flex items-center justify-center rounded-full active:bg-white/15"
+              >
+                <X size={24} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-[68%] max-w-[300px] aspect-square">
+              <span className={`${corner} top-0 left-0 border-t-4 border-l-4 rounded-tl-3xl`} />
+              <span className={`${corner} top-0 right-0 border-t-4 border-r-4 rounded-tr-3xl`} />
+              <span className={`${corner} bottom-0 left-0 border-b-4 border-l-4 rounded-bl-3xl`} />
+              <span className={`${corner} bottom-0 right-0 border-b-4 border-r-4 rounded-br-3xl`} />
+            </div>
+          </div>
+
+          {!cameraOn && cameraError && (
+            <div className="absolute inset-x-0 bottom-0 z-10 p-5 bg-gradient-to-t from-black/80 to-transparent text-center space-y-3">
+              <p className="text-sm leading-relaxed text-white/90">{cameraError}</p>
+              <button
+                type="button"
+                onClick={startCamera}
+                className="h-11 px-6 rounded-full bg-white text-stone-900 text-sm font-semibold"
+              >
+                {t('scan.start_camera')}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+          {torchOk && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-pressed={torchOn}
+              className={`flex-1 h-12 rounded-full inline-flex items-center justify-center gap-2 text-[15px] font-medium ${
+                torchOn ? 'bg-white text-stone-900' : 'bg-white/15 text-white'
+              }`}
+            >
+              {torchOn ? <Flashlight size={18} /> : <FlashlightOff size={18} />} {t('scan.flash')}
+            </button>
+          )}
+          <label className="flex-1 h-12 rounded-full bg-white/15 inline-flex items-center justify-center gap-2 text-[15px] font-medium cursor-pointer active:bg-white/25">
+            <ImageUp size={18} /> {t('scan.upload')}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = '' }} />
+          </label>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -187,85 +296,6 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
 
       <main className={embedded ? 'space-y-5' : 'max-w-lg mx-auto px-4 py-6 space-y-5'}>
         <canvas ref={canvasRef} hidden />
-
-        {!result && (
-          <>
-            <div>
-              <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('scan.title')}</h1>
-              <p className="text-sm text-stone-600 mt-1 leading-relaxed">{t('scan.intro')}</p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2" role="tablist">
-              {([
-                ['camera', Camera, t('scan.mode_camera')],
-                ['photo', ImageUp, t('scan.mode_photo')],
-                ['paste', ClipboardPaste, t('scan.mode_paste')],
-              ] as const).map(([m, Icon, label]) => (
-                <button
-                  key={m}
-                  type="button"
-                  role="tab"
-                  aria-selected={mode === m}
-                  onClick={() => {
-                    stopCamera()
-                    setMode(m)
-                  }}
-                  className={`flex flex-col items-center gap-1 py-3 rounded-lg border text-xs font-semibold ${
-                    mode === m ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-stone-200 bg-white text-stone-600'
-                  }`}
-                >
-                  <Icon size={18} /> {label}
-                </button>
-              ))}
-            </div>
-
-            {mode === 'camera' && (
-              <div className="space-y-3">
-                <div className="relative bg-stone-900 rounded-xl overflow-hidden aspect-square max-h-[60dvh] w-full">
-                  <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-                  {!cameraOn && (
-                    <button
-                      type="button"
-                      onClick={startCamera}
-                      className="absolute inset-0 m-auto w-48 h-12 bg-white text-stone-900 font-semibold rounded-xl"
-                    >
-                      {t('scan.start_camera')}
-                    </button>
-                  )}
-                </div>
-                {cameraError && <p className="text-sm text-amber-800">{cameraError}</p>}
-              </div>
-            )}
-
-            {mode === 'photo' && (
-              <label className="block border-2 border-dashed border-stone-300 rounded-xl p-8 text-center cursor-pointer bg-white">
-                <span className="text-sm font-semibold text-indigo-700">{t('scan.choose_photo')}</span>
-                <span className="block text-xs text-stone-500 mt-1">{t('scan.photo_hint')}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
-              </label>
-            )}
-
-            {mode === 'paste' && (
-              <div className="space-y-2">
-                <textarea
-                  value={pasted}
-                  onChange={(e) => setPasted(e.target.value)}
-                  placeholder="KH1:…"
-                  rows={5}
-                  className="w-full border border-stone-300 rounded-lg p-3 text-xs font-mono"
-                />
-                <button
-                  type="button"
-                  disabled={!pasted.trim()}
-                  onClick={() => handle(pasted)}
-                  className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-xl text-sm disabled:opacity-50"
-                >
-                  {t('scan.verify_button')}
-                </button>
-              </div>
-            )}
-          </>
-        )}
 
         {result?.kind === 'checking' && <p className="text-sm text-stone-600">{t('scan.checking')}</p>}
 
