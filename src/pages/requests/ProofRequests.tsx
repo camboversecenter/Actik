@@ -95,12 +95,13 @@ export default function ProofRequests() {
           {answers.length === 0 && <p className="p-4 text-sm text-stone-500">{t('proof.no_answers')}</p>}
           {answers.map((a) => (
             <div key={a.id} className="flex items-start justify-between gap-3 p-4">
-              <div className="min-w-0">
+              <Link to={`/app/requests/sent/${a.id}`} className="min-w-0 flex-1" aria-label={t('proof.view_sent')}>
                 <div className="font-semibold text-stone-900 truncate">{a.title}</div>
                 <div className="text-xs text-stone-500 truncate">
                   {a.requesterName} · {t('proof.sent_items', { count: a.items })} · {new Date(a.createdAt).toLocaleDateString()}
+                  {a.expiresAt && ` · ${t(new Date(a.expiresAt).getTime() > Date.now() ? 'proof.visible_until' : 'proof.visible_ended', { date: longDate(Math.floor(new Date(a.expiresAt).getTime() / 1000)) })}`}
                 </div>
-              </div>
+              </Link>
               <div className="flex items-center gap-2 shrink-0">
                 <StatusPill status={a.requestStatus} />
                 <button
