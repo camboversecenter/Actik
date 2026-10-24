@@ -2,8 +2,9 @@
 //
 // This is an EDUCATIONAL implementation that follows the structure of the IETF
 // SD-JWT spec closely enough to be correct and to round-trip, but it is NOT a
-// full implementation. For production use the `@sd-jwt/sd-jwt-vc` library and
-// add Key Binding (KB-JWT) for holder proof. See README.
+// full implementation. For production use the `@sd-jwt/sd-jwt-vc` library.
+// Key Binding (KB-JWT) is implemented below (addKeyBinding / verification of
+// `cnf`), per RFC 9901 and RFC 7800; see docs/HOLDER_BINDING.md.
 //
 // The core trick: the issuer signs HASHES of each claim (the `_sd` array), not
 // the values. The values live in separate "disclosure" strings appended after

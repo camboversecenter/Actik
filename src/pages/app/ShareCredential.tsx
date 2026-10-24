@@ -119,9 +119,10 @@ export default function ShareCredential() {
   const [customDate, setCustomDate] = useState('')
   const [recipientLabel, setRecipientLabel] = useState('')
   // A link that stops working after its first successful view. A forwarded or
-  // leaked share link is otherwise replayable by anyone until it expires;
-  // presentations here are not bound to the holder (no KB-JWT), so this,
-  // expiry and revocation are the controls that exist.
+  // leaked share link is otherwise replayable by anyone until it expires.
+  // A credential bound to this wallet's key also carries a key-binding proof
+  // made for this one link (handleCreateShare); an unbound one has no such
+  // proof, so this, expiry and revocation are the only controls it has.
   const [singleUse, setSingleUse] = useState(false)
 
   // Share action states
@@ -451,6 +452,11 @@ export default function ShareCredential() {
   // so it is never counted or listed separately.
   const disclosedFieldsCount = alwaysShownCount + selectedFields.filter(f => f !== 'degree' && availableClaims[f] !== undefined && availableClaims[f] !== '').length
   
+  // Issued before this holder had a wallet: no key to prove the share came
+  // from them, and the verifier's page says so (holder_unbound).
+  let isUnbound = false
+  try { isUnbound = !!decryptedSDJwt && !peekJwt(decryptedSDJwt).bound } catch { /* unreadable: no note */ }
+
   const hiddenFields = selectableKeys
     .filter(f => availableClaims[f] !== undefined && availableClaims[f] !== '' && !selectedFields.includes(f))
     .map(fieldLabel)
@@ -1006,6 +1012,11 @@ export default function ShareCredential() {
                       <span className="block text-xs text-stone-500">{t('wallet.single_use_desc')}</span>
                     </span>
                   </label>
+                  {isUnbound && (
+                    <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      {t('wallet.share_unbound_note')}
+                    </p>
+                  )}
                 </div>
 
                 <h3 className="font-khmer text-lg font-bold text-stone-900 mb-1">

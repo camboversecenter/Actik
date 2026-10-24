@@ -153,6 +153,7 @@ const translations = {
       recipient_placeholder: 'e.g. Acme Corp · HR',
       single_use: 'Allow only one view',
       single_use_desc: 'The link stops working after it is first opened. Use this when the link should not be forwarded.',
+      share_unbound_note: 'This credential was issued before you had an Actik wallet, so the link cannot prove it came from you. The person who opens it will see it marked “not bound”. Turning on one view and a short expiry helps.',
       how_long_active: 'How long should this link work?',
       duration_desc: 'Choose a quick duration or set a custom expiry window.',
       day_1: '1 Day',
@@ -1182,6 +1183,7 @@ const translations = {
       recipient_placeholder: 'ឧ. ក្រុមហ៊ុន Acme ផ្នែកធនធានមនុស្ស',
       single_use: 'អនុញ្ញាតឱ្យមើលបានតែម្តង', // TODO(km-review)
       single_use_desc: 'តំណនឹងឈប់ដំណើរការបន្ទាប់ពីការមើលលើកដំបូង។ ប្រើវានៅពេលអ្នកមិនចង់ឱ្យវាត្រូវបានបញ្ជូនបន្ត។', // TODO(km-review)
+      share_unbound_note: 'ឯកសារនេះត្រូវបានចេញមុនពេលអ្នកមានកាបូប Actik ដូច្នេះតំណមិនអាចបញ្ជាក់ថាវាមកពីអ្នកទេ។ អ្នកដែលបើកវានឹងឃើញសញ្ញា «មិនបានភ្ជាប់»។ ការបើកមើលតែម្តង និងកំណត់ថ្ងៃផុតកំណត់ខ្លី នឹងជួយបាន។', // TODO(km-review)
       how_long_active: 'តើតំណនេះគួរដំណើរការរយៈពេលប៉ុន្មាន?',
       duration_desc: 'ជ្រើសរើសរយៈពេលរហ័ស ឬកំណត់ថ្ងៃផុតកំណត់។',
       day_1: '១ ថ្ងៃ',
