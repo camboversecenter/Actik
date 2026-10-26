@@ -14,7 +14,7 @@ import {
 import { shareAudience } from '../../lib/sdjwt'
 import { displayClaim } from '../../lib/claimDisplay'
 import type { WithdrawalReason } from '../../lib/revocation'
-import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
+import { loadRevocationState, withTrustRefresh } from '../../lib/trustAnchor'
 
 // --- TypeScript Types ---
 type CheckStatus = 'waiting' | 'running' | 'passed' | 'failed'
@@ -497,25 +497,25 @@ export default function VerifyCredential() {
         const payload = parseJwtPayload(jwt)
         const issuerDID: string | undefined = payload?.iss
 
-        const trust = await loadTrustState()
-        const revocations =
-          trust.list && issuerDID
-            ? await loadRevocationState(issuerDID, trust.list)
-            : { list: null, failure: null }
-        if (!active) return
-
         let result: CheckedCredential
         try {
-          result = await checkCredential(
-            shareRecord.presentation,
-            issuerDID,
-            trust,
-            revocations,
-            Math.floor(Date.now() / 1000),
-            // A credential bound to its holder's wallet must come with that
-            // wallet's proof, signed for this very link.
-            { holderProof: { audience: shareAudience(shareRecord.id) } }
-          )
+          result = await withTrustRefresh(async (trust) => {
+            const revocations =
+              trust.list && issuerDID
+                ? await loadRevocationState(issuerDID, trust.list)
+                : { list: null, failure: null }
+            return checkCredential(
+              shareRecord.presentation,
+              issuerDID,
+              trust,
+              revocations,
+              Math.floor(Date.now() / 1000),
+              // A credential bound to its holder's wallet must come with that
+              // wallet's proof, signed for this very link.
+              { holderProof: { audience: shareAudience(shareRecord.id) } }
+            )
+          })
+          if (!active) return
         } catch (e) {
           if (!(e instanceof CredentialRefused)) throw e
           // The reason, never the payload.

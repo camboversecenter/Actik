@@ -4,8 +4,8 @@
 
 import { boundToOneWallet } from './identity'
 import { supabase } from './supabase'
-import { loadRevocationState, loadTrustState } from './trustAnchor'
-import type { RevocationState } from './credentialCheck'
+import { isStaleListReason, loadRevocationState, loadTrustState, refetchedTrust } from './trustAnchor'
+import type { RevocationState, TrustState } from './credentialCheck'
 import {
   checkAnswer,
   validateRequest,
@@ -133,6 +133,16 @@ export async function listResponses(requestId: string): Promise<ResponseRow[]> {
  */
 export async function checkResponses(request: ProofRequest, rows: ResponseRow[]): Promise<CheckedResponse[]> {
   const trust = await loadTrustState()
+  const checked = await checkResponsesWith(trust, request, rows)
+  // Refused only because the saved list does not know an issuer or key: the
+  // registry may have been republished since, so check once more against it.
+  const stale = checked.some((r) => r.answers.some((a) => a.kind === 'refused' && isStaleListReason(a.reason)))
+  if (!stale) return checked
+  const fresh = await refetchedTrust(trust)
+  return fresh ? checkResponsesWith(fresh, request, rows) : checked
+}
+
+async function checkResponsesWith(trust: TrustState, request: ProofRequest, rows: ResponseRow[]): Promise<CheckedResponse[]> {
   const revocations = new Map<string, RevocationState>()
   if (trust.list) {
     const issuers = new Set<string>()
