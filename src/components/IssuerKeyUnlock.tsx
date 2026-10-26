@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { JWK } from 'jose'
 import { Loader2, Key, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useZkVault } from '../vault/zk-vault/hooks'
-import type { EncryptedPayload } from '../vault/zk-vault/crypto'
+import { decryptData, deriveKeyFromPin, hexToBuf, unwrapKey, type EncryptedPayload } from '../vault/zk-vault/crypto'
 import { supabase } from '../lib/supabase'
 import { generateIssuerKeys } from '../lib/did'
 import { holdIssuerKey } from '../lib/issuerKeyStore'
@@ -100,6 +100,47 @@ async function persistKey(userId: string, publicJwk: JWK, ciphertext: EncryptedP
   if (secretRes.error) throw secretRes.error
 }
 
+async function saveCiphertext(userId: string, ciphertext: EncryptedPayload) {
+  const { error } = await supabase
+    .from('issuer_secrets')
+    .upsert(
+      { owner: userId, signing_key_ciphertext: ciphertext, updated_at: new Date().toISOString() },
+      { onConflict: 'owner' }
+    )
+  if (error) throw error
+}
+
+/** Does this issuer already have a signing key, which setting up would replace? */
+async function hasKeyOnRecord(userId: string): Promise<boolean> {
+  if (await fetchCiphertext(userId)) return true
+  const { data } = await supabase
+    .from('issuers')
+    .select('*')
+    .or(`owner.eq.${userId},user_id.eq.${userId}`)
+    .limit(1)
+    .maybeSingle()
+  return !!(data?.public_jwk || data?.public_key)
+}
+
+// Repair. Withdrawals and Reissue requests used to sit outside the issuer
+// vault, so their unlock screen set up the *wallet* vault and saved the
+// signing key under its key. The same PIN on the wallet vault opens it.
+async function keyFromWalletVault(pin: string, userId: string, ciphertext: EncryptedPayload): Promise<JWK | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('vault_envelope_pin, vault_pin_salt')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!data?.vault_envelope_pin || !data.vault_pin_salt) return null
+  try {
+    const kek = await deriveKeyFromPin(pin, hexToBuf(data.vault_pin_salt))
+    const dek = await unwrapKey(JSON.parse(data.vault_envelope_pin) as EncryptedPayload, kek)
+    return (await decryptData(ciphertext, dek)) as JWK
+  } catch {
+    return null
+  }
+}
+
 interface IssuerKeyUnlockProps {
   userId: string
   userEmail: string
@@ -117,6 +158,9 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
   const [phase, setPhase] = useState<Phase>('checking')
   const [setupReason, setSetupReason] = useState<'legacy' | 'incomplete'>('legacy')
+  // Setting up when a key already exists makes a new one: say so, and ask.
+  const [replacesKey, setReplacesKey] = useState(false)
+  const [replaceAck, setReplaceAck] = useState(false)
   const [pin, setPin] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -138,6 +182,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
     }
     if (!status.hasPin) {
       setSetupReason('legacy')
+      setReplacesKey(await hasKeyOnRecord(userId).catch(() => true))
       setPhase('setup')
       return
     }
@@ -164,7 +209,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (pin.length < MIN_LEN || isProcessing) return
+    if (pin.length < MIN_LEN || isProcessing || (replacesKey && !replaceAck)) return
     setIsProcessing(true)
     setError(null)
     try {
@@ -202,6 +247,7 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
         // A PIN envelope exists but the key payload itself never got saved —
         // treat as an incomplete setup rather than attempting a decrypt.
         setSetupReason('incomplete')
+        setReplacesKey(await hasKeyOnRecord(userId).catch(() => true))
         setPhase('setup')
         setPin('')
         setIsProcessing(false)
@@ -210,6 +256,20 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
       const ok = await unlockWithPin(pin, userId)
       if (!ok) {
+        // The PIN does not open this vault, but it may open the wallet vault
+        // the key was wrongly saved under: protect that same key here again.
+        const recovered = await keyFromWalletVault(pin, userId, ciphertext)
+        if (recovered) {
+          if (!(await setupVault(pin, userId, userEmail, { skipPasskey: true }))) {
+            throw new Error('Your signing key was found, but could not be secured again. Please try once more.')
+          }
+          await saveCiphertext(userId, await encryptPayload(recovered))
+          setAttempts(0)
+          clearLockout(userId)
+          await holdIssuerKey(recovered, did)
+          onUnlocked(did)
+          return
+        }
         const newAttempts = attempts + 1
         setAttempts(newAttempts)
         setPin('')
@@ -231,11 +291,26 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
       setAttempts(0)
       clearLockout(userId)
+      let privateJwk: JWK
+      try {
+        privateJwk = (await decryptPayload(ciphertext)) as JWK
+      } catch (first) {
+        // The PIN opens this vault but the key was saved under the wallet
+        // vault's: open it there, then save the same key under this one.
+        const recovered = await keyFromWalletVault(pin, userId, ciphertext)
+        if (!recovered) throw first
+        await saveCiphertext(userId, await encryptPayload(recovered))
+        privateJwk = recovered
+      }
       // Decrypted, imported as non-extractable, and the plaintext dropped.
-      await holdIssuerKey((await decryptPayload(ciphertext)) as JWK, did)
+      await holdIssuerKey(privateJwk, did)
       onUnlocked(did)
     } catch (err: any) {
-      setError(err.message || "Couldn't unlock your signing key. Try again, or use Regenerate signing key if the problem persists.")
+      setError(
+        err.message ||
+          "Couldn't unlock your signing key. Check the PIN and try again. Do not regenerate the key: a new key " +
+            'cannot sign anything that verifies until the trust registry is republished. Contact the registry operator instead.'
+      )
     } finally {
       setIsProcessing(false)
     }
@@ -273,12 +348,28 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
         <div className="flex items-start gap-4">
           <Key size={26} className="text-amber-600 mt-0.5 shrink-0" />
           <div className="w-full">
-            <h2 className="text-lg font-bold text-amber-800">Set up your signing PIN</h2>
+            <h2 className="text-lg font-bold text-amber-800">
+              {replacesKey ? 'Create a new signing key' : 'Set up your signing PIN'}
+            </h2>
             <p className="text-sm text-stone-600 mt-2 leading-relaxed">
-              {setupReason === 'legacy'
-                ? 'This is a one-time step: choose a PIN to protect your signing key so it survives closing this tab. This is the last time you’ll need to (re)generate it.'
-                : 'Your signing key setup looks incomplete. Choose a PIN to finish protecting it.'}
+              {replacesKey
+                ? 'Your institution already has a signing key, but this browser cannot open it. Continuing creates a new key and a new PIN, and retires the old key.'
+                : setupReason === 'legacy'
+                  ? 'This is a one-time step: choose a PIN to protect your new signing key so it survives closing this tab.'
+                  : 'Your signing key setup looks incomplete. Choose a PIN to finish protecting it.'}
             </p>
+            {replacesKey && (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 leading-relaxed">
+                <p>
+                  <strong>Anything you sign with the new key will not verify until the trust registry is next published</strong>{' '}
+                  with it. Until then you cannot issue or withdraw. If you know your PIN, go back and unlock instead.
+                </p>
+                <label className="mt-2 flex items-start gap-2 font-semibold">
+                  <input type="checkbox" checked={replaceAck} onChange={(e) => setReplaceAck(e.target.checked)} className="mt-0.5" />
+                  <span>I understand, create a new key and tell the registry operator</span>
+                </label>
+              </div>
+            )}
 
             <form onSubmit={handleSetup} className="mt-4 space-y-3">
               <div className="relative max-w-xs">
@@ -315,11 +406,11 @@ export default function IssuerKeyUnlock({ userId, userEmail, did, onUnlocked, on
 
               <button
                 type="submit"
-                disabled={pin.length < MIN_LEN || isProcessing}
-                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-11 px-6 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                disabled={pin.length < MIN_LEN || isProcessing || (replacesKey && !replaceAck)}
+                className={`${replacesKey ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800' : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'} text-white font-semibold h-11 px-6 rounded-xl text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50`}
               >
                 {isProcessing && <Loader2 size={16} className="animate-spin" />}
-                <span>Set up signing PIN</span>
+                <span>{replacesKey ? 'Create a new signing key' : 'Set up signing PIN'}</span>
               </button>
             </form>
           </div>
