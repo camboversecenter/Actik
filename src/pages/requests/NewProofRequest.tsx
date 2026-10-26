@@ -123,7 +123,7 @@ export default function NewProofRequest() {
       <label className="block text-sm font-medium text-stone-800">
         {t('proof.open_for')}
         <select value={days} onChange={(e) => setDays(Number(e.target.value))} className={`${input} mt-1`}>
-          {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{t('proof.days', { count: d })}</option>)}
+          {[1, 7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{d === 1 ? t('wallet.day_1') : t('proof.days', { count: d })}</option>)}
         </select>
       </label>
 

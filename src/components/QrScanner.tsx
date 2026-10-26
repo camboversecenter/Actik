@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import jsQR from 'jsqr'
 import { useLanguage } from '../lib/i18n'
+import { acquireCamera, parkCamera } from '../lib/cameraStream'
 
 export default function QrScanner({ onText, onError }: { onText: (text: string) => void; onError: (message: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -16,7 +17,11 @@ export default function QrScanner({ onText, onError }: { onText: (text: string) 
   const stop = useCallback(() => {
     if (loopRef.current !== null) cancelAnimationFrame(loopRef.current)
     loopRef.current = null
-    streamRef.current?.getTracks().forEach((track) => track.stop())
+    // Shared stream, kept for the next scan so the browser asks only once.
+    if (streamRef.current) {
+      if (videoRef.current) videoRef.current.srcObject = null
+      parkCamera()
+    }
     streamRef.current = null
     setOn(false)
   }, [])
@@ -25,7 +30,7 @@ export default function QrScanner({ onText, onError }: { onText: (text: string) 
 
   const start = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      const stream = await acquireCamera()
       streamRef.current = stream
       const video = videoRef.current!
       video.srcObject = stream

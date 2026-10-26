@@ -652,8 +652,6 @@ const translations = {
       answers_count: '{count} answer(s)',
       until: 'open until {date}',
       sent_items: '{count} credential(s) sent',
-      share_for: 'Let them see it for',
-      share_for_hint: 'After this, the employer can no longer open your answer. You can still see it, and withdraw it any time.',
       visible_until: 'Employer can see it until {date}',
       visible_ended: 'The employer can no longer see it',
       sent_to: 'What {requester} can see',
@@ -725,6 +723,10 @@ const translations = {
       set_up_wallet: 'Set up your wallet',
       unlock_failed: 'The wallet did not unlock. Try again.',
       no_match: 'Your wallet has no credential of this kind.',
+      change: 'Change',
+      skip_short: 'Skip',
+      include: 'Include',
+      visible_until_withdrawn: 'Visible to the requester until you withdraw it.',
       checking: 'Checking…',
       skip_requirement: 'Do not answer this one',
       they_will_see: '{requester} will see:',
@@ -1684,8 +1686,6 @@ const translations = {
       answers_count: 'ចម្លើយ {count}', // TODO(km-review)
       until: 'បើករហូតដល់ {date}', // TODO(km-review)
       sent_items: 'បានផ្ញើលិខិត {count}', // TODO(km-review)
-      share_for: 'អនុញ្ញាតឱ្យពួកគេមើលរយៈពេល', // TODO(km-review)
-      share_for_hint: 'បន្ទាប់ពីនេះ និយោជកលែងអាចបើកចម្លើយរបស់អ្នកបានទៀត។ អ្នកនៅតែអាចមើលវា ហើយដកវាវិញបានគ្រប់ពេល។', // TODO(km-review)
       visible_until: 'និយោជកអាចមើលបានរហូតដល់ {date}', // TODO(km-review)
       visible_ended: 'និយោជកលែងអាចមើលឃើញទៀតហើយ', // TODO(km-review)
       sent_to: 'អ្វីដែល {requester} អាចមើលឃើញ', // TODO(km-review)
@@ -1757,6 +1757,10 @@ const translations = {
       set_up_wallet: 'រៀបចំកាបូបរបស់អ្នក', // TODO(km-review)
       unlock_failed: 'កាបូបមិនបានដោះសោទេ។ សូមព្យាយាមម្តងទៀត។', // TODO(km-review)
       no_match: 'កាបូបរបស់អ្នកគ្មានលិខិតប្រភេទនេះទេ។', // TODO(km-review)
+      change: 'ប្តូរ', // TODO(km-review)
+      skip_short: 'រំលង', // TODO(km-review)
+      include: 'បញ្ចូល', // TODO(km-review)
+      visible_until_withdrawn: 'អ្នកស្នើសុំអាចមើលឃើញរហូតដល់អ្នកដកវាវិញ។', // TODO(km-review)
       checking: 'កំពុងពិនិត្យ…', // TODO(km-review)
       skip_requirement: 'មិនឆ្លើយចំណុចនេះ', // TODO(km-review)
       they_will_see: '{requester} នឹងឃើញ៖', // TODO(km-review)

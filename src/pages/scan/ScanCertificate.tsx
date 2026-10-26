@@ -29,6 +29,7 @@ import {
 import { CredentialRefused, CredentialWithdrawn, messageForRefusal } from '../../lib/credentialCheck'
 import type { WithdrawalReason } from '../../lib/revocation'
 import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
+import { acquireCamera, parkCamera } from '../../lib/cameraStream'
 
 type Result =
   | { kind: 'checking' }
@@ -74,7 +75,9 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
     startRef.current++
     if (loopRef.current !== null) cancelAnimationFrame(loopRef.current)
     loopRef.current = null
-    streamRef.current?.getTracks().forEach((track) => track.stop())
+    // The stream is shared and kept for the next scan (one permission prompt).
+    if (streamRef.current && videoRef.current) videoRef.current.srcObject = null
+    if (streamRef.current) parkCamera()
     streamRef.current = null
     setCameraOn(false)
     setTorchOk(false)
@@ -122,12 +125,9 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
     setCameraError(null)
     setResult(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
+      const stream = await acquireCamera()
       if (attempt !== startRef.current) {
-        stream.getTracks().forEach((track) => track.stop())
+        parkCamera()
         return
       }
       streamRef.current = stream
