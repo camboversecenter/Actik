@@ -652,8 +652,6 @@ const translations = {
       answers_count: '{count} answer(s)',
       until: 'open until {date}',
       sent_items: '{count} credential(s) sent',
-      share_for: 'Let them see it for',
-      share_for_hint: 'After this, the employer can no longer open your answer. You can still see it, and withdraw it any time.',
       visible_until: 'Employer can see it until {date}',
       visible_ended: 'The employer can no longer see it',
       sent_to: 'What {requester} can see',
@@ -1684,8 +1682,6 @@ const translations = {
       answers_count: 'ចម្លើយ {count}', // TODO(km-review)
       until: 'បើករហូតដល់ {date}', // TODO(km-review)
       sent_items: 'បានផ្ញើលិខិត {count}', // TODO(km-review)
-      share_for: 'អនុញ្ញាតឱ្យពួកគេមើលរយៈពេល', // TODO(km-review)
-      share_for_hint: 'បន្ទាប់ពីនេះ និយោជកលែងអាចបើកចម្លើយរបស់អ្នកបានទៀត។ អ្នកនៅតែអាចមើលវា ហើយដកវាវិញបានគ្រប់ពេល។', // TODO(km-review)
       visible_until: 'និយោជកអាចមើលបានរហូតដល់ {date}', // TODO(km-review)
       visible_ended: 'និយោជកលែងអាចមើលឃើញទៀតហើយ', // TODO(km-review)
       sent_to: 'អ្វីដែល {requester} អាចមើលឃើញ', // TODO(km-review)

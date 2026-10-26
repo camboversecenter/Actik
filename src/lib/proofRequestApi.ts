@@ -169,12 +169,11 @@ function issuerOf(presentation: string): string | null {
   }
 }
 
-export async function submitAnswer(requestId: string, contact: string, items: AnswerItem[], shareDays: number): Promise<void> {
+export async function submitAnswer(requestId: string, contact: string, items: AnswerItem[]): Promise<void> {
   const { error } = await supabase.from('proof_responses').insert({
     request_id: requestId,
     contact: contact.trim(),
     items,
-    expires_at: new Date(Date.now() + shareDays * 86400 * 1000).toISOString(),
   })
   if (error) {
     if (error.code === '23505') throw new Error('ALREADY_ANSWERED')

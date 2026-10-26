@@ -58,7 +58,6 @@ export default function AnswerProofRequest() {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null)
   const [choice, setChoice] = useState<Record<number, string | null>>({})
   const [contact, setContact] = useState('')
-  const [shareDays, setShareDays] = useState(30)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -160,7 +159,7 @@ export default function AnswerProofRequest() {
           presentation: await buildBoundAnswer(request.requirements[c.requirement], c.sdjwt, request.id, holder?.key ?? null),
         })
       }
-      await submitAnswer(request.id, contact, items, shareDays)
+      await submitAnswer(request.id, contact, items)
       setSent(true)
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e)
@@ -272,15 +271,6 @@ export default function AnswerProofRequest() {
             <input value={contact} onChange={(e) => setContact(e.target.value)} maxLength={200}
               className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm mt-1" name="contact" />
             <span className="block text-xs text-stone-500 font-normal mt-1">{t('proof.contact_hint')}</span>
-          </label>
-
-          <label className="block text-sm font-medium text-stone-800">
-            {t('proof.share_for')}
-            <select value={shareDays} onChange={(e) => setShareDays(Number(e.target.value))}
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm mt-1 bg-white" name="shareDays">
-              {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{t('proof.days', { count: d })}</option>)}
-            </select>
-            <span className="block text-xs text-stone-500 font-normal mt-1">{t('proof.share_for_hint')}</span>
           </label>
 
           {error && <div className="rounded-lg p-3 bg-rose-50 text-rose-800 border border-rose-200 text-sm">{error}</div>}
