@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { ArrowLeft, ChevronDown, Copy, Loader2 } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Copy, Loader2 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { longDate } from '../../lib/dates'
 import { messageForRefusal } from '../../lib/credentialCheck'
@@ -37,8 +37,7 @@ export function RequirementLabel({ request, index }: { request: Pick<ProofReques
   )
 }
 
-
-function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
+export function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
   const { t } = useLanguage()
   if (!answer) return <p className="text-sm text-stone-500">{t('proof.not_answered')}</p>
   if (answer.kind === 'not_asked') {
@@ -88,7 +87,7 @@ function Answer({ answer }: { answer: CheckedAnswer | undefined }) {
 
 // One line per requirement, enough to scan a list of candidates: what was
 // answered, by whom it was issued, and how it checked. The full fields and
-// standing sit behind the card.
+// standing are on the answer's own page.
 function summaryOf(t: (k: string, v?: Record<string, string | number>) => string, answer: CheckedAnswer | undefined) {
   if (!answer) return { text: t('proof.not_answered').replace(/\.$/, ''), tone: 'text-stone-500' }
   if (answer.kind === 'not_asked') return { text: t(`proof.not_asked_${answer.reason}`), tone: 'text-rose-800' }
@@ -102,56 +101,37 @@ function summaryOf(t: (k: string, v?: Record<string, string | number>) => string
     : { text: `${issuer.name} · ${t('verify.standing_unchecked_title').replace(/\.$/, '')}`, tone: 'text-amber-800' }
 }
 
+export function nameOf(resp: CheckedResponse): string | undefined {
+  const name = resp.answers.flatMap((a) => (a.kind === 'checked' ? a.fields : [])).find(([k]) => k === 'name')?.[1]
+  return typeof name === 'string' ? name : undefined
+}
+
 function AnswerCard({ request, resp }: { request: ProofRequest; resp: CheckedResponse }) {
   const { t } = useLanguage()
-  const [open, setOpen] = useState(false)
-  const name = resp.answers.flatMap((a) => (a.kind === 'checked' ? a.fields : [])).find(([k]) => k === 'name')?.[1]
-  const panelId = `answer-${resp.id}`
+  const name = nameOf(resp)
   return (
-    <article className="bg-white rounded-xl border border-stone-200" data-testid="answer">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={panelId}
-        className="w-full text-left p-4 flex items-start gap-3 cursor-pointer">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="font-semibold text-stone-900 truncate">{typeof name === 'string' ? name : resp.contact}</p>
-            <span className="text-xs text-stone-500 shrink-0">{new Date(resp.createdAt).toLocaleDateString()}</span>
-          </div>
-          {typeof name === 'string' && <p className="text-xs text-stone-500 break-all">{resp.contact}</p>}
-          <ul className="space-y-1">
-            {request.requirements.map((_, i) => {
-              const s = summaryOf(t, resp.answers.find((a) => a.requirement === i))
-              return (
-                <li key={i} className="text-sm flex flex-wrap gap-x-2">
-                  <span className="text-stone-500">{t(`proof.type_${request.requirements[i].type}`)}</span>
-                  <span className={s.tone}>{s.text}</span>
-                </li>
-              )
-            })}
-          </ul>
+    <Link to={`/app/requests/${request.id}/answers/${resp.id}`} data-testid="answer"
+      className="bg-white rounded-xl border border-stone-200 p-4 flex items-start gap-3 hover:border-stone-300 hover:bg-stone-50/60 transition-colors">
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="font-semibold text-stone-900 truncate">{name ?? resp.contact}</p>
+          <span className="text-xs text-stone-500 shrink-0">{new Date(resp.createdAt).toLocaleDateString()}</span>
         </div>
-        <ChevronDown size={18} className={`mt-1 shrink-0 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
-        <span className="sr-only">{open ? t('proof.hide_details') : t('proof.view_details')}</span>
-      </button>
-      {open && (
-        <div id={panelId} className="px-4 pb-4 space-y-4 border-t border-stone-100">
-          <p className="text-sm pt-3">
-            <span className="text-stone-500">{t('proof.contact')}</span>{' '}
-            <span className="font-semibold text-stone-900 break-all">{resp.contact}</span>
-          </p>
-          {resp.oneWalletWithIdentity && (
-            <p className="text-xs rounded-lg border border-sky-200 bg-sky-50 text-sky-900 p-2.5" data-testid="one-wallet">
-              {t('proof.one_wallet_with_identity')}
-            </p>
-          )}
-          {request.requirements.map((_, i) => (
-            <div key={i} className="border-t border-stone-100 pt-3 space-y-2">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide"><RequirementLabel request={request} index={i} /></p>
-              <Answer answer={resp.answers.find((a) => a.requirement === i)} />
-            </div>
-          ))}
-        </div>
-      )}
-    </article>
+        {name && <p className="text-xs text-stone-500 break-all">{resp.contact}</p>}
+        <ul className="space-y-1">
+          {request.requirements.map((_, i) => {
+            const s = summaryOf(t, resp.answers.find((a) => a.requirement === i))
+            return (
+              <li key={i} className="text-sm flex flex-wrap gap-x-2">
+                <span className="text-stone-500">{t(`proof.type_${request.requirements[i].type}`)}</span>
+                <span className={s.tone}>{s.text}</span>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+      <ChevronRight size={18} className="mt-1 shrink-0 text-stone-400" aria-hidden />
+    </Link>
   )
 }
 

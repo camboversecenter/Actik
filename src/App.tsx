@@ -39,6 +39,7 @@ const ReissueRequests = lazy(() => import('./pages/app/ReissueRequests'))
 const ProofRequests = lazy(() => import('./pages/requests/ProofRequests'))
 const NewProofRequest = lazy(() => import('./pages/requests/NewProofRequest'))
 const ProofRequestDetail = lazy(() => import('./pages/requests/ProofRequestDetail'))
+const ResponseDetail = lazy(() => import('./pages/requests/ResponseDetail'))
 const ProofRequestPublic = lazy(() => import('./pages/requests/ProofRequestPublic'))
 const SentAnswer = lazy(() => import('./pages/requests/SentAnswer'))
 const AnswerProofRequest = lazy(() => import('./pages/requests/AnswerProofRequest'))
@@ -437,6 +438,7 @@ export default function App() {
           <Route path="requests/new" element={<NewProofRequest />} />
           <Route path="requests/sent/:id" element={<SentAnswer />} />
           <Route path="requests/:id" element={<ProofRequestDetail />} />
+          <Route path="requests/:id/answers/:answerId" element={<ResponseDetail />} />
           <Route path="answer/:id" element={<AnswerProofRequest />} />
           {/* Same scanner as public /scan, inside the app shell. */}
           <Route path="scan" element={<ScanCertificate embedded />} />
