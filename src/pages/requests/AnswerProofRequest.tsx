@@ -238,6 +238,9 @@ export default function AnswerProofRequest() {
             const usable = matches.filter((c) => c.check?.usable)
             const chosen = candidates.find((c) => c.id === choice[i])
             const skipped = matches.length > 0 && choice[i] === null
+            // Every match was checked and none passed: show them with their
+            // reasons rather than presenting it as a requirement left out.
+            const noneUsable = matches.length > 0 && usable.length === 0 && matches.every((c) => c.check !== null)
             const shown = chosen ? allowedClaims(r).filter((k) => !['iss', 'iat', 'exp'].includes(k) && chosen.claims[k] !== undefined && chosen.claims[k] !== '') : []
             return (
               <section key={i} className="bg-white rounded-xl border border-stone-200 overflow-hidden" data-testid={`answer-requirement-${i}`}>
@@ -260,9 +263,9 @@ export default function AnswerProofRequest() {
                 </div>
 
                 {matches.length === 0 && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.no_match')}</p>}
-                {skipped && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.skip_requirement')}</p>}
+                {skipped && !noneUsable && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.skip_requirement')}</p>}
 
-                {(picking === i || (!chosen && !skipped && matches.length > 0)) && (
+                {(picking === i || (!chosen && matches.length > 0 && (!skipped || noneUsable))) && (
                   <div className="divide-y divide-stone-100">
                     {matches.map((c) => (
                       <label key={c.id} className={`flex items-start gap-2 px-4 py-3 text-sm ${c.check?.usable === false ? 'text-stone-400' : 'text-stone-800'}`}>
