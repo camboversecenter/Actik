@@ -695,6 +695,7 @@ const translations = {
       invalid_NOTE: 'A note is too long.',
       invalid_EXPIRY: 'A request stays open for 1 to 90 days.',
       not_found: 'There is no such request.',
+      answer_not_found: 'There is no such answer to this request.',
       share_heading: 'Share this request',
       share_hint: 'Send the link or show the code. Anyone with it can see what you ask; only people who answer send you anything.',
       close_request: 'Close request',
@@ -704,8 +705,6 @@ const translations = {
       no_answers_yet: 'No answers yet.',
       contact: 'Contact:',
       not_answered: 'Not answered.',
-      view_details: 'Show details',
-      hide_details: 'Hide details',
       not_asked_WRONG_TYPE: 'Not counted: this is a different kind of credential from the one asked for.',
       not_asked_OVER_DISCLOSED: 'Not shown: this answer carries fields the request could not ask for.',
       not_asked_NO_SUCH_REQUIREMENT: 'Not shown.',
@@ -1729,6 +1728,7 @@ const translations = {
       invalid_NOTE: 'កំណត់ចំណាំវែងពេក។', // TODO(km-review)
       invalid_EXPIRY: 'សំណើបើកពី ១ ដល់ ៩០ ថ្ងៃ។', // TODO(km-review)
       not_found: 'គ្មានសំណើនេះទេ។', // TODO(km-review)
+      answer_not_found: 'គ្មានចម្លើយនេះចំពោះសំណើនេះទេ។', // TODO(km-review)
       share_heading: 'ចែករំលែកសំណើនេះ', // TODO(km-review)
       share_hint: 'ផ្ញើតំណ ឬបង្ហាញកូដ។ អ្នកមានវាអាចឃើញអ្វីដែលអ្នកស្នើ ប៉ុន្តែតែអ្នកដែលឆ្លើយទេដែលផ្ញើអ្វីមកអ្នក។', // TODO(km-review)
       close_request: 'បិទសំណើ', // TODO(km-review)
@@ -1738,8 +1738,6 @@ const translations = {
       no_answers_yet: 'មិនទាន់មានចម្លើយទេ។', // TODO(km-review)
       contact: 'ទំនាក់ទំនង៖', // TODO(km-review)
       not_answered: 'មិនបានឆ្លើយ។', // TODO(km-review)
-      view_details: 'បង្ហាញព័ត៌មានលម្អិត', // TODO(km-review)
-      hide_details: 'លាក់ព័ត៌មានលម្អិត', // TODO(km-review)
       not_asked_WRONG_TYPE: 'មិនរាប់បញ្ចូល៖ នេះជាប្រភេទលិខិតខុសពីអ្វីដែលបានស្នើ។', // TODO(km-review)
       not_asked_OVER_DISCLOSED: 'មិនបង្ហាញ៖ ចម្លើយនេះមានព័ត៌មានដែលសំណើមិនអាចស្នើបាន។', // TODO(km-review)
       not_asked_NO_SUCH_REQUIREMENT: 'មិនបង្ហាញ។', // TODO(km-review)
