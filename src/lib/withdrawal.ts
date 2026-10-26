@@ -78,6 +78,33 @@ export async function loadOwnRevocations(did: string): Promise<OpenedRevocations
 }
 
 /**
+ * Why a list signed with the unlocked key would be refused, or null when it
+ * would be accepted. Checked when the page opens as well as before signing,
+ * so an issuer is told before choosing what to withdraw, not after.
+ */
+export async function signingKeyBlocker(did: string, opts: { force?: boolean } = {}): Promise<string | null> {
+  const held = getIssuerKey()
+  if (!held || held.did !== did) return null
+  const trust = await loadTrustState({ force: opts.force })
+  if (!trust.list) return 'The signed trust registry is not available right now. Try again shortly.'
+  // A list signed with a key the registry does not (yet) list for you would be
+  // refused by every verifier. Say so rather than publish something inert.
+  try {
+    keyAcceptedAt(trust.list, did, held.kid, Math.floor(Date.now() / 1000))
+    return null
+  } catch (e) {
+    if (e instanceof TrustRejected) {
+      return (
+        'Withdrawals are paused: your current signing key is not on the published trust registry yet. This happens ' +
+        'after a key change, until the registry operator publishes the next version of the registry. A list signed ' +
+        'now would be refused by verifiers, so nothing can be published until then.'
+      )
+    }
+    throw e
+  }
+}
+
+/**
  * Sign and publish the next version of this issuer's list, with `add`
  * appended. With nothing to add it simply renews the list — which must happen
  * at least every 30 days, or verifiers report standing as unchecked.
@@ -87,25 +114,13 @@ export async function publishWithdrawals(did: string, add: WithdrawalRequest[]):
   if (!held || held.did !== did) {
     throw new WithdrawalBlocked('Unlock your signing key first: the list is signed with it.')
   }
-
-  const trust = await loadTrustState({ force: true })
+  const blocked = await signingKeyBlocker(did, { force: true })
+  if (blocked) throw new WithdrawalBlocked(blocked)
+  const trust = await loadTrustState()
   if (!trust.list) {
     throw new WithdrawalBlocked('The signed trust registry is not available right now. Try again shortly.')
   }
   const now = Math.floor(Date.now() / 1000)
-  // A list signed with a key the registry does not (yet) list for you would be
-  // refused by every verifier. Say so now rather than publish something inert.
-  try {
-    keyAcceptedAt(trust.list, did, held.kid, now)
-  } catch (e) {
-    if (e instanceof TrustRejected) {
-      throw new WithdrawalBlocked(
-        'Your current signing key is not on the published trust registry yet (it changes when the registry is next ' +
-          'published after a key change). A list signed with it would not be accepted, so nothing was published.'
-      )
-    }
-    throw e
-  }
 
   const previous = await loadOwnRevocations(did)
   const document = await buildRevocationList({
