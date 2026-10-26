@@ -723,6 +723,10 @@ const translations = {
       set_up_wallet: 'Set up your wallet',
       unlock_failed: 'The wallet did not unlock. Try again.',
       no_match: 'Your wallet has no credential of this kind.',
+      change: 'Change',
+      skip_short: 'Skip',
+      include: 'Include',
+      visible_until_withdrawn: 'Visible to the requester until you withdraw it.',
       checking: 'Checking…',
       skip_requirement: 'Do not answer this one',
       they_will_see: '{requester} will see:',
@@ -1753,6 +1757,10 @@ const translations = {
       set_up_wallet: 'រៀបចំកាបូបរបស់អ្នក', // TODO(km-review)
       unlock_failed: 'កាបូបមិនបានដោះសោទេ។ សូមព្យាយាមម្តងទៀត។', // TODO(km-review)
       no_match: 'កាបូបរបស់អ្នកគ្មានលិខិតប្រភេទនេះទេ។', // TODO(km-review)
+      change: 'ប្តូរ', // TODO(km-review)
+      skip_short: 'រំលង', // TODO(km-review)
+      include: 'បញ្ចូល', // TODO(km-review)
+      visible_until_withdrawn: 'អ្នកស្នើសុំអាចមើលឃើញរហូតដល់អ្នកដកវាវិញ។', // TODO(km-review)
       checking: 'កំពុងពិនិត្យ…', // TODO(km-review)
       skip_requirement: 'មិនឆ្លើយចំណុចនេះ', // TODO(km-review)
       they_will_see: '{requester} នឹងឃើញ៖', // TODO(km-review)

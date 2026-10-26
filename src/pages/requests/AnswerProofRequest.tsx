@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, EyeOff, Loader2, Mail } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
@@ -25,7 +25,7 @@ import {
 } from '../../lib/proofRequest'
 import { getProofRequest, submitAnswer } from '../../lib/proofRequestApi'
 import { ensureHolderKey } from '../../lib/holderKey'
-import { RequestSummary } from './ProofRequestPublic'
+import { longDate } from '../../lib/dates'
 import { displayClaim } from '../../lib/claimDisplay'
 
 type UnlockMethod = 'pin' | 'passkey' | 'biometric' | 'both' | null
@@ -60,6 +60,7 @@ export default function AnswerProofRequest() {
   const [contact, setContact] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [picking, setPicking] = useState<number | null>(null)
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
@@ -179,7 +180,18 @@ export default function AnswerProofRequest() {
       <Link to="/app/requests" className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
         <ArrowLeft size={14} /> {t('proof.page_title')}
       </Link>
-      <RequestSummary request={request} />
+      <header className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{t('proof.request_from')}</p>
+        <h1 className="text-[24px] md:text-[28px] font-bold text-stone-900 leading-tight">{request.title}</h1>
+        <p className="text-sm text-stone-600">{request.requesterName}</p>
+        <p className="text-xs text-amber-800">{t('proof.requester_unverified')}</p>
+        {request.description && <p className="text-sm text-stone-700 whitespace-pre-line pt-1">{request.description}</p>}
+        <p className="text-xs text-stone-500">
+          {request.status === 'open'
+            ? t('proof.until', { date: longDate(Math.floor(new Date(request.expiresAt).getTime() / 1000)) })
+            : t(`proof.status_${request.status}_long`)}
+        </p>
+      </header>
 
       {sent ? (
         <div className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-800 space-y-2" data-testid="answer-sent">
@@ -223,36 +235,64 @@ export default function AnswerProofRequest() {
         <>
           {request.requirements.map((r, i) => {
             const matches = candidates.filter((c) => c.type === r.type)
+            const usable = matches.filter((c) => c.check?.usable)
             const chosen = candidates.find((c) => c.id === choice[i])
+            const skipped = matches.length > 0 && choice[i] === null
             const shown = chosen ? allowedClaims(r).filter((k) => !['iss', 'iat', 'exp'].includes(k) && chosen.claims[k] !== undefined && chosen.claims[k] !== '') : []
             return (
-              <section key={i} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3" data-testid={`answer-requirement-${i}`}>
-                <h2 className="text-sm font-bold text-stone-900">{i + 1}. {t(`proof.type_${r.type}`)}{r.note && <span className="font-normal text-stone-500"> — {r.note}</span>}</h2>
-                {matches.length === 0 && <p className="text-sm text-stone-500">{t('proof.no_match')}</p>}
-                {matches.map((c) => (
-                  <label key={c.id} className={`flex items-start gap-2 text-sm ${c.check?.usable === false ? 'text-stone-400' : 'text-stone-800'}`}>
-                    <input
-                      type="radio" name={`req-${i}`} className="mt-1" checked={choice[i] === c.id}
-                      disabled={!c.check?.usable} onChange={() => setChoice((ch) => ({ ...ch, [i]: c.id }))}
-                    />
-                    <span>
-                      <span className="font-medium">{c.label}</span>
-                      {c.check === null && <span className="block text-xs text-stone-500">{t('proof.checking')}</span>}
-                      {c.check?.usable && <span className="block text-xs text-stone-500">{t('proof.issued_by')} {c.check.issuer}</span>}
-                      {c.check?.usable === false && <span className="block text-xs text-rose-700">{c.check.message}</span>}
-                    </span>
-                  </label>
-                ))}
-                {matches.length > 0 && (
-                  <label className="flex items-center gap-2 text-sm text-stone-600">
-                    <input type="radio" name={`req-${i}`} checked={choice[i] === null} onChange={() => setChoice((ch) => ({ ...ch, [i]: null }))} />
-                    {t('proof.skip_requirement')}
-                  </label>
+              <section key={i} className="bg-white rounded-xl border border-stone-200 overflow-hidden" data-testid={`answer-requirement-${i}`}>
+                <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-stone-50 border-b border-stone-100">
+                  <h2 className="text-sm font-bold text-stone-900 min-w-0">
+                    {t(`proof.type_${r.type}`)}{r.note && <span className="font-normal text-stone-500"> — {r.note}</span>}
+                  </h2>
+                  {chosen && (
+                    <div className="flex items-center gap-3 shrink-0 text-xs font-medium text-indigo-700">
+                      {usable.length > 1 && (
+                        <button type="button" onClick={() => setPicking(picking === i ? null : i)}>{t('proof.change')}</button>
+                      )}
+                      <button type="button" className="text-stone-500" onClick={() => setChoice((ch) => ({ ...ch, [i]: null }))}>{t('proof.skip_short')}</button>
+                    </div>
+                  )}
+                  {skipped && usable.length > 0 && (
+                    <button type="button" className="shrink-0 text-xs font-medium text-indigo-700"
+                      onClick={() => setChoice((ch) => ({ ...ch, [i]: usable[0].id }))}>{t('proof.include')}</button>
+                  )}
+                </div>
+
+                {matches.length === 0 && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.no_match')}</p>}
+                {skipped && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.skip_requirement')}</p>}
+
+                {(picking === i || (!chosen && !skipped && matches.length > 0)) && (
+                  <div className="divide-y divide-stone-100">
+                    {matches.map((c) => (
+                      <label key={c.id} className={`flex items-start gap-2 px-4 py-3 text-sm ${c.check?.usable === false ? 'text-stone-400' : 'text-stone-800'}`}>
+                        <input
+                          type="radio" name={`req-${i}`} className="mt-1" checked={choice[i] === c.id}
+                          disabled={!c.check?.usable}
+                          onChange={() => { setChoice((ch) => ({ ...ch, [i]: c.id })); setPicking(null) }}
+                        />
+                        <span>
+                          <span className="font-medium">{c.label}</span>
+                          {c.check === null && <span className="block text-xs text-stone-500">{t('proof.checking')}</span>}
+                          {c.check?.usable && <span className="block text-xs text-stone-500">{t('proof.issued_by')} {c.check.issuer}</span>}
+                          {c.check?.usable === false && <span className="block text-xs text-rose-700">{c.check.message}</span>}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 )}
-                {chosen && (
-                  <div className="rounded-lg bg-stone-50 border border-stone-200 p-3" data-testid={`preview-${i}`}>
-                    <p className="text-xs font-semibold text-stone-600 mb-1">{t('proof.they_will_see', { requester: request.requesterName })}</p>
-                    <dl className="grid grid-cols-[minmax(0,9rem)_1fr] gap-x-3 gap-y-0.5 text-xs">
+
+                {chosen && picking !== i && (
+                  <div data-testid={`preview-${i}`}>
+                    <div className="px-4 pt-3 flex items-start gap-2">
+                      <BadgeCheck size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium text-stone-900 break-words">{chosen.label}</p>
+                        {chosen.check?.usable && <p className="text-xs text-stone-500">{chosen.check.issuer}</p>}
+                      </div>
+                    </div>
+                    <p className="px-4 pt-3 text-xs text-stone-500">{t('proof.they_will_see', { requester: request.requesterName })}</p>
+                    <dl className="px-4 pt-1 pb-3 grid grid-cols-[minmax(0,8rem)_1fr] gap-x-4 gap-y-1.5 text-sm">
                       {shown.map((k) => (
                         <div key={k} className="contents">
                           <dt className="text-stone-500">{t(`proof.field_${k}`)}</dt>
@@ -266,21 +306,32 @@ export default function AnswerProofRequest() {
             )
           })}
 
-          <label className="block text-sm font-medium text-stone-800">
-            {t('proof.contact_label')}
-            <input value={contact} onChange={(e) => setContact(e.target.value)} maxLength={200}
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm mt-1" name="contact" />
-            <span className="block text-xs text-stone-500 font-normal mt-1">{t('proof.contact_hint')}</span>
-          </label>
+          <div className="rounded-xl bg-white border border-stone-200 divide-y divide-stone-100 text-sm">
+            <label className="flex items-center gap-3 px-4 py-3">
+              <Mail size={16} className="text-stone-400 shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-stone-500">{t('proof.contact_label')}</span>
+                <input value={contact} onChange={(e) => setContact(e.target.value)} maxLength={200}
+                  className="w-full bg-transparent text-stone-900 font-medium outline-none" name="contact" />
+              </span>
+            </label>
+            <div className="flex items-center gap-3 px-4 py-3">
+              <EyeOff size={16} className="text-stone-400 shrink-0" />
+              <p className="text-xs text-stone-500">{t('proof.visible_until_withdrawn')}</p>
+            </div>
+          </div>
+          <p className="text-xs text-stone-500 leading-relaxed -mt-3 px-1">{t('proof.contact_hint')}</p>
 
           {error && <div className="rounded-lg p-3 bg-rose-50 text-rose-800 border border-rose-200 text-sm">{error}</div>}
 
-          <button
-            type="button" onClick={send} disabled={sending || chosen.length === 0 || contact.trim().length < 3}
-            className="w-full h-12 rounded-xl bg-indigo-600 text-white font-semibold text-sm disabled:opacity-50"
-          >
-            {sending ? t('proof.sending') : t('proof.send_answer', { count: chosen.length })}
-          </button>
+          <div className="sticky z-20 bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+8px)] md:bottom-4 material-bar rounded-2xl border border-stone-900/[0.06] p-2">
+            <button
+              type="button" onClick={send} disabled={sending || chosen.length === 0 || contact.trim().length < 3}
+              className="w-full h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm disabled:opacity-50"
+            >
+              {sending ? t('proof.sending') : t('proof.send_answer', { count: chosen.length })}
+            </button>
+          </div>
           <p className="text-xs text-stone-500 leading-relaxed">{t('proof.answer_privacy')}</p>
         </>
       )}
