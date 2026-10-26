@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useLanguage, formatDegreeTitle } from '../../lib/i18n'
-import { Loader2, IdCard } from 'lucide-react'
+import { Loader2, IdCard, FileX, KeyRound, ChevronRight } from 'lucide-react'
 import StatusPill from '../../components/ui/StatusPill'
 import { loadIssuedRecords, type IssuedRecord } from '../../lib/withdrawal'
 
@@ -74,12 +74,34 @@ export default function IssuedCredentials() {
       <div className="mb-8 pt-4">
         <h1 className="font-khmer text-[26px] md:text-[30px] font-bold text-stone-900 leading-tight">{t('dashboard.issued_creds')}</h1>
         <p className="text-sm text-stone-500 mt-1">{t('dashboard.issued_creds_desc')}</p>
-        <Link to="/app/withdrawals" className="inline-block mt-3 text-sm font-semibold text-rose-700 hover:text-rose-800">
-          {t('dashboard.manage_withdrawals')} →
-        </Link>
-        <Link to="/app/reissue-requests" className="inline-block mt-3 ml-4 text-sm font-semibold text-indigo-700 hover:text-indigo-800">
-          {t('dashboard.reissue_requests')} →
-        </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+          <Link
+            to="/app/withdrawals"
+            className="group flex items-center gap-3 bg-white border border-stone-200 rounded-xl p-4 shadow-sm hover:border-rose-300 hover:shadow transition-all"
+          >
+            <span className="w-10 h-10 shrink-0 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <FileX size={20} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-stone-900">{t('dashboard.manage_withdrawals')}</span>
+              <span className="block text-xs text-stone-500 mt-0.5">{t('dashboard.manage_withdrawals_hint')}</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-stone-400 group-hover:text-rose-600 transition-colors" />
+          </Link>
+          <Link
+            to="/app/reissue-requests"
+            className="group flex items-center gap-3 bg-white border border-stone-200 rounded-xl p-4 shadow-sm hover:border-indigo-300 hover:shadow transition-all"
+          >
+            <span className="w-10 h-10 shrink-0 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <KeyRound size={20} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-stone-900">{t('dashboard.reissue_requests')}</span>
+              <span className="block text-xs text-stone-500 mt-0.5">{t('dashboard.reissue_requests_hint')}</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-stone-400 group-hover:text-indigo-600 transition-colors" />
+          </Link>
+        </div>
       </div>
 
       {records.length === 0 ? (

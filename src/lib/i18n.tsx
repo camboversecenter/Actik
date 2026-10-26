@@ -351,8 +351,10 @@ const translations = {
       status_claimed: 'Claimed',
       status_issued: 'Issued',
       status_withdrawn: 'Withdrawn',
-      manage_withdrawals: 'Withdraw a credential, or renew your withdrawal list',
-      reissue_requests: 'Reissue requests (new wallet keys)',
+      manage_withdrawals: 'Withdrawals',
+      manage_withdrawals_hint: 'Withdraw a credential, or renew your withdrawal list',
+      reissue_requests: 'Reissue requests',
+      reissue_requests_hint: 'People whose wallet key changed',
       reissue_banner: 'Reissuing to this person\'s new wallet key, from your own records. When you issue, the credential it replaces is withdrawn as “replaced by a corrected credential”, and the request is closed.',
       reissue_not_withdrawn: 'Issued, but the replaced credential was not withdrawn yet — withdraw it under Withdrawals:',
       status_pending: 'Pending',
@@ -1383,8 +1385,10 @@ const translations = {
       status_claimed: 'បានទទួល',
       status_issued: 'បានចេញ', // TODO(km-review)
       status_withdrawn: 'បានដកហូត', // TODO(km-review)
-      manage_withdrawals: 'ដកហូតវិញ្ញាបនបត្រ ឬបន្តបញ្ជីដកហូតរបស់អ្នក', // TODO(km-review)
-      reissue_requests: 'សំណើចេញឡើងវិញ (កូនសោកាបូបថ្មី)', // TODO(km-review)
+      manage_withdrawals: 'ការដកហូត', // TODO(km-review)
+      manage_withdrawals_hint: 'ដកហូតវិញ្ញាបនបត្រ ឬបន្តបញ្ជីដកហូតរបស់អ្នក', // TODO(km-review)
+      reissue_requests: 'សំណើចេញឡើងវិញ', // TODO(km-review)
+      reissue_requests_hint: 'អ្នកដែលកូនសោកាបូបរបស់ពួកគេបានផ្លាស់ប្តូរ', // TODO(km-review)
       reissue_banner: 'កំពុងចេញឡើងវិញទៅកូនសោកាបូបថ្មីរបស់បុគ្គលនេះ ពីកំណត់ត្រារបស់អ្នក។ ពេលអ្នកចេញ លិខិតដែលវាជំនួសនឹងត្រូវដកវិញជា “ជំនួសដោយលិខិតដែលបានកែតម្រូវ” ហើយសំណើត្រូវបានបិទ។', // TODO(km-review)
       reissue_not_withdrawn: 'បានចេញ ប៉ុន្តែលិខិតដែលត្រូវជំនួសមិនទាន់ត្រូវបានដកវិញទេ — សូមដកវានៅក្នុង ការដកហូត៖', // TODO(km-review)
       status_pending: 'រង់ចាំ',
