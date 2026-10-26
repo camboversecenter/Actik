@@ -78,9 +78,9 @@ export async function loadOwnRevocations(did: string): Promise<OpenedRevocations
 }
 
 /**
- * Why a list signed with the unlocked key would be refused, or null when it
- * would be accepted. Checked when the page opens as well as before signing,
- * so an issuer is told before choosing what to withdraw, not after.
+ * Why anything signed with the unlocked key would be refused, or null when it
+ * would be accepted. Checked when a signing page opens as well as before
+ * signing, so an issuer is told before filling anything in, not after.
  */
 export async function signingKeyBlocker(did: string, opts: { force?: boolean } = {}): Promise<string | null> {
   const held = getIssuerKey()
@@ -95,9 +95,9 @@ export async function signingKeyBlocker(did: string, opts: { force?: boolean } =
   } catch (e) {
     if (e instanceof TrustRejected) {
       return (
-        'Withdrawals are paused: your current signing key is not on the published trust registry yet. This happens ' +
-        'after a key change, until the registry operator publishes the next version of the registry. A list signed ' +
-        'now would be refused by verifiers, so nothing can be published until then.'
+        'Signing is paused: your current signing key is not on the published trust registry yet. This happens ' +
+        'after a key change, until the registry operator publishes the next version of the registry. Anything ' +
+        'signed now — a certificate or a withdrawal — would be refused by verifiers.'
       )
     }
     throw e
