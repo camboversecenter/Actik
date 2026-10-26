@@ -21,7 +21,6 @@ export function RequestSummary({ request }: { request: ProofRequest }) {
         <p className="text-sm text-stone-700 mt-1">{request.requesterName}</p>
         <p className="text-xs text-amber-800 mt-1">{t('proof.requester_unverified')}</p>
       </div>
-      {request.description && <p className="text-sm text-stone-700 whitespace-pre-line">{request.description}</p>}
       <div className="bg-white rounded-2xl border border-stone-200/80 p-5 space-y-2.5">
         <h2 className="text-sm font-bold text-stone-900">{t('proof.they_ask')}</h2>
         <ol className="list-decimal pl-5 text-sm text-stone-800 space-y-1">

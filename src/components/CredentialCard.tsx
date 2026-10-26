@@ -127,9 +127,12 @@ export default function CredentialCard({
             {truncateDid(issuerDid)}
           </span>
         ) : <span />}
-        <span className="shrink-0 inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          {t('wallet.verified_label')}
+        {/* Not a verdict: the credential was checked against the trust and
+            withdrawal lists when it was added. Its standing today is what a
+            verifier's own check reports. */}
+        <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-medium text-stone-500 bg-white border border-stone-200 rounded-full px-2 py-0.5">
+          <Check size={11} strokeWidth={2.25} className="text-stone-400" />
+          {t('wallet.checked_when_added')}
         </span>
       </div>
     </div>

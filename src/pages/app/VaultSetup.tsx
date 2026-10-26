@@ -292,10 +292,16 @@ export default function VaultSetup() {
       await supabase.rpc('retire_holder_key', { p_reason: 'lost' })
       forgetHolderKey()
 
-      // 1. Delete from vaults table (if exists)
+      // 1. Delete the credentials this vault sealed. Nothing can open them
+      //    once the vault is gone, and the warning promises they are deleted.
+      //    Stop here if that fails, so the vault is not left half-reset.
+      const { error: credsError } = await supabase.from('credentials').delete().eq('owner', currentUser.id)
+      if (credsError) throw credsError
+
+      // 2. Delete from vaults table (if exists)
       await supabase.from('vaults').delete().eq('user_id', currentUser.id)
 
-      // 2. Clear vault columns from profiles table
+      // 3. Clear vault columns from profiles table
       await supabase
         .from('profiles')
         .update({
@@ -306,7 +312,7 @@ export default function VaultSetup() {
         })
         .eq('id', currentUser.id)
 
-      // 3. Clear local state
+      // 4. Clear local state
       lock()
 
       // Reset components
@@ -963,7 +969,6 @@ export function useClaim() {
     if (res.error && (res.error.message.includes('column') || res.error.code === '42703')) {
       const fallbackRes = await supabase.from('credentials').insert({
         owner: ownerId,
-        label: credential.degree_title,
         cipher: encrypted.cipher,
         iv: encrypted.iv
       })

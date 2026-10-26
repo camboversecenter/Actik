@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { cardFromSdJwt } from '../../lib/walletCard'
 import { useZkVault } from '../../vault/zk-vault'
 import { readDisclosures, peekJwt } from '../../lib/sdjwt'
 import { readPrintedFields } from '../../lib/printedCredential'
@@ -161,7 +162,7 @@ export default function CredentialDetail() {
         holder_email: data.holder_email || user.email,
         issuer_did: data.issuer_did || '',
         institution_name: data.institution_name || '',
-        degree_title: data.degree_title || data.label || 'Degree Certificate',
+        degree_title: data.degree_title || data.label || t('wallet.encrypted_certificate_fallback'),
         sd_jwt: data.sd_jwt || '',
         claimed: data.claimed ?? true,
         claimed_at: data.claimed_at || data.created_at,
@@ -309,6 +310,15 @@ export default function CredentialDetail() {
             } catch {}
           }
 
+          // The heading's institution, DID and title come from the credential
+          // itself once opened — they are not stored in the clear.
+          const card = cardFromSdJwt(sdjwtString)
+          setCredential((prev) => prev && {
+            ...prev,
+            issuer_did: prev.issuer_did || card.issuer_did || '',
+            institution_name: prev.institution_name || card.institution_name || '',
+            degree_title: card.title || prev.degree_title,
+          })
           setDetail(fields)
         } catch {
           showToast(t('wallet.decryption_failed'))

@@ -76,7 +76,7 @@ const old = await checkCredential(present(unbound, ALWAYS_REVEALED), did, trust,
 assert(old.holder.binding === 'unbound', 'an unbound credential still verifies, and says it is unbound — check ID')
 
 console.log('\nanswering a proof request')
-const req = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [{ type: 'academic_degree', extras: ['major'], note: '' }] }
+const req = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [{ type: 'academic_degree', extras: ['major'] }] }
 const other = { ...req, id: '9e8d7c6b-1111-4222-8333-944455556666' }
 const answer = await buildBoundAnswer(req.requirements[0], bound, req.id, holderKey)
 const checked = await checkAnswer(req, { requirement: 0, presentation: answer }, trust, () => none, now)

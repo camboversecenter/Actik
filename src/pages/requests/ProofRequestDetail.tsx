@@ -32,7 +32,6 @@ export function RequirementLabel({ request, index }: { request: Pick<ProofReques
     <span>
       {t(`proof.type_${r.type}`)}
       {r.extras.length > 0 && <span className="text-stone-500"> + {r.extras.map((f) => t(`proof.field_${f}`)).join(', ')}</span>}
-      {r.note && <span className="text-stone-500"> — {r.note}</span>}
     </span>
   )
 }

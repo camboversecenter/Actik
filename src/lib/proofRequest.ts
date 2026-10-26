@@ -66,17 +66,20 @@ export const NEVER_REQUESTABLE = [
   'student number', 'place of birth', 'religion or ethnicity', 'email or phone',
 ]
 
+/**
+ * One credential asked for. There is no free-text field anywhere in a
+ * request beyond its title and who is asking: a box for "the employer's own
+ * words" is a box for "how old are you?", and the format is what keeps that
+ * question from being asked (paper, "Asking Less, by Design").
+ */
 export interface Requirement {
   type: string
   extras: string[]
-  /** The employer's own words about this requirement, e.g. "in accounting or finance". */
-  note: string
 }
 
 export interface ProofRequestDraft {
   requesterName: string
   title: string
-  description: string
   requirements: Requirement[]
   expiresInDays: number
 }
@@ -85,7 +88,6 @@ export interface ProofRequest {
   id: string
   requesterName: string
   title: string
-  description: string
   requirements: Requirement[]
   expiresAt: string
   status: 'open' | 'closed' | 'expired'
@@ -94,12 +96,10 @@ export interface ProofRequest {
 export type ProofRequestProblem =
   | 'REQUESTER_NAME'
   | 'TITLE'
-  | 'DESCRIPTION'
   | 'NO_REQUIREMENTS'
   | 'TOO_MANY_REQUIREMENTS'
   | 'UNKNOWN_TYPE'
   | 'FIELD_NOT_REQUESTABLE'
-  | 'NOTE'
   | 'EXPIRY'
 
 export class ProofRequestInvalid extends Error {
@@ -118,7 +118,6 @@ const textLength = (s: unknown, min: number, max: number) =>
 export function validateRequest(d: ProofRequestDraft): ProofRequestDraft {
   if (!textLength(d.requesterName, 2, 120)) throw new ProofRequestInvalid('REQUESTER_NAME')
   if (!textLength(d.title, 2, 120)) throw new ProofRequestInvalid('TITLE')
-  if (typeof d.description !== 'string' || d.description.length > 2000) throw new ProofRequestInvalid('DESCRIPTION')
   if (!Array.isArray(d.requirements) || d.requirements.length === 0) throw new ProofRequestInvalid('NO_REQUIREMENTS')
   if (d.requirements.length > MAX_REQUIREMENTS) throw new ProofRequestInvalid('TOO_MANY_REQUIREMENTS')
   const requirements = d.requirements.map((r) => {
@@ -128,8 +127,7 @@ export function validateRequest(d: ProofRequestDraft): ProofRequestDraft {
     for (const f of extras) {
       if (!spec.extras.includes(f)) throw new ProofRequestInvalid('FIELD_NOT_REQUESTABLE', f)
     }
-    if (typeof r.note !== 'string' || r.note.length > 300) throw new ProofRequestInvalid('NOTE')
-    return { type: r.type, extras, note: r.note.trim() }
+    return { type: r.type, extras }
   })
   if (!Number.isInteger(d.expiresInDays) || d.expiresInDays < 1 || d.expiresInDays > MAX_REQUEST_DAYS) {
     throw new ProofRequestInvalid('EXPIRY')
@@ -137,7 +135,6 @@ export function validateRequest(d: ProofRequestDraft): ProofRequestDraft {
   return {
     requesterName: d.requesterName.trim(),
     title: d.title.trim(),
-    description: d.description.trim(),
     requirements,
     expiresInDays: d.expiresInDays,
   }

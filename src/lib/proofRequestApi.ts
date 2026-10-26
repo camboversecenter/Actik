@@ -67,7 +67,6 @@ export async function createProofRequest(draft: ProofRequestDraft): Promise<stri
     .insert({
       requester_name: d.requesterName,
       title: d.title,
-      description: d.description,
       requirements: d.requirements,
       expires_at: new Date(Date.now() + d.expiresInDays * 86400 * 1000).toISOString(),
     })
@@ -105,8 +104,9 @@ export async function getProofRequest(id: string): Promise<ProofRequest | null> 
     id: r.id,
     requesterName: r.requester_name,
     title: r.title,
-    description: r.description ?? '',
-    requirements: (r.requirements ?? []) as Requirement[],
+    // Requests written before notes were removed may still carry one: it is
+    // not shown.
+    requirements: ((r.requirements ?? []) as Requirement[]).map(({ type, extras }) => ({ type, extras })),
     expiresAt: r.expires_at,
     status: r.status,
   }

@@ -20,8 +20,7 @@ export default function NewProofRequest() {
   const navigate = useNavigate()
   const [requesterName, setRequesterName] = useState('')
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [requirements, setRequirements] = useState<Requirement[]>([{ type: 'academic_degree', extras: [], note: '' }])
+  const [requirements, setRequirements] = useState<Requirement[]>([{ type: 'academic_degree', extras: [] }])
   const [days, setDays] = useState(30)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +33,7 @@ export default function NewProofRequest() {
     setBusy(true)
     setError(null)
     try {
-      const id = await createProofRequest({ requesterName, title, description, requirements, expiresInDays: days })
+      const id = await createProofRequest({ requesterName, title, requirements, expiresInDays: days })
       navigate(`/app/requests/${id}`, { replace: true })
     } catch (err) {
       setError(err instanceof ProofRequestInvalid ? t(`proof.invalid_${err.problem}`) : err instanceof Error ? err.message : String(err))
@@ -63,10 +62,6 @@ export default function NewProofRequest() {
         <label className="block text-sm font-medium text-stone-800">
           {t('proof.request_title')}
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${input} mt-1`} maxLength={120} name="title" placeholder={t('proof.request_title_placeholder')} />
-        </label>
-        <label className="block text-sm font-medium text-stone-800">
-          {t('proof.description')}
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={`${input} mt-1`} rows={3} maxLength={2000} name="description" />
         </label>
       </section>
 
@@ -102,14 +97,10 @@ export default function NewProofRequest() {
                 ))}
               </div>
             )}
-            <input
-              value={r.note} onChange={(e) => update(i, { note: e.target.value })} maxLength={300}
-              className={input} placeholder={t('proof.note_placeholder')} aria-label={t('proof.note')}
-            />
           </div>
         ))}
         {requirements.length < MAX_REQUIREMENTS && (
-          <button type="button" onClick={() => setRequirements((rs) => [...rs, { type: 'professional_certification', extras: [], note: '' }])}
+          <button type="button" onClick={() => setRequirements((rs) => [...rs, { type: 'professional_certification', extras: [] }])}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-700">
             <Plus size={14} /> {t('proof.add_requirement')}
           </button>

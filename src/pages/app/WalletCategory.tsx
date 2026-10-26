@@ -5,26 +5,12 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import CredentialCard from '../../components/CredentialCard'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { readDisclosures } from '../../lib/sdjwt'
+import { CARD_LIST_COLUMNS, type WalletCard } from '../../lib/walletCard'
+import { openCards } from '../../lib/walletCardApi'
 
-// Best-effort decrypted fallback for credentials claimed before institution_name
-// (and friends) were threaded through at issuance/claim time — see Wallet.tsx.
-// No degree_type here: it's the exact same string as the card's title
-// (degree_title/label below), not a distinct field.
-interface DecryptedPreview {
-  institution_name?: string
-  major?: string
-  issuer_did?: string
-}
-
-function parseJwtPayload(jwt: string): any {
-  try {
-    const base64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(base64))
-  } catch {
-    return {}
-  }
-}
+// A card's details (title, institution, major, dates) are sealed with the
+// vault key, not stored in plain columns: they show once the wallet is
+// unlocked. See lib/walletCard.ts.
 
 // Reusing same Credential interface from Wallet.tsx
 interface Credential {
@@ -45,6 +31,8 @@ interface Credential {
 
   cipher?: string
   iv?: string
+  card_cipher?: string | null
+  card_iv?: string | null
 }
 
 export default function WalletCategory() {
@@ -61,9 +49,9 @@ export default function WalletCategory() {
   // Modals & Action States
   
   // Vault state
-  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, decryptPayload } = useZkVault()
+  const { isUnlocked, unlockWithPin, unlockWithPasskey, checkVaultStatus, encryptPayload, decryptPayload } = useZkVault()
   const { t } = useLanguage()
-  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, DecryptedPreview>>({})
+  const [decryptedPreviews, setDecryptedPreviews] = useState<Record<string, WalletCard>>({})
   const [vaultExists, setVaultExists] = useState<boolean | null>(null)
   const [unlockMethod, setUnlockMethod] = useState<'pin' | 'passkey' | 'biometric' | 'both' | null>(null)
   
@@ -141,7 +129,7 @@ export default function WalletCategory() {
         .from('credentials')
         // List columns only — `cipher` holds the whole encrypted credential
         // (photo included, ~0.7 MB each) and is fetched on demand below.
-        .select('id, owner, label, iv, created_at, graduation_date, credential_type, major, issuer_did, institution_name')
+        .select(CARD_LIST_COLUMNS)
         .eq('owner', user.id)
         .order('created_at', { ascending: false })
       
@@ -160,18 +148,20 @@ export default function WalletCategory() {
         issuer_id: c.issuer_id || '',
         holder_id: c.owner,
         holder_email: c.holder_email || user.email,
-        issuer_did: c.issuer_did || '',
-        institution_name: c.institution_name || '',
-        degree_title: c.degree_title || c.label || 'Degree Certificate',
+        issuer_did: '',
+        institution_name: '',
+        degree_title: '',
         sd_jwt: c.sd_jwt || '',
         claimed: c.claimed ?? true,
         claimed_at: c.claimed_at || c.created_at,
         created_at: c.created_at,
-        graduation_date: c.graduation_date || null,
+        graduation_date: null,
         credential_type: c.credential_type || null,
-        major: c.major || null,
+        major: null,
         cipher: c.cipher,
-        iv: c.iv
+        iv: c.iv,
+        card_cipher: c.card_cipher,
+        card_iv: c.card_iv
       }))
 
       setCredentials(claimedList)
@@ -201,62 +191,26 @@ export default function WalletCategory() {
     }
   }, [credentialType, isOther])
 
-  // Once the vault is unlocked, decrypt whatever credentials are still
-  // missing institution_name and fill in the real values from inside the
-  // credential itself (mirrors Wallet.tsx). Best-effort per credential.
+  // Once the vault is unlocked, open each card (a small sealed blob). A card
+  // that is not openable — sealed by a wallet since reset — stays a
+  // placeholder. Rows from before cards existed get one sealed on the way.
   const previewAttempted = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isUnlocked) return
-    const toDecrypt = credentials.filter(
-      (c) => !c.institution_name && !decryptedPreviews[c.id] && !previewAttempted.current.has(c.id)
-    )
-    if (toDecrypt.length === 0) return
-    toDecrypt.forEach((c) => previewAttempted.current.add(c.id))
+    const toOpen = credentials.filter((c) => !decryptedPreviews[c.id] && !previewAttempted.current.has(c.id))
+    if (toOpen.length === 0) return
+    toOpen.forEach((c) => previewAttempted.current.add(c.id))
 
     let active = true
     ;(async () => {
-      // The list query leaves `cipher` out (it's the heavy column); fetch it
-      // only for the few legacy rows that need decrypting for their preview.
-      const { data: cipherRows } = await supabase
-        .from('credentials')
-        .select('id, cipher, iv')
-        .in('id', toDecrypt.map((c) => c.id))
-      const cipherById = new Map((cipherRows || []).map((r: any) => [r.id, r]))
-      const results: Record<string, DecryptedPreview> = {}
-      for (const listed of toDecrypt) {
-        const cred = { ...listed, ...(cipherById.get(listed.id) || {}) }
-        if (!cred.cipher && !cred.sd_jwt) continue
-        try {
-          let sdjwtString: string
-          if (cred.cipher && cred.iv) {
-            const decrypted = await decryptPayload({ cipher: cred.cipher, iv: cred.iv }) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
-          } else {
-            const parsedPayload = JSON.parse(cred.sd_jwt)
-            const decrypted = await decryptPayload(parsedPayload) as { sdjwt: string }
-            sdjwtString = decrypted.sdjwt
-          }
-
-          const claims: Record<string, any> = {}
-          readDisclosures(sdjwtString).forEach((d) => { claims[d.name] = d.value })
-          const payload = parseJwtPayload(sdjwtString.split('~')[0])
-
-          results[cred.id] = {
-            institution_name: claims.institution || undefined,
-            major: claims.major || undefined,
-            issuer_did: payload.iss || undefined,
-          }
-        } catch {
-          // non-fatal — this card just keeps showing whatever it already had
-        }
-      }
-      if (active && Object.keys(results).length > 0) {
-        setDecryptedPreviews((prev) => ({ ...prev, ...results }))
+      const cards = await openCards(toOpen, encryptPayload, (p) => decryptPayload(p))
+      if (active && Object.keys(cards).length > 0) {
+        setDecryptedPreviews((prev) => ({ ...prev, ...cards }))
       }
     })()
 
     return () => { active = false }
-  }, [isUnlocked, credentials, decryptPayload, decryptedPreviews])
+  }, [isUnlocked, credentials, encryptPayload, decryptPayload, decryptedPreviews])
 
   // Mount logic
   useEffect(() => {
@@ -414,14 +368,14 @@ export default function WalletCategory() {
                 return (
                   <CredentialCard
                     key={c.id}
-                    degreeTitle={c.degree_title}
-                    institutionName={c.institution_name || preview?.institution_name}
-                    issuerDid={c.issuer_did || preview?.issuer_did}
-                    graduationDate={c.graduation_date}
+                    degreeTitle={preview?.title || (preview && c.credential_type ? t(`proof.type_${c.credential_type}`) : t('wallet.encrypted_certificate_fallback'))}
+                    institutionName={preview?.institution_name}
+                    issuerDid={preview?.issuer_did}
+                    graduationDate={preview?.graduation_date}
                     createdAt={c.created_at}
                     onClick={() => handleViewDetailsClick(c.id)}
                     shareCount={shareCounts[c.id]}
-                    major={c.major || preview?.major}
+                    major={preview?.major}
                   />
                 )
               })}

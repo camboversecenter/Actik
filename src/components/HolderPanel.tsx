@@ -64,7 +64,7 @@ export default function HolderPanel({ user }: { user: User }) {
     for (const p of data ?? []) {
       const enc = await encryptData({ sdjwt: p.sdjwt }, sessionKey)
       const { error } = await supabase.from('credentials').insert({
-        owner: user.id, label: p.label, cipher: enc.cipher, iv: enc.iv,
+        owner: user.id, cipher: enc.cipher, iv: enc.iv,
       })
       if (!error) { await supabase.from('pending_credentials').delete().eq('id', p.id); n++ }
     }
