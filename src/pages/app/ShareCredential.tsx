@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { cardFromSdJwt } from '../../lib/walletCard'
 import { QRCodeSVG } from 'qrcode.react'
 import { ALWAYS_REVEALED } from '../../lib/disclosure'
 import { useZkVault } from '../../vault/zk-vault'
@@ -191,9 +192,9 @@ export default function ShareCredential() {
       setCredential({
         id: credData.id,
         holder_id: ownerId,
-        issuer_did: credData.issuer_did || 'did:web:...',
+        issuer_did: credData.issuer_did || '',
         institution_name: credData.institution_name || '',
-        degree_title: credData.degree_title || credData.label || 'Certificate',
+        degree_title: credData.degree_title || credData.label || t('wallet.encrypted_certificate_fallback'),
         sd_jwt: credData.sd_jwt || '',
         claimed: true,
         created_at: credData.created_at,
@@ -369,6 +370,15 @@ export default function ShareCredential() {
       }
 
       setDecryptedSDJwt(sdjwtString)
+      // The heading's institution, DID and title come from the credential
+      // itself once opened — they are not stored in the clear.
+      const card = cardFromSdJwt(sdjwtString)
+      setCredential((prev) => prev && {
+        ...prev,
+        issuer_did: prev.issuer_did || card.issuer_did || '',
+        institution_name: prev.institution_name || card.institution_name || '',
+        degree_title: card.title || prev.degree_title,
+      })
 
       // Decode disclosures to show claims
       const disclosures = readDisclosures(sdjwtString)

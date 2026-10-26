@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, BadgeCheck, EyeOff, Loader2, Mail } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { cardFromSdJwt } from '../../lib/walletCard'
 import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
@@ -91,7 +92,7 @@ export default function AnswerProofRequest() {
       // Only rows that could match: a requested type, or untyped legacy
       // rows (their type is only known after decrypting).
       const { data } = await supabase.from('credentials')
-        .select('id, label, cipher, iv, credential_type')
+        .select('id, cipher, iv, credential_type')
         .eq('owner', user.id)
         .or(`credential_type.is.null,credential_type.in.(${[...wanted].join(',')})`)
       const out: Candidate[] = []
@@ -103,7 +104,7 @@ export default function AnswerProofRequest() {
           const type = claimedType(decrypted.sdjwt)
           if (!type || !wanted.has(type)) continue
           const claims = Object.fromEntries(readDisclosures(decrypted.sdjwt).map((d) => [d.name, d.value]))
-          out.push({ id: row.id, label: row.label || (row as any).degree_title || t(`proof.type_${type}`), type, sdjwt: decrypted.sdjwt, claims, check: null })
+          out.push({ id: row.id, label: cardFromSdJwt(decrypted.sdjwt).title || t(`proof.type_${type}`), type, sdjwt: decrypted.sdjwt, claims, check: null })
         } catch {
           // a credential that will not decrypt is simply not offered
         }
@@ -185,7 +186,6 @@ export default function AnswerProofRequest() {
         <h1 className="text-[24px] md:text-[28px] font-bold text-stone-900 leading-tight">{request.title}</h1>
         <p className="text-sm text-stone-600">{request.requesterName}</p>
         <p className="text-xs text-amber-800">{t('proof.requester_unverified')}</p>
-        {request.description && <p className="text-sm text-stone-700 whitespace-pre-line pt-1">{request.description}</p>}
         <p className="text-xs text-stone-500">
           {request.status === 'open'
             ? t('proof.until', { date: longDate(Math.floor(new Date(request.expiresAt).getTime() / 1000)) })
@@ -238,12 +238,15 @@ export default function AnswerProofRequest() {
             const usable = matches.filter((c) => c.check?.usable)
             const chosen = candidates.find((c) => c.id === choice[i])
             const skipped = matches.length > 0 && choice[i] === null
+            // Every match was checked and none passed: show them with their
+            // reasons rather than presenting it as a requirement left out.
+            const noneUsable = matches.length > 0 && usable.length === 0 && matches.every((c) => c.check !== null)
             const shown = chosen ? allowedClaims(r).filter((k) => !['iss', 'iat', 'exp'].includes(k) && chosen.claims[k] !== undefined && chosen.claims[k] !== '') : []
             return (
               <section key={i} className="bg-white rounded-xl border border-stone-200 overflow-hidden" data-testid={`answer-requirement-${i}`}>
                 <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-stone-50 border-b border-stone-100">
                   <h2 className="text-sm font-bold text-stone-900 min-w-0">
-                    {t(`proof.type_${r.type}`)}{r.note && <span className="font-normal text-stone-500"> — {r.note}</span>}
+                    {t(`proof.type_${r.type}`)}
                   </h2>
                   {chosen && (
                     <div className="flex items-center gap-3 shrink-0 text-xs font-medium text-indigo-700">
@@ -260,9 +263,9 @@ export default function AnswerProofRequest() {
                 </div>
 
                 {matches.length === 0 && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.no_match')}</p>}
-                {skipped && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.skip_requirement')}</p>}
+                {skipped && !noneUsable && <p className="px-4 py-3 text-sm text-stone-500">{t('proof.skip_requirement')}</p>}
 
-                {(picking === i || (!chosen && !skipped && matches.length > 0)) && (
+                {(picking === i || (!chosen && matches.length > 0 && (!skipped || noneUsable))) && (
                   <div className="divide-y divide-stone-100">
                     {matches.map((c) => (
                       <label key={c.id} className={`flex items-start gap-2 px-4 py-3 text-sm ${c.check?.usable === false ? 'text-stone-400' : 'text-stone-800'}`}>

@@ -134,8 +134,8 @@ for (const f of ['verification_level', 'evidence_type', 'verified_on']) {
 }
 const shown = present(identity, ALWAYS_REVEALED)
 assert(!disclosedNames(shown).includes('sub') && disclosedNames(shown).includes('name'), 'a share shows the name, not the account id')
-const req = validateRequest({ requesterName: 'Angkor Accounting Co.', title: 'Accountant', description: '', expiresInDays: 30,
-  requirements: [{ type: 'academic_degree', extras: [], note: '' }, { type: 'identity_attestation', extras: [], note: '' }] })
+const req = validateRequest({ requesterName: 'Angkor Accounting Co.', title: 'Accountant', expiresInDays: 30,
+  requirements: [{ type: 'academic_degree', extras: [] }, { type: 'identity_attestation', extras: [] }] })
 const request = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: req.requirements }
 const degree = await issueSdJwt({ issuerDid: uniDid, signingKey: uniKey, kid: uniKid, holderPublicJwk: holder.publicJwk,
   subject: { name: 'Chan Sopheak', institution: 'National University of Management', degree_type: 'BBA',

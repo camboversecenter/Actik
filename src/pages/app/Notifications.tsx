@@ -5,9 +5,10 @@ import { useZkVault } from '../../vault/zk-vault'
 import { useLanguage } from '../../lib/i18n'
 import { Bell, ArrowLeft, Inbox, ShieldAlert } from 'lucide-react'
 import VaultUnlockModal from '../../components/VaultUnlockModal'
-import { verifyIssuedCredential, verifyPrintedCopy, signedOr, ClaimRefused } from '../../lib/claimVerification'
+import { verifyIssuedCredential, verifyPrintedCopy, ClaimRefused } from '../../lib/claimVerification'
+import { cardFromSdJwt, sealCard } from '../../lib/walletCard'
+import { openCards } from '../../lib/walletCardApi'
 import { ensureHolderKey, isOwnHolderKey } from '../../lib/holderKey'
-import { peekJwt } from '../../lib/sdjwt'
 
 interface PendingCredential {
   id: string
@@ -305,43 +306,34 @@ export default function Notifications() {
       // the old one is withdrawn as corrected, and one wallet cannot hold two
       // copies of the same document from the same issuer. Only the copy it
       // names goes — or one this wallet can no longer open at all (it was
-      // sealed by a wallet that has since been reset).
-      const certificateId = signedOr(assertion, 'certificate_id', cred.certificate_id) as string | null
-      if (isFallback && cred.replaces_jti && certificateId) {
+      // sealed by a wallet that has since been reset, and is unreadable to
+      // anyone). Nothing about a credential is stored in the clear, so each
+      // card is opened to find the one being replaced.
+      if (isFallback && cred.replaces_jti) {
         const { data: olds } = await supabase.from('credentials')
-          .select('id, cipher, iv')
-          .eq('owner', currentUser.id).eq('issuer_did', cred.issuer_did).eq('certificate_id', certificateId)
+          .select('id, card_cipher, card_iv')
+          .eq('owner', currentUser.id)
+        const cards = await openCards(olds ?? [], encryptPayload, (p) => decryptPayload(p))
         for (const old of olds ?? []) {
-          let replaced = false
-          try {
-            const opened = await decryptPayload({ cipher: old.cipher, iv: old.iv }) as { sdjwt?: string }
-            replaced = !!opened.sdjwt && peekJwt(opened.sdjwt).jti === cred.replaces_jti
-          } catch {
-            replaced = true
+          const card = cards[old.id]
+          if (!card || card.jti === cred.replaces_jti) {
+            await supabase.from('credentials').delete().eq('id', old.id)
           }
-          if (replaced) await supabase.from('credentials').delete().eq('id', old.id)
         }
       }
 
       if (isFallback) {
-        // The display columns are written from the *verified* claims, falling
-        // back to the row only where the credential carries no such claim.
-        // The wallet card then shows what the issuer signed rather than what
-        // someone typed into a column beside it.
+        // Only ciphertext is stored: the credential, and its card (title,
+        // institution, major, dates) sealed separately so the wallet list can
+        // draw it without opening the whole credential. The card is read from
+        // the verified credential, not from what the offer row says.
+        // credential_type stays readable so a locked wallet can sort by kind.
         updateRes = await supabase.from('credentials').insert({
           owner: currentUser.id,
-          label: signedOr(assertion, 'degree_type', cred.degree_title || cred.label),
           cipher: encryptedPayload.cipher,
           iv: encryptedPayload.iv,
           credential_type: cred.credential_type,
-          type_metadata: cred.type_metadata,
-          degree_type: signedOr(assertion, 'degree_type', cred.degree_type),
-          student_id: signedOr(assertion, 'student_id', cred.student_id),
-          major: signedOr(assertion, 'major', cred.major),
-          graduation_date: signedOr(assertion, 'graduation_date', cred.graduation_date),
-          certificate_id: signedOr(assertion, 'certificate_id', cred.certificate_id),
-          issuer_did: cred.issuer_did,
-          institution_name: signedOr(assertion, 'institution', cred.institution_name)
+          ...(await sealCard(encryptPayload, cardFromSdJwt(cred.sd_jwt))),
         })
 
         if (!updateRes.error) {

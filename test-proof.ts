@@ -61,21 +61,27 @@ console.log('what a request can ask for')
 const banned = ['national_id', 'student_id', 'date_of_birth', 'birth_date', 'photo', 'email', 'gender', 'sex',
   'marital_status', 'place_of_birth', 'religion', 'age', 'phone', 'sub']
 for (const type of Object.keys(REQUESTABLE)) {
-  const all = allowedClaims({ type, extras: REQUESTABLE[type].extras, note: '' })
+  const all = allowedClaims({ type, extras: REQUESTABLE[type].extras })
   assert(!banned.some((b) => all.includes(b)), `${type}: no requestable field is personal or discriminatory`)
 }
 const draft: ProofRequestDraft = {
-  requesterName: 'Angkor Accounting Co.', title: 'Junior accountant', description: 'Phnom Penh office.',
-  requirements: [{ type: 'academic_degree', extras: ['major'], note: 'in accounting or finance' },
-    { type: 'professional_certification', extras: [], note: '' }],
+  requesterName: 'Angkor Accounting Co.', title: 'Junior accountant',
+  requirements: [{ type: 'academic_degree', extras: ['major'] },
+    { type: 'professional_certification', extras: [] }],
   expiresInDays: 30,
 }
 assert(validateRequest(draft).requirements.length === 2, 'a sensible request is accepted')
+// No free text beyond the title: a note or a description sent anyway (by a
+// modified app) does not survive into the request.
+const smuggled = validateRequest({ ...draft, description: 'How old are you?',
+  requirements: [{ type: 'academic_degree', extras: [], note: 'and your date of birth' }] } as any) as any
+assert(!('description' in smuggled) && !('note' in smuggled.requirements[0]),
+  'a note or description cannot be written into a request')
 for (const f of ['national_id', 'student_id', 'photo', 'date_of_birth', 'email']) {
-  assert(problem(() => validateRequest({ ...draft, requirements: [{ type: 'academic_degree', extras: [f], note: '' }] }))
+  assert(problem(() => validateRequest({ ...draft, requirements: [{ type: 'academic_degree', extras: [f] }] }))
     === 'FIELD_NOT_REQUESTABLE', `asking for ${f} is refused`)
 }
-assert(problem(() => validateRequest({ ...draft, requirements: [{ type: 'passport', extras: [], note: '' }] })) === 'UNKNOWN_TYPE',
+assert(problem(() => validateRequest({ ...draft, requirements: [{ type: 'passport', extras: [] }] })) === 'UNKNOWN_TYPE',
   'an unknown credential type is refused')
 assert(problem(() => validateRequest({ ...draft, requirements: [] })) === 'NO_REQUIREMENTS', 'a request must ask for something')
 assert(problem(() => validateRequest({ ...draft, requirements: Array(6).fill(draft.requirements[1]) })) === 'TOO_MANY_REQUIREMENTS',
@@ -84,7 +90,7 @@ assert(problem(() => validateRequest({ ...draft, expiresInDays: 91 })) === 'EXPI
 assert(problem(() => validateRequest({ ...draft, title: ' ' })) === 'TITLE', 'a request needs a title')
 
 console.log('\nwhat a candidate discloses')
-const wantDegree: Requirement = { type: 'academic_degree', extras: ['major'], note: '' }
+const wantDegree: Requirement = { type: 'academic_degree', extras: ['major'] }
 const answer = buildAnswer(wantDegree, degree)
 const names = disclosedNames(answer)
 assert(['name', 'institution', 'degree_type', 'graduation_date', 'certificate_id', 'major'].every((n) => names.includes(n)),
@@ -98,7 +104,7 @@ assert(wrong instanceof AnswerRefused, 'a credential of the wrong kind is not se
 assert(claimedType(degree) === 'academic_degree', 'the type is read from the credential')
 
 console.log('\nchecking an answer')
-const request = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [wantDegree, { type: 'professional_certification', extras: [], note: '' }] }
+const request = { id: '7d3f1c2a-1111-4222-8333-944455556666', requirements: [wantDegree, { type: 'professional_certification', extras: [] }] }
 const ok = await checkAnswer(request, { requirement: 0, presentation: answer }, trust, revFor, now)
 assert(ok.kind === 'checked' && ok.checked.issuer.name === 'National University of Management',
   'a genuine answer is checked, and names the institution from the signed trust list')

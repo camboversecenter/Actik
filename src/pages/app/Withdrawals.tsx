@@ -19,6 +19,7 @@ import { getIssuerKey, subscribeIssuerKey } from '../../lib/issuerKeyStore'
 import {
   loadIssuedRecords,
   publishWithdrawals,
+  signingKeyBlocker,
   WithdrawalBlocked,
   type IssuedRecord,
   type IssuerContext,
@@ -68,6 +69,8 @@ export default function Withdrawals() {
   const [revocations, setRevocations] = useState<OpenedRevocations | null>(null)
   const [revocationsError, setRevocationsError] = useState<string | null>(null)
   const [hasKey, setHasKey] = useState(!!getIssuerKey())
+  // Why nothing can be signed right now (e.g. a new key not yet on the registry).
+  const [keyBlocked, setKeyBlocked] = useState<string | null>(null)
 
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [reason, setReason] = useState<WithdrawalReason>('withdrawn')
@@ -96,6 +99,17 @@ export default function Withdrawals() {
       load(u.id)
     })
   }, [load, navigate])
+
+  useEffect(() => {
+    if (!issuer || !hasKey) return
+    let live = true
+    signingKeyBlocker(issuer.did)
+      .then((b) => live && setKeyBlocked(b))
+      .catch(() => live && setKeyBlocked(null))
+    return () => {
+      live = false
+    }
+  }, [issuer, hasKey])
 
   const publish = async (add: WithdrawalRequest[], done: string) => {
     if (!issuer || !user) return
@@ -168,6 +182,12 @@ export default function Withdrawals() {
         </p>
       </div>
 
+      {keyBlocked && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          {keyBlocked}
+        </div>
+      )}
+
       {/* The list's own standing: what verifiers will say about every credential. */}
       <div
         className={`rounded-xl border p-4 text-sm ${
@@ -207,7 +227,7 @@ export default function Withdrawals() {
         {!revocationsError && (
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || !!keyBlocked}
             onClick={() => publish([], 'Withdrawal list renewed for another 30 days.')}
             className="mt-3 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-stone-800 text-xs font-semibold disabled:opacity-50"
           >
@@ -246,7 +266,7 @@ export default function Withdrawals() {
                 pendingId !== r.id && (
                   <button
                     type="button"
-                    disabled={busy || !!revocationsError || (!r.jti && !r.documentId)}
+                    disabled={busy || !!keyBlocked || !!revocationsError || (!r.jti && !r.documentId)}
                     onClick={() => {
                       setPendingId(r.id)
                       setReason('withdrawn')
@@ -265,7 +285,7 @@ export default function Withdrawals() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !!keyBlocked}
                     onClick={() => withdraw(r)}
                     className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold disabled:opacity-50"
                   >
@@ -298,7 +318,7 @@ export default function Withdrawals() {
         <ReasonPicker name="reason-by-number" value={byNumberReason} onChange={setByNumberReason} />
         <button
           type="button"
-          disabled={busy || !!revocationsError || byNumber.trim().length < 3}
+          disabled={busy || !!keyBlocked || !!revocationsError || byNumber.trim().length < 3}
           onClick={() =>
             publish(
               [{ documentId: byNumber.trim(), reason: byNumberReason, revokedAt: Math.floor(Date.now() / 1000) }],

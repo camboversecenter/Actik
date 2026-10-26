@@ -118,6 +118,45 @@ async function openTrustState(force: boolean): Promise<TrustState> {
   }
 }
 
+// A saved list is reused for up to REFRESH_AFTER_MS. When it does not know an
+// issuer or a key, the registry may simply have been republished since — a new
+// institution, or a key change — so fetch it once more before refusing.
+const STALE_LIST_REASONS = new Set(['ISSUER_NOT_LISTED', 'KEY_UNKNOWN', 'REVOCATIONS_KEY_NOT_ACCEPTED'])
+const REFETCH_AT_MOST_EVERY_MS = 60 * 1000
+let refetching: Promise<TrustState> | null = null
+let refetchedAt = 0
+
+export function isStaleListReason(reason: unknown): boolean {
+  return typeof reason === 'string' && STALE_LIST_REASONS.has(reason)
+}
+
+/** A freshly fetched trust state, or null when it is no newer than `trust`. */
+export async function refetchedTrust(trust: TrustState): Promise<TrustState | null> {
+  if (!refetching || Date.now() - refetchedAt > REFETCH_AT_MOST_EVERY_MS) {
+    refetching = loadTrustState({ force: true })
+    refetchedAt = Date.now()
+  }
+  const fresh = await refetching
+  return fresh.list && fresh !== trust ? fresh : null
+}
+
+/**
+ * Run a check against the trust state; if it is refused only because the
+ * saved list does not know the issuer or key, run it once more against a
+ * freshly fetched list.
+ */
+export async function withTrustRefresh<T>(check: (trust: TrustState) => Promise<T>): Promise<T> {
+  const trust = await loadTrustState()
+  try {
+    return await check(trust)
+  } catch (e) {
+    if (!isStaleListReason((e as { reason?: unknown } | null)?.reason)) throw e
+    const fresh = await refetchedTrust(trust)
+    if (!fresh) throw e
+    return check(fresh)
+  }
+}
+
 const revocationHeldKey = (did: string) => `actik:revocations:${did}:held`
 
 export async function loadRevocationState(

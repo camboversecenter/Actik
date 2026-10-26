@@ -418,11 +418,13 @@ export default function App() {
             {/* institution-settings needs the issuer signing-key vault too —
                 its Danger Zone (regenerate signing key) lives there. */}
             <Route path="institution-settings" element={<InstitutionSettings />} />
+            {/* Both unlock the signing key too. Outside this provider their
+                unlock screen used the wallet vault and saved the key there. */}
+            <Route path="withdrawals" element={<Withdrawals />} />
+            <Route path="reissue-requests" element={<ReissueRequests />} />
           </Route>
           <Route path="issued" element={<IssuedCredentials />} />
           <Route path="issued/type/:credentialType" element={<IssuedCredentialsCategory />} />
-          <Route path="withdrawals" element={<Withdrawals />} />
-          <Route path="reissue-requests" element={<ReissueRequests />} />
           {/* Student routes */}
           <Route path="wallet" element={<Wallet />} />
           <Route path="wallet/type/:credentialType" element={<WalletCategory />} />

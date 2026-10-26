@@ -28,7 +28,7 @@ import {
 } from '../../lib/printedCredential'
 import { CredentialRefused, CredentialWithdrawn, messageForRefusal } from '../../lib/credentialCheck'
 import type { WithdrawalReason } from '../../lib/revocation'
-import { loadRevocationState, loadTrustState } from '../../lib/trustAnchor'
+import { loadRevocationState, withTrustRefresh } from '../../lib/trustAnchor'
 import { acquireCamera, parkCamera } from '../../lib/cameraStream'
 
 type Result =
@@ -100,11 +100,12 @@ export default function ScanCertificate({ embedded = false }: { embedded?: boole
 
     setResult({ kind: 'checking' })
     try {
-      const trust = await loadTrustState()
-      const issuer = trust.list ? await peekPrintedIssuer(kind.payload) : null
-      const revocations =
-        trust.list && issuer ? await loadRevocationState(issuer, trust.list) : { list: null, failure: null }
-      const checked = await verifyPrintedCredential(kind.payload, trust, revocations, Math.floor(Date.now() / 1000))
+      const checked = await withTrustRefresh(async (trust) => {
+        const issuer = trust.list ? await peekPrintedIssuer(kind.payload) : null
+        const revocations =
+          trust.list && issuer ? await loadRevocationState(issuer, trust.list) : { list: null, failure: null }
+        return verifyPrintedCredential(kind.payload, trust, revocations, Math.floor(Date.now() / 1000))
+      })
       setResult({ kind: 'checked', checked })
     } catch (e) {
       if (e instanceof CredentialWithdrawn) {

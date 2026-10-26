@@ -12,6 +12,7 @@ import { issuePrintedCredential, printedDocumentHash, PrintRefused } from '../..
 import PrintableCertificate from '../../components/PrintableCertificate'
 import CredentialCard from '../../components/CredentialCard'
 import Banner from '../../components/ui/Banner'
+import { signingKeyBlocker } from '../../lib/withdrawal'
 import {
   AlertTriangle, CheckCircle2, GraduationCap, UserCheck, Star,
   HeartHandshake, Briefcase, Loader2, Check, ArrowLeft, FileText, Upload,
@@ -48,6 +49,8 @@ export default function IssueCredential() {
   // The signing key, as a non-extractable CryptoKey held in memory
   // (issuerKeyStore.ts) — never the JWK itself.
   const [signingKey, setSigningKey] = useState<HeldIssuerKey | null>(null)
+  // Why nothing can be signed right now (e.g. a new key not yet on the registry).
+  const [keyBlocked, setKeyBlocked] = useState<string | null>(null)
   const [gateState, setGateState] = useState<'valid' | 'not_registered' | 'pending_approval'>('valid')
   const [gateError, setGateError] = useState<string | null>(null)
 
@@ -485,11 +488,22 @@ export default function IssueCredential() {
     return Object.keys(nextErrors).length === 0
   }
 
+  useEffect(() => {
+    if (!issuerInfo?.did || !signingKey) return
+    let live = true
+    signingKeyBlocker(issuerInfo.did)
+      .then((b) => live && setKeyBlocked(b))
+      .catch(() => live && setKeyBlocked(null))
+    return () => {
+      live = false
+    }
+  }, [issuerInfo?.did, signingKey])
+
   // Form submit only validates and shows the review screen — issuing the
   // (irreversible, cryptographically signed) credential happens from there.
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!issuerInfo || !signingKey) return
+    if (!issuerInfo || !signingKey || keyBlocked) return
     if (!validateForm()) return
     if (checkingStudent) return // wait for lookup to finish
     setShowConfirm(true)
@@ -499,6 +513,15 @@ export default function IssueCredential() {
     if (!issuerInfo || !signingKey) return
     if (!validateForm()) return
     if (checkingStudent) return // wait for lookup to finish
+
+    // Re-check against the freshest registry: a certificate signed with a key
+    // it does not list would never verify, and cannot be taken back cleanly.
+    const blocked = await signingKeyBlocker(issuerInfo.did, { force: true })
+    if (blocked) {
+      setKeyBlocked(blocked)
+      setSubmitError(blocked)
+      return
+    }
 
     try {
       setIsSubmitting(true)
@@ -1152,7 +1175,7 @@ export default function IssueCredential() {
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !!keyBlocked}
               onClick={handleIssue}
               className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
@@ -1215,6 +1238,12 @@ export default function IssueCredential() {
             : label('dashboard.issue_credential_desc_form')}
         </p>
       </div>
+
+      {keyBlocked && (
+        <Banner tone="error" className="mb-6">
+          <p>{keyBlocked}</p>
+        </Banner>
+      )}
 
       {/* Unsaved-draft prompt — offered once per mount when a saved draft is
           found; resuming re-verifies the recipient email rather than
@@ -1817,8 +1846,8 @@ export default function IssueCredential() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSubmitting || !!keyBlocked}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold h-[52px] rounded-lg text-sm transition-all focus:outline-none flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               <span>{t('dashboard.issue_credential_btn')}</span>

@@ -66,7 +66,7 @@ const translations = {
       see_all: 'See all ({count})',
       all_count: 'All {count}',
       verified: '✓ Verified',
-      verified_label: 'Verified',
+      checked_when_added: 'Checked when added',
       encrypted_certificate_fallback: 'Encrypted certificate',
       institution_unknown: 'Institution',
       issued_by: 'Issued by: ',
@@ -622,8 +622,8 @@ const translations = {
       trust_title: 'Built to be trusted, not just believed',
       trust_1_title: 'Signed, not scanned',
       trust_1_desc: 'Every credential carries a cryptographic signature tied to the issuing institution — tamper-evident by design.',
-      trust_2_title: 'Accreditation, verified live',
-      trust_2_desc: 'Institutions are reviewed and approved before they can issue. Verification checks their status in real time.',
+      trust_2_title: 'Accreditation, on a signed list',
+      trust_2_desc: 'Institutions are reviewed and approved before they can issue, then added to a signed trust list. Checks run against that list, even offline, so a withdrawal shows once the institution next updates its list.',
       trust_3_title: 'You control the keys',
       trust_3_desc: 'Your vault is encrypted on your own device. Actik stores ciphertext, not your data.',
       for_title: 'Built for Cambodia, starting with education',
@@ -1098,7 +1098,7 @@ const translations = {
       see_all: 'មើលទាំងអស់ ({count})',
       all_count: 'ទាំងអស់ {count}',
       verified: '✓ បានផ្ទៀងផ្ទាត់',
-      verified_label: 'បានផ្ទៀងផ្ទាត់', // TODO(km-review)
+      checked_when_added: 'បានពិនិត្យនៅពេលបន្ថែម', // TODO(km-review)
       encrypted_certificate_fallback: 'លិខិតបញ្ជាក់ដែលបានគ្រីប', // TODO(km-review)
       institution_unknown: 'ស្ថាប័ន', // TODO(km-review)
       issued_by: 'ចេញដោយ៖ ',
@@ -1655,8 +1655,8 @@ const translations = {
       trust_title: 'បង្កើតឡើងដើម្បីទុកចិត្តបាន មិនមែនគ្រាន់តែជឿ',
       trust_1_title: 'បានចុះហត្ថលេខា មិនមែនស្កេន',
       trust_1_desc: 'លិខិតបញ្ជាក់នីមួយៗមានហត្ថលេខាតាមក្រាហ្វិកភ្ជាប់ជាមួយស្ថាប័នចេញ — រកឃើញការកែប្រែបានភ្លាមតាមរចនាសម្ព័ន្ធ។',
-      trust_2_title: 'ការទទួលស្គាល់ដែលផ្ទៀងផ្ទាត់ផ្ទាល់',
-      trust_2_desc: 'ស្ថាប័នត្រូវបានត្រួតពិនិត្យ និងអនុម័តមុននឹងអាចចេញបាន។ ការផ្ទៀងផ្ទាត់ត្រួតពិនិត្យស្ថានភាពរបស់ពួកគេតាមពេលវេលាជាក់ស្តែង។',
+      trust_2_title: 'ការទទួលស្គាល់ នៅលើបញ្ជីដែលបានចុះហត្ថលេខា', // TODO(km-review)
+      trust_2_desc: 'ស្ថាប័នត្រូវបានត្រួតពិនិត្យ និងអនុម័តមុននឹងអាចចេញបាន រួចត្រូវបានដាក់ក្នុងបញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខា។ ការពិនិត្យធ្វើឡើងតាមបញ្ជីនោះ ទោះគ្មានអ៊ីនធឺណិតក៏ដោយ ដូច្នេះការដកហូតនឹងបង្ហាញ នៅពេលស្ថាប័នធ្វើបច្ចុប្បន្នភាពបញ្ជីរបស់ខ្លួនលើកក្រោយ។', // TODO(km-review)
       trust_3_title: 'អ្នកគ្រប់គ្រងកូនសោរ',
       trust_3_desc: 'កាបូបរបស់អ្នកត្រូវបានគ្រីបនៅលើឧបករណ៍ផ្ទាល់ខ្លួនរបស់អ្នក។ Actik រក្សាទុកតែទិន្នន័យដែលបានគ្រីប មិនមែនទិន្នន័យរបស់អ្នកទេ។',
       for_title: 'បង្កើតឡើងសម្រាប់កម្ពុជា ចាប់ផ្តើមពីការអប់រំ',
