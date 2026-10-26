@@ -121,7 +121,9 @@ async function openTrustState(force: boolean): Promise<TrustState> {
 // A saved list is reused for up to REFRESH_AFTER_MS. When it does not know an
 // issuer or a key, the registry may simply have been republished since — a new
 // institution, or a key change — so fetch it once more before refusing.
-const STALE_LIST_REASONS = new Set(['ISSUER_NOT_LISTED', 'KEY_UNKNOWN', 'REVOCATIONS_KEY_NOT_ACCEPTED'])
+// UNKNOWN_KID is the printed lane's KEY_UNKNOWN: a KH1: code signed by a key
+// the saved list has not seen yet.
+const STALE_LIST_REASONS = new Set(['ISSUER_NOT_LISTED', 'KEY_UNKNOWN', 'UNKNOWN_KID', 'REVOCATIONS_KEY_NOT_ACCEPTED'])
 const REFETCH_AT_MOST_EVERY_MS = 60 * 1000
 let refetching: Promise<TrustState> | null = null
 let refetchedAt = 0
