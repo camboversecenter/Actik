@@ -152,7 +152,7 @@ const translations = {
       who_is_this_for: 'Who is this for? (optional)',
       recipient_placeholder: 'e.g. Acme Corp · HR',
       single_use: 'Allow only one view',
-      single_use_desc: 'The link stops working after it is first opened. Use this when the link should not be forwarded.',
+      single_use_desc: 'The link stops working after someone else opens it once. Opening it yourself while signed in does not use it up. Use this when the link should not be forwarded.',
       share_unbound_note: 'This credential was issued before you had an Actik wallet, so the link cannot prove it came from you. The person who opens it will see it marked “not bound”. Turning on one view and a short expiry helps.',
       how_long_active: 'How long should this link work?',
       duration_desc: 'Choose a quick duration or set a custom expiry window.',
@@ -1005,6 +1005,30 @@ const translations = {
       check_3: 'Verifying issuer signature…',
       check_4: 'Checking the signed trust registry…',
       check_5: 'Checking whether the issuer withdrew it…',
+      err_not_found: 'This link does not exist',
+      err_link_withdrawn: 'The holder has withdrawn this share link',
+      err_link_exhausted: 'This link could be opened only once, and it already has been',
+      err_expired_on: 'This share link expired on {date}',
+      err_expired: 'This share link has expired',
+      err_internal: 'An unexpected internal error occurred',
+      fail_generic: 'An error occurred during verification.',
+      fail_link_withdrawn: 'The holder has withdrawn this link',
+      fail_link_exhausted: 'This single-use link has already been opened',
+      fail_link_expired: 'This link has expired',
+      fail_code_unchecked: 'This code was not checked',
+      fail_code_invalid: 'This code did not verify',
+      fail_registry_unchecked: 'The signed trust registry could not be checked',
+      fail_not_registered: 'The issuing institution is not on the signed trust registry',
+      fail_credential_withdrawn: 'The institution has withdrawn this credential',
+      fail_withdrawals_unchecked: "The institution's withdrawal list could not be checked",
+      guide_not_found: 'Check the link you were given, or ask the holder to share a new one.',
+      guide_link_withdrawn: 'The holder withdrew this link. Ask them for a new one if you still need it.',
+      guide_link_exhausted: 'Single-use links stop working after the first view. Ask the holder for a new one.',
+      guide_link_expired: 'Ask the credential holder to generate a new share link.',
+      guide_try_again: 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.',
+      guide_code_invalid: 'This code did not verify. Do not accept it as proof, and ask the holder for the credential another way.',
+      guide_not_registered: 'Contact the institution directly to verify their credentials.',
+      guide_credential_withdrawn: 'Do not accept this credential. The institution, not the code, ended it — the holder can ask the institution why.',
       withdrawn_title: 'Withdrawn by the issuer',
       withdrawn_withdrawn: 'The institution that issued it has withdrawn it.',
       withdrawn_corrected: 'The institution has replaced it with a corrected credential. Ask the holder for the corrected one.',
@@ -1186,7 +1210,7 @@ const translations = {
       who_is_this_for: 'តើនេះសម្រាប់នរណា? (ស្រេចចិត្ត)',
       recipient_placeholder: 'ឧ. ក្រុមហ៊ុន Acme ផ្នែកធនធានមនុស្ស',
       single_use: 'អនុញ្ញាតឱ្យមើលបានតែម្តង', // TODO(km-review)
-      single_use_desc: 'តំណនឹងឈប់ដំណើរការបន្ទាប់ពីការមើលលើកដំបូង។ ប្រើវានៅពេលអ្នកមិនចង់ឱ្យវាត្រូវបានបញ្ជូនបន្ត។', // TODO(km-review)
+      single_use_desc: 'តំណនឹងឈប់ដំណើរការ បន្ទាប់ពីអ្នកផ្សេងបើកវាម្តង។ ការបើកដោយខ្លួនអ្នកផ្ទាល់ ពេលបានចូលគណនី មិនរាប់ទេ។ ប្រើវានៅពេលអ្នកមិនចង់ឱ្យវាត្រូវបានបញ្ជូនបន្ត។', // TODO(km-review)
       share_unbound_note: 'ឯកសារនេះត្រូវបានចេញមុនពេលអ្នកមានកាបូប Actik ដូច្នេះតំណមិនអាចបញ្ជាក់ថាវាមកពីអ្នកទេ។ អ្នកដែលបើកវានឹងឃើញសញ្ញា «មិនបានភ្ជាប់»។ ការបើកមើលតែម្តង និងកំណត់ថ្ងៃផុតកំណត់ខ្លី នឹងជួយបាន។', // TODO(km-review)
       how_long_active: 'តើតំណនេះគួរដំណើរការរយៈពេលប៉ុន្មាន?',
       duration_desc: 'ជ្រើសរើសរយៈពេលរហ័ស ឬកំណត់ថ្ងៃផុតកំណត់។',
@@ -2040,6 +2064,30 @@ const translations = {
       check_3: 'ផ្ទៀងផ្ទាត់ហត្ថលេខាស្ថាប័ន…',
       check_4: 'ពិនិត្យបញ្ជីស្ថាប័នទុកចិត្តដែលបានចុះហត្ថលេខា…', // TODO(km-review)
       check_5: 'ពិនិត្យថាតើស្ថាប័នបានដកហូតវាឬទេ…', // TODO(km-review)
+      err_not_found: 'តំណនេះមិនមានទេ', // TODO(km-review)
+      err_link_withdrawn: 'ម្ចាស់បានដកតំណចែករំលែកនេះវិញហើយ', // TODO(km-review)
+      err_link_exhausted: 'តំណនេះអាចបើកបានតែម្តងប៉ុណ្ណោះ ហើយវាត្រូវបានបើករួចហើយ', // TODO(km-review)
+      err_expired_on: 'តំណចែករំលែកនេះបានផុតកំណត់នៅថ្ងៃ {date}', // TODO(km-review)
+      err_expired: 'តំណចែករំលែកនេះបានផុតកំណត់ហើយ', // TODO(km-review)
+      err_internal: 'មានបញ្ហាមិនរំពឹងទុកបានកើតឡើង', // TODO(km-review)
+      fail_generic: 'មានបញ្ហាកើតឡើងក្នុងពេលផ្ទៀងផ្ទាត់។', // TODO(km-review)
+      fail_link_withdrawn: 'ម្ចាស់បានដកតំណនេះវិញហើយ', // TODO(km-review)
+      fail_link_exhausted: 'តំណប្រើបានតែម្តងនេះ ត្រូវបានបើករួចហើយ', // TODO(km-review)
+      fail_link_expired: 'តំណនេះបានផុតកំណត់ហើយ', // TODO(km-review)
+      fail_code_unchecked: 'កូដនេះមិនទាន់ត្រូវបានពិនិត្យទេ', // TODO(km-review)
+      fail_code_invalid: 'កូដនេះផ្ទៀងផ្ទាត់មិនត្រឹមត្រូវទេ', // TODO(km-review)
+      fail_registry_unchecked: 'មិនអាចពិនិត្យបញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខាបានទេ', // TODO(km-review)
+      fail_not_registered: 'ស្ថាប័នចេញមិនមាននៅក្នុងបញ្ជីទុកចិត្តដែលបានចុះហត្ថលេខាទេ', // TODO(km-review)
+      fail_credential_withdrawn: 'ស្ថាប័នបានដកហូតវិញ្ញាបនបត្រនេះហើយ', // TODO(km-review)
+      fail_withdrawals_unchecked: 'មិនអាចពិនិត្យបញ្ជីដកហូតរបស់ស្ថាប័នបានទេ', // TODO(km-review)
+      guide_not_found: 'សូមពិនិត្យតំណដែលអ្នកបានទទួល ឬសុំឱ្យម្ចាស់ចែករំលែកតំណថ្មី។', // TODO(km-review)
+      guide_link_withdrawn: 'ម្ចាស់បានដកតំណនេះវិញ។ សូមសុំតំណថ្មីពីគាត់ ប្រសិនបើអ្នកនៅត្រូវការវា។', // TODO(km-review)
+      guide_link_exhausted: 'តំណប្រើបានតែម្តង ឈប់ដំណើរការបន្ទាប់ពីការមើលលើកដំបូង។ សូមសុំតំណថ្មីពីម្ចាស់។', // TODO(km-review)
+      guide_link_expired: 'សូមសុំឱ្យម្ចាស់វិញ្ញាបនបត្របង្កើតតំណចែករំលែកថ្មី។', // TODO(km-review)
+      guide_try_again: 'តាមដែលយើងដឹង កូដនេះគ្មានបញ្ហាទេ — យើងគ្រាន់តែមិនអាចពិនិត្យវាបាន។ សូមព្យាយាមម្តងទៀតបន្តិចក្រោយ។', // TODO(km-review)
+      guide_code_invalid: 'កូដនេះផ្ទៀងផ្ទាត់មិនត្រឹមត្រូវ។ កុំទទួលយកវាជាភស្តុតាង ហើយសុំវិញ្ញាបនបត្រពីម្ចាស់តាមវិធីផ្សេង។', // TODO(km-review)
+      guide_not_registered: 'សូមទាក់ទងស្ថាប័នដោយផ្ទាល់ ដើម្បីផ្ទៀងផ្ទាត់វិញ្ញាបនបត្ររបស់ពួកគេ។', // TODO(km-review)
+      guide_credential_withdrawn: 'កុំទទួលយកវិញ្ញាបនបត្រនេះ។ ស្ថាប័ន មិនមែនកូដទេ ដែលបានបញ្ចប់វា — ម្ចាស់អាចសួរស្ថាប័នពីមូលហេតុ។', // TODO(km-review)
       withdrawn_title: 'ត្រូវបានដកហូតដោយស្ថាប័នចេញ', // TODO(km-review)
       withdrawn_withdrawn: 'ស្ថាប័នដែលបានចេញវា បានដកហូតវាវិញ។', // TODO(km-review)
       withdrawn_corrected: 'ស្ថាប័នបានជំនួសវាដោយលិខិតបញ្ជាក់ដែលបានកែតម្រូវ។ សូមស្នើសុំលិខិតដែលបានកែតម្រូវពីម្ចាស់។', // TODO(km-review)
