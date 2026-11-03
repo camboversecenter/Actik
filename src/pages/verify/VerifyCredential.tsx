@@ -19,11 +19,15 @@ import { loadRevocationState, withTrustRefresh } from '../../lib/trustAnchor'
 // --- TypeScript Types ---
 type CheckStatus = 'waiting' | 'running' | 'passed' | 'failed'
 
+// Text the page writes itself is kept as a key and translated when drawn, so
+// switching language after the check has run changes it too. A plain string is
+// a message from the verifier library, shown as it came.
+type CheckMessage = string | { key: string; vars?: Record<string, string | number> }
+
 interface VerificationCheck {
   id: string
-  label: string
   status: CheckStatus
-  errorMessage?: string
+  errorMessage?: CheckMessage
   detail?: string
 }
 
@@ -352,11 +356,11 @@ export default function VerifyCredential() {
 
   const [status, setStatus] = useState<'loading' | 'success' | 'failed' | 'idle'>('idle')
   const [checks, setChecks] = useState<VerificationCheck[]>([
-    { id: '1', label: t('verify.check_1'), status: 'waiting' },
-    { id: '2', label: t('verify.check_2'), status: 'waiting' },
-    { id: '4', label: t('verify.check_4'), status: 'waiting' },
-    { id: '3', label: t('verify.check_3'), status: 'waiting' },
-    { id: '5', label: t('verify.check_5'), status: 'waiting' },
+    { id: '1', status: 'waiting' },
+    { id: '2', status: 'waiting' },
+    { id: '4', status: 'waiting' },
+    { id: '3', status: 'waiting' },
+    { id: '5', status: 'waiting' },
   ])
 
   const [share, setShare] = useState<ShareRecord | null>(null)
@@ -381,7 +385,7 @@ export default function VerifyCredential() {
   const [detailsExpanded, setDetailsExpanded] = useState(false)
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
 
-  const updateCheck = (id: string, status: CheckStatus, errorMessage?: string, detail?: string) => {
+  const updateCheck = (id: string, status: CheckStatus, errorMessage?: CheckMessage, detail?: string) => {
     setChecks((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status, errorMessage, detail } : c))
     )
@@ -395,11 +399,11 @@ export default function VerifyCredential() {
     async function runVerification() {
       // Initialize checks list
       setChecks([
-        { id: '1', label: t('verify.check_1'), status: 'running' },
-        { id: '2', label: t('verify.check_2'), status: 'waiting' },
-        { id: '4', label: t('verify.check_4'), status: 'waiting' },
-        { id: '3', label: t('verify.check_3'), status: 'waiting' },
-        { id: '5', label: t('verify.check_5'), status: 'waiting' },
+        { id: '1', status: 'running' },
+        { id: '2', status: 'waiting' },
+        { id: '4', status: 'waiting' },
+        { id: '3', status: 'waiting' },
+        { id: '5', status: 'waiting' },
       ])
       setStatus('loading')
 
@@ -422,7 +426,7 @@ export default function VerifyCredential() {
           | undefined
 
         if (shareError || !lookup || lookup.status === 'not_found') {
-          updateCheck('1', 'failed', 'This link does not exist')
+          updateCheck('1', 'failed', { key: 'verify.err_not_found' })
           if (active) setStatus('failed')
           return
         }
@@ -447,7 +451,7 @@ export default function VerifyCredential() {
         // the holder took the link back, the credential is not in question.
         if (lookup.status === 'revoked') {
           setLinkStatus('revoked')
-          updateCheck('2', 'failed', 'The holder has withdrawn this share link')
+          updateCheck('2', 'failed', { key: 'verify.err_link_withdrawn' })
           if (active) setStatus('failed')
           return
         }
@@ -455,7 +459,7 @@ export default function VerifyCredential() {
         // A link the holder limited to one view, already viewed.
         if (lookup.status === 'exhausted') {
           setLinkStatus('exhausted')
-          updateCheck('2', 'failed', 'This link could be opened only once, and it already has been')
+          updateCheck('2', 'failed', { key: 'verify.err_link_exhausted' })
           if (active) setStatus('failed')
           return
         }
@@ -475,7 +479,7 @@ export default function VerifyCredential() {
           updateCheck(
             '2',
             'failed',
-            formattedDate ? `This share link expired on ${formattedDate}` : 'This share link has expired'
+            formattedDate ? { key: 'verify.err_expired_on', vars: { date: formattedDate } } : { key: 'verify.err_expired' }
           )
           if (active) setStatus('failed')
           return
@@ -585,7 +589,7 @@ export default function VerifyCredential() {
             if (running) {
               return prev.map((c) =>
                 c.id === running.id
-                  ? { ...c, status: 'failed', errorMessage: 'An unexpected internal error occurred' }
+                  ? { ...c, status: 'failed', errorMessage: { key: 'verify.err_internal' } }
                   : c
               )
             }
@@ -633,30 +637,30 @@ export default function VerifyCredential() {
   const failedCheck = checks.find((c) => c.status === 'failed')
 
   const getFailureSubtext = () => {
-    if (!failedCheck) return 'An error occurred during verification.'
+    if (!failedCheck) return t('verify.fail_generic')
     switch (failedCheck.id) {
       case '1':
-        return 'This link does not exist'
+        return t('verify.err_not_found')
       case '2':
         return linkStatus === 'revoked'
-          ? 'The holder has withdrawn this link'
+          ? t('verify.fail_link_withdrawn')
           : linkStatus === 'exhausted'
-            ? 'This single-use link has already been opened'
-            : 'This link has expired'
+            ? t('verify.fail_link_exhausted')
+            : t('verify.fail_link_expired')
       case '3':
         return failureKind === 'unavailable'
-          ? 'This code was not checked'
-          : "This code did not verify"
+          ? t('verify.fail_code_unchecked')
+          : t('verify.fail_code_invalid')
       case '4':
         return failureKind === 'unavailable'
-          ? 'The signed trust registry could not be checked'
-          : 'The issuing institution is not on the signed trust registry'
+          ? t('verify.fail_registry_unchecked')
+          : t('verify.fail_not_registered')
       case '5':
         return failureKind === 'withdrawn'
-          ? 'The institution has withdrawn this credential'
-          : "The institution's withdrawal list could not be checked"
+          ? t('verify.fail_credential_withdrawn')
+          : t('verify.fail_withdrawals_unchecked')
       default:
-        return 'An error occurred during verification.'
+        return t('verify.fail_generic')
     }
   }
 
@@ -664,25 +668,25 @@ export default function VerifyCredential() {
     if (!failedCheck) return ''
     switch (failedCheck.id) {
       case '1':
-        return 'Check the link you were given, or ask the holder to share a new one.'
+        return t('verify.guide_not_found')
       case '2':
         return linkStatus === 'revoked'
-          ? 'The holder withdrew this link. Ask them for a new one if you still need it.'
+          ? t('verify.guide_link_withdrawn')
           : linkStatus === 'exhausted'
-            ? 'Single-use links stop working after the first view. Ask the holder for a new one.'
-            : 'Ask the credential holder to generate a new share link.'
+            ? t('verify.guide_link_exhausted')
+            : t('verify.guide_link_expired')
       case '3':
         return failureKind === 'unavailable'
-          ? 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
-          : 'This code did not verify. Do not accept it as proof, and ask the holder for the credential another way.'
+          ? t('verify.guide_try_again')
+          : t('verify.guide_code_invalid')
       case '4':
         return failureKind === 'unavailable'
-          ? 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
-          : 'Contact the institution directly to verify their credentials.'
+          ? t('verify.guide_try_again')
+          : t('verify.guide_not_registered')
       case '5':
         return failureKind === 'withdrawn'
-          ? 'Do not accept this credential. The institution, not the code, ended it — the holder can ask the institution why.'
-          : 'Nothing is wrong with the code as far as we know — we could not check it. Try again shortly.'
+          ? t('verify.guide_credential_withdrawn')
+          : t('verify.guide_try_again')
       default:
         return ''
     }
@@ -910,7 +914,7 @@ export default function VerifyCredential() {
                             : 'text-stone-400'
                         }`}
                       >
-                        {check.label}
+                        {t(`verify.check_${check.id}`)}
                       </span>
                     </div>
                     {/* Always-English mono technical caption — same "Khmer
@@ -921,7 +925,7 @@ export default function VerifyCredential() {
                     </span>
                     {check.status === 'failed' && check.errorMessage && (
                       <p className="pl-[30px] pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
-                        {check.errorMessage}
+                        {typeof check.errorMessage === 'string' ? check.errorMessage : t(check.errorMessage.key, check.errorMessage.vars)}
                       </p>
                     )}
                   </div>
@@ -1360,12 +1364,12 @@ export default function VerifyCredential() {
                               : 'text-stone-400'
                           }`}
                         >
-                          {check.label}
+                          {t(`verify.check_${check.id}`)}
                         </span>
                       </div>
                       {check.status === 'failed' && check.errorMessage && (
                         <p className="pl-[30px] pt-1 text-xs text-rose-500 font-semibold leading-relaxed">
-                          {check.errorMessage}
+                          {typeof check.errorMessage === 'string' ? check.errorMessage : t(check.errorMessage.key, check.errorMessage.vars)}
                         </p>
                       )}
                     </div>
